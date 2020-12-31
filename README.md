@@ -21,7 +21,7 @@ npm i w-orm-mdb
 ```
 
 #### Example for access mdb by js settings 
-> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/mastersp-mdb-js.mjs)]
+> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/sp-mdb-js.mjs)]
 ```alias
 import wo from 'w-orm-mdb'
 import fs from 'fs'
@@ -212,7 +212,7 @@ test().catch((err) => console.log('err:', err))
 ```
 
 #### Example for access mdb by json settings 
-> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/mastersp-mdb-json.mjs)]
+> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/sp-mdb-json.mjs)]
 ```alias
 import wo from 'w-orm-mdb'
 import fs from 'fs'
