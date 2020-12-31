@@ -1,8 +1,6 @@
 # w-orm-mdb
 An object of operator for access mdb database in nodejs, like a simple ORM.
 
-test
-
 ![language](https://img.shields.io/badge/language-JavaScript-orange.svg) 
 [![npm version](http://img.shields.io/npm/v/w-orm-mdb.svg?style=flat)](https://npmjs.org/package/w-orm-mdb) 
 [![Build Status](https://travis-ci.org/yuda-lyu/w-orm-mdb.svg?branch=master)](https://travis-ci.org/yuda-lyu/w-orm-mdb) 
