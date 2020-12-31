@@ -1,0 +1,38 @@
+{
+  "name": "w-orm-mdb",
+  "version": "1.0.1",
+  "description": "An object of operator for access mdb database in nodejs, like a simple ORM.",
+  "main": "dist/w-orm-mdb.umd.js",
+  "dependencies": {
+    "lodash": "^4.17.20",
+    "node-adodb": "^5.0.3",
+    "w-orm-reladb": "^1.0.30",
+    "wsemi": "^1.5.41"
+  },
+  "devDependencies": {
+    "w-package-tools": "^1.0.30"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --require @babel/register",
+    "deploy": "gh-pages -d docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuda-lyu/w-orm-mdb.git"
+  },
+  "keywords": [
+    "package",
+    "tool",
+    "operator",
+    "MSSQL",
+    "sqlite",
+    "ORM",
+    "nodejs"
+  ],
+  "author": "yuda-lyu(semisphere)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yuda-lyu/w-orm-mdb/issues"
+  },
+  "homepage": "https://github.com/yuda-lyu/w-orm-mdb#readme"
+}
