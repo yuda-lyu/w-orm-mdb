@@ -426,7 +426,7 @@ let opt = {
 if (fs.existsSync(opt.storage)) {
     fs.unlinkSync(opt.storage)
 }
-fs.copyFileSync('./worm_encryption_def.mdb', opt.storage) //複製加密版
+fs.copyFileSync('./worm_encryption_def.mdb', opt.storage) //複製加密版, 密碼為[username:password]
 
 let rs = [
     {
