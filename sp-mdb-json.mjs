@@ -2,10 +2,10 @@ import wo from './src/WOrmMdb.mjs'
 import fs from 'fs'
 
 
-let username = 'username'
-let password = 'password'
+let username = ''
+let password = ''
 let opt = {
-    url: `mdb://${username}:${password}`, //username:password
+    url: `mdb://${username}:${password}`,
     db: 'worm',
     cl: 'users',
     fdModels: './models',
@@ -17,8 +17,8 @@ let opt = {
 //因worm.mdb可能被修改, 先刪除再由worm_def.mdb複製一份來用
 if (fs.existsSync(opt.storage)) {
     fs.unlinkSync(opt.storage)
-    fs.copyFileSync('./worm_def.mdb', opt.storage)
 }
+fs.copyFileSync('./worm_def.mdb', opt.storage)
 
 let rs = [
     {

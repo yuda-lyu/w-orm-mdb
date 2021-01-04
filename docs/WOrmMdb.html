@@ -71,7 +71,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line46">line 46</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line47">line 47</a>
     </li></ul></dd>
     
 
@@ -286,14 +286,14 @@
                 </td>
             
 
-            <td class="description last"><p>輸入sqlite資料庫檔案位置字串，預設'./worm.db'</p></td>
+            <td class="description last"><p>輸入mdb資料庫檔案位置字串，預設'./worm.db'</p></td>
         </tr>
 
     
 
         <tr>
             
-                <td class="name"><code>useSqlcipher</code></td>
+                <td class="name"><code>useEncryption</code></td>
             
 
             <td class="type">
@@ -325,7 +325,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入是否使用sqlite加密套件[@journeyapps/sqlcipher]，型別為布林值，預設false，若是的話因依賴預設不安裝，得自行人工安裝</p></td>
+            <td class="description last"><p>輸入是否使用加密保護，型別為布林值，預設false</p></td>
         </tr>
 
     
@@ -443,6 +443,45 @@
             
 
             <td class="description last"><p>輸入資料表設定檔所在資料夾字串，預設'./models'</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>dbType</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>'Access2007'</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入使用資料庫類型字串，可選'Access2000-2003'、'Access2007'，預設'Access2007'</p></td>
         </tr>
 
     
@@ -637,7 +676,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入是否使用穩定模式，使用佇列管理同時只能進行一種操作故會犧牲效能，sqlite需開啟穩定模式才不會有非預期錯誤，型別為布林值，預設true</p></td>
+            <td class="description last"><p>輸入是否使用穩定模式，使用佇列管理同時只能進行一種操作故會犧牲效能，mdb需開啟穩定模式才不會有非預期錯誤，型別為布林值，預設true</p></td>
         </tr>
 
     
@@ -729,7 +768,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line904">line 904</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line927">line 927</a>
     </li></ul></dd>
     
 
@@ -769,7 +808,7 @@
 
 
 <div class="description usertext">
-    <p>創建sqlite資料庫檔案</p>
+    <p>創建mdb資料庫檔案</p>
 </div>
 
 
@@ -838,7 +877,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line732">line 732</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line755">line 755</a>
     </li></ul></dd>
     
 
@@ -1162,7 +1201,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line841">line 841</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line864">line 864</a>
     </li></ul></dd>
     
 
@@ -1487,7 +1526,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line991">line 991</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1014">line 1014</a>
     </li></ul></dd>
     
 
@@ -1790,7 +1829,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line177">line 177</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line183">line 183</a>
     </li></ul></dd>
     
 
@@ -1899,7 +1938,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line503">line 503</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line526">line 526</a>
     </li></ul></dd>
     
 
@@ -2223,7 +2262,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line580">line 580</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line603">line 603</a>
     </li></ul></dd>
     
 
@@ -2586,7 +2625,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line458">line 458</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line481">line 481</a>
     </li></ul></dd>
     
 
@@ -2914,7 +2953,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.6</a> on Thu Dec 31 2020 23:11:00 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.6</a> on Mon Jan 04 2021 22:47:54 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
