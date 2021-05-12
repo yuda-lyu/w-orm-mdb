@@ -23,8 +23,8 @@ npm i w-orm-mdb
 #### Example by js settings 
 > **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
 ```alias
-import wo from 'w-orm-mdb'
 import fs from 'fs'
+import wo from 'w-orm-mdb'
 
 
 let username = ''
@@ -214,8 +214,8 @@ test().catch((err) => console.log('err:', err))
 #### Example by json settings 
 > **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-json.mjs)]
 ```alias
-import wo from 'w-orm-mdb'
 import fs from 'fs'
+import wo from 'w-orm-mdb'
 
 
 let username = ''
@@ -405,8 +405,8 @@ test().catch((err) => console.log('err:', err))
 #### Example for encryption by js settings 
 > **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
 ```alias
-import wo from 'w-orm-mdb'
 import fs from 'fs'
+import wo from 'w-orm-mdb'
 
 
 let username = 'username'
