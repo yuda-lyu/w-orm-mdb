@@ -1,6 +1,6 @@
 {
   "name": "w-orm-mdb",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "An object of operator for access mdb database in nodejs, like a simple ORM.",
   "main": "dist/w-orm-mdb.umd.js",
   "dependencies": {
