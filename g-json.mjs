@@ -9,7 +9,7 @@ let opt = {
     db: 'worm',
     cl: 'users',
     fdModels: './models',
-    // modelType: 'js', //default
+    modelType: 'json',
     // autoGenPK: false,
     storage: './worm.mdb',
 }
@@ -185,4 +185,4 @@ test().catch((err) => console.log('err:', err))
 //   { n: 1, nDeleted: 1, ok: 1 }
 // ]
 
-//node --experimental-modules --es-module-specifier-resolution=node sp-mdb-js.mjs
+//node --experimental-modules --es-module-specifier-resolution=node g-json.mjs

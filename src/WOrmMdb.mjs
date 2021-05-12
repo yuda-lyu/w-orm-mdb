@@ -198,10 +198,12 @@ function WOrmMdb(opt = {}) {
             databasePassword = ` Jet OLEDB:Database Password=${up};`
         }
 
-        //adodb, open for x64
+        //strConn
         let strConn = `Provider=${provider};Data Source=${opt.storage};Persist Security Info=False;${databasePassword}`
         // console.log('strConn', strConn)
-        adodb = Adodb.open(strConn, true)
+
+        //adodb, open for x64 記憶體才能支撐讀大檔
+        adodb = Adodb.open(strConn, true) 
         // console.log('adodb', adodb)
 
         //initSequelize

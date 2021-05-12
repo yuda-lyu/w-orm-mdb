@@ -14,14 +14,14 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 
 ## Installation
 ### Using npm(ES6 module):
-> **Note:** `w-orm-mdb` depends on `node-adodb` and `w-orm-reladb`.
+> **Note:** `w-orm-mdb` is mainly dependent on `node-adodb` and `w-orm-reladb`.
 
 ```alias
 npm i w-orm-mdb
 ```
 
 #### Example by js settings 
-> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/sp-mdb-js.mjs)]
+> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
 ```alias
 import wo from 'w-orm-mdb'
 import fs from 'fs'
@@ -212,7 +212,7 @@ test().catch((err) => console.log('err:', err))
 ```
 
 #### Example by json settings 
-> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/sp-mdb-json.mjs)]
+> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-json.mjs)]
 ```alias
 import wo from 'w-orm-mdb'
 import fs from 'fs'
@@ -403,7 +403,7 @@ test().catch((err) => console.log('err:', err))
 ```
 
 #### Example for encryption by js settings 
-> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/sp-mdb-js.mjs)]
+> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
 ```alias
 import wo from 'w-orm-mdb'
 import fs from 'fs'

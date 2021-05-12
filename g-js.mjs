@@ -2,24 +2,23 @@ import wo from './src/WOrmMdb.mjs'
 import fs from 'fs'
 
 
-let username = 'username'
-let password = 'password'
+let username = ''
+let password = ''
 let opt = {
-    url: `mdb://${username}:${password}`, //username:password
+    url: `mdb://${username}:${password}`,
     db: 'worm',
     cl: 'users',
     fdModels: './models',
     // modelType: 'js', //default
     // autoGenPK: false,
     storage: './worm.mdb',
-    useEncryption: true,
 }
 
-//因worm.mdb可能被修改, 先刪除再由worm_encryption_def.mdb複製一份來用
+//因worm.mdb可能被修改, 先刪除再由worm_def.mdb複製一份來用
 if (fs.existsSync(opt.storage)) {
     fs.unlinkSync(opt.storage)
 }
-fs.copyFileSync('./worm_encryption_def.mdb', opt.storage) //複製加密版, 密碼為[username:password]
+fs.copyFileSync('./worm_def.mdb', opt.storage)
 
 let rs = [
     {
@@ -186,4 +185,4 @@ test().catch((err) => console.log('err:', err))
 //   { n: 1, nDeleted: 1, ok: 1 }
 // ]
 
-//node --experimental-modules --es-module-specifier-resolution=node sp-mdb-js-encryption.mjs
+//node --experimental-modules --es-module-specifier-resolution=node g-js.mjs
