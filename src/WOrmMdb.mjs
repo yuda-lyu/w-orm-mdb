@@ -203,7 +203,7 @@ function WOrmMdb(opt = {}) {
         // console.log('strConn', strConn)
 
         //adodb, open for x64 記憶體才能支撐讀大檔
-        adodb = Adodb.open(strConn, true) 
+        adodb = Adodb.open(strConn, true)
         // console.log('adodb', adodb)
 
         //initSequelize
@@ -568,7 +568,7 @@ function WOrmMdb(opt = {}) {
             //pmSeries
             await insertAll(si, data)
                 .then(() => {
-                    let res = { n, ok: 1 }
+                    let res = { n, nInserted: n, ok: 1 }
                     pm.resolve(res)
                     ee.emit('change', 'insert', data, res)
                 })
@@ -897,7 +897,7 @@ function WOrmMdb(opt = {}) {
             //destroyAll
             await destroyAll(si, find)
                 .then((res) => {
-                    res = { n, ok: 1 }
+                    res = { n, nDeleted: n, ok: 1 }
                     pm.resolve(res)
                     ee.emit('change', 'delAll', null, res)
                 })

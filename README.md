@@ -174,19 +174,20 @@ async function test() {
 }
 test().catch((err) => console.log('err:', err))
 // change delAll
-// delAll then { n: 0, ok: 1 }
+// delAll then { n: 0, nDeleted: 0, ok: 1 }
 // change insert
-// insert then { n: 3, ok: 1 }
+// insert then { n: 3, nInserted: 3, ok: 1 }
 // change save
 // save then [
 //   { n: 1, nModified: 1, ok: 1 },
 //   { n: 1, nModified: 1, ok: 1 },
-//   { n: 0, nModified: 0, ok: 1 }
+//   { n: 0, nModified: 0, ok: 1 } //autoInsert=false
+//   { n: 1, nInserted: 1, ok: 1 } //autoInsert=true
 // ]
 // select all [
 //   { id: 'id-peter', name: 'peter(modify)', value: 123 },
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: 'random', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 }
 // ]
 // select [
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
@@ -195,7 +196,7 @@ test().catch((err) => console.log('err:', err))
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
 // ]
 // select by $or, $gte, $lte [
-//   { id: 'random', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 }
 // ]
 // select by $or, $and, $ne, $in, $nin [
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
@@ -365,19 +366,20 @@ async function test() {
 }
 test().catch((err) => console.log('err:', err))
 // change delAll
-// delAll then { n: 0, ok: 1 }
+// delAll then { n: 0, nDeleted: 0, ok: 1 }
 // change insert
-// insert then { n: 3, ok: 1 }
+// insert then { n: 3, nInserted: 3, ok: 1 }
 // change save
 // save then [
 //   { n: 1, nModified: 1, ok: 1 },
 //   { n: 1, nModified: 1, ok: 1 },
-//   { n: 0, nModified: 0, ok: 1 }
+//   { n: 0, nModified: 0, ok: 1 } //autoInsert=false
+//   { n: 1, nInserted: 1, ok: 1 } //autoInsert=true
 // ]
 // select all [
 //   { id: 'id-peter', name: 'peter(modify)', value: 123 },
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: 'random', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 }
 // ]
 // select [
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
@@ -386,7 +388,7 @@ test().catch((err) => console.log('err:', err))
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
 // ]
 // select by $or, $gte, $lte [
-//   { id: 'random', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 }
 // ]
 // select by $or, $and, $ne, $in, $nin [
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
@@ -557,19 +559,20 @@ async function test() {
 }
 test().catch((err) => console.log('err:', err))
 // change delAll
-// delAll then { n: 0, ok: 1 }
+// delAll then { n: 0, nDeleted: 0, ok: 1 }
 // change insert
-// insert then { n: 3, ok: 1 }
+// insert then { n: 3, nInserted: 3, ok: 1 }
 // change save
 // save then [
 //   { n: 1, nModified: 1, ok: 1 },
 //   { n: 1, nModified: 1, ok: 1 },
-//   { n: 0, nModified: 0, ok: 1 }
+//   { n: 0, nModified: 0, ok: 1 } //autoInsert=false
+//   { n: 1, nInserted: 1, ok: 1 } //autoInsert=true
 // ]
 // select all [
 //   { id: 'id-peter', name: 'peter(modify)', value: 123 },
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: 'random', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 }
 // ]
 // select [
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
@@ -578,7 +581,7 @@ test().catch((err) => console.log('err:', err))
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
 // ]
 // select by $or, $gte, $lte [
-//   { id: 'random', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 }
 // ]
 // select by $or, $and, $ne, $in, $nin [
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
