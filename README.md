@@ -1,5 +1,5 @@
 # w-orm-mdb
-An object of operator for access mdb database in nodejs.
+An operator for access mdb database in nodejs.
 
 ![language](https://img.shields.io/badge/language-JavaScript-orange.svg) 
 [![npm version](http://img.shields.io/npm/v/w-orm-mdb.svg?style=flat)](https://npmjs.org/package/w-orm-mdb) 
