@@ -24,8 +24,8 @@
     "package",
     "tool",
     "operator",
-    "MSSQL",
-    "sqlite",
+    "access",
+    "mdb",
     "ORM",
     "nodejs"
   ],
