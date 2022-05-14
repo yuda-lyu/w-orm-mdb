@@ -1,7 +1,6 @@
 {
   "name": "w-orm-mdb",
   "version": "1.0.6",
-  "description": "An operator for access mdb database in nodejs.",
   "main": "dist/w-orm-mdb.umd.js",
   "dependencies": {
     "lodash": "^4.17.21",
@@ -30,9 +29,5 @@
     "nodejs"
   ],
   "author": "yuda-lyu(semisphere)",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/yuda-lyu/w-orm-mdb/issues"
-  },
-  "homepage": "https://github.com/yuda-lyu/w-orm-mdb#readme"
+  "license": "MIT"
 }

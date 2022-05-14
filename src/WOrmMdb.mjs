@@ -81,7 +81,7 @@ function WOrmMdb(opt = {}) {
         opt.storage = './worm.mdb'
     }
     opt.storage = path.resolve(opt.storage)
-    if (opt.dbType !== 'Access2000-2003' && opt.dbType !== 'Access2007') {
+    if (opt.dbType !== 'Access2000-2003' && opt.dbType !== 'Access2007' && opt.dbType !== 'Access2016') {
         opt.dbType = 'Access2007'
     }
     if (!isbol(opt.useEncryption)) {
@@ -187,6 +187,7 @@ function WOrmMdb(opt = {}) {
         let kpProvider = {
             'Access2000-2003': 'Microsoft.Jet.OLEDB.4.0',
             'Access2007': 'Microsoft.ACE.OLEDB.12.0',
+            'Access2016': 'Microsoft.ACE.OLEDB.16.0',
         }
         let provider = kpProvider[opt.dbType]
         // console.log('provider', provider)
