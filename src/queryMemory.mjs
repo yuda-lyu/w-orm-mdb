@@ -1,5 +1,5 @@
 import Sequelize from 'sequelize'
-import cloneDeep from 'lodash/cloneDeep'
+import cloneDeep from 'lodash-es/cloneDeep'
 import isarr from 'wsemi/src/isarr.mjs'
 import pm2resolve from 'wsemi/src/pm2resolve.mjs'
 import importModels from 'w-orm-reladb/src/importModels.mjs'

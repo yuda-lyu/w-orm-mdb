@@ -1,5 +1,5 @@
-import isNumber from 'lodash/isNumber'
-import each from 'lodash/each'
+import isNumber from 'lodash-es/isNumber'
+import each from 'lodash-es/each'
 import genPm from 'wsemi/src/genPm.mjs'
 import replace from 'wsemi/src/replace.mjs'
 import treeObj from 'wsemi/src/treeObj.mjs'

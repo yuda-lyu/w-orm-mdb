@@ -6,6 +6,7 @@ An operator for access mdb database in nodejs.
 [![license](https://img.shields.io/npm/l/w-orm-mdb.svg?style=flat)](https://npmjs.org/package/w-orm-mdb) 
 [![gzip file size](http://img.badgesize.io/yuda-lyu/w-orm-mdb/master/dist/w-orm-mdb.umd.js.svg?compression=gzip)](https://github.com/yuda-lyu/w-orm-mdb)
 [![npm download](https://img.shields.io/npm/dt/w-orm-mdb.svg)](https://npmjs.org/package/w-orm-mdb) 
+[![npm download](https://img.shields.io/npm/dm/w-orm-mdb.svg)](https://npmjs.org/package/w-orm-mdb) 
 [![jsdelivr download](https://img.shields.io/jsdelivr/npm/hm/w-orm-mdb.svg)](https://www.jsdelivr.com/package/npm/w-orm-mdb)
 
 ## Documentation
