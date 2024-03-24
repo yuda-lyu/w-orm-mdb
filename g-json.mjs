@@ -186,4 +186,7 @@ test().catch((err) => console.log('err:', err))
 //   { n: 1, nDeleted: 1, ok: 1 }
 // ]
 
+//已知Sequelize將不再支援「sqlite::memory」模式，待更改
+//已知node-adodb會發生「查詢運算式 '$1' 中的 語法錯誤。」，待修復
+
 //node --experimental-modules --es-module-specifier-resolution=node g-json.mjs
