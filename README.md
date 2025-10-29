@@ -4,7 +4,6 @@ An operator for access mdb database in nodejs.
 ![language](https://img.shields.io/badge/language-JavaScript-orange.svg) 
 [![npm version](http://img.shields.io/npm/v/w-orm-mdb.svg?style=flat)](https://npmjs.org/package/w-orm-mdb) 
 [![license](https://img.shields.io/npm/l/w-orm-mdb.svg?style=flat)](https://npmjs.org/package/w-orm-mdb) 
-[![gzip file size](http://img.badgesize.io/yuda-lyu/w-orm-mdb/master/dist/w-orm-mdb.umd.js.svg?compression=gzip)](https://github.com/yuda-lyu/w-orm-mdb)
 [![npm download](https://img.shields.io/npm/dt/w-orm-mdb.svg)](https://npmjs.org/package/w-orm-mdb) 
 [![npm download](https://img.shields.io/npm/dm/w-orm-mdb.svg)](https://npmjs.org/package/w-orm-mdb) 
 [![jsdelivr download](https://img.shields.io/jsdelivr/npm/hm/w-orm-mdb.svg)](https://www.jsdelivr.com/package/npm/w-orm-mdb)
@@ -13,9 +12,8 @@ An operator for access mdb database in nodejs.
 To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-orm-mdb/WOrm.html).
 
 ## Installation
-### Using npm(ES6 module):
-> **Note:** `w-orm-mdb` is mainly dependent on `node-adodb` and `w-orm-reladb`.
 
+### Using npm(ES6 module):
 ```alias
 npm i w-orm-mdb
 ```

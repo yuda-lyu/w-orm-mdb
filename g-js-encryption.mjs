@@ -187,4 +187,4 @@ test().catch((err) => console.log('err:', err))
 //   { n: 1, nDeleted: 1, ok: 1 }
 // ]
 
-//node --experimental-modules --es-module-specifier-resolution=node g-js-encryption.mjs
+//node g-js-encryption.mjs
