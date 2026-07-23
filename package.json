@@ -1,15 +1,15 @@
 {
   "name": "w-orm-mdb",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "main": "dist/w-orm-mdb.umd.js",
   "dependencies": {
     "lodash-es": "^4.18.1",
     "node-adodb": "^5.0.3",
-    "w-orm-reladb": "^1.0.44",
-    "wsemi": "^1.8.66"
+    "w-orm-reladb": "^1.0.45",
+    "wsemi": "^1.8.67"
   },
   "devDependencies": {
-    "w-package-tools": "^1.1.11"
+    "w-package-tools": "^1.1.12"
   },
   "scripts": {
     "test": "mocha --parallel --timeout 60000",
