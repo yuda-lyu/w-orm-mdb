@@ -1,7 +1,8 @@
 import path from 'path'
+import fs from 'fs'
 import events from 'events'
 import Sequelize from 'sequelize'
-import Adodb from 'node-adodb'
+import jetOpen from './jet.mjs'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import get from 'lodash-es/get.js'
 import map from 'lodash-es/map.js'
@@ -183,28 +184,15 @@ function WOrmMdb(opt = {}) {
     async function initAdodb() {
         let err = null
 
-        //provider
-        let kpProvider = {
-            'Access2000-2003': 'Microsoft.Jet.OLEDB.4.0',
-            'Access2007': 'Microsoft.ACE.OLEDB.12.0',
-            'Access2016': 'Microsoft.ACE.OLEDB.16.0',
-        }
-        let provider = kpProvider[opt.dbType]
-        // console.log('provider', provider)
-
         //databasePassword
         let databasePassword = ''
         if (opt.useEncryption) {
-            let up = `${username}:${password}`
-            databasePassword = ` Jet OLEDB:Database Password=${up};`
+            databasePassword = `${username}:${password}`
         }
 
-        //strConn
-        let strConn = `Provider=${provider};Data Source=${opt.storage};Persist Security Info=False;${databasePassword}`
-        // console.log('strConn', strConn)
-
-        //adodb, open for x64 記憶體才能支撐讀大檔
-        adodb = Adodb.open(strConn, true)
+        //adodb, 透過connMDB.exe操作, 使用Windows內建Jet 4.0引擎, 目標機不需安裝任何東西
+        //查詢結果由exe逐列串流寫jsonl, 不受exe程序記憶體限制, 可支援至mdb格式上限(2GB)
+        adodb = jetOpen({ path: opt.storage, password: databasePassword })
         // console.log('adodb', adodb)
 
         //initSequelize
@@ -405,7 +393,7 @@ function WOrmMdb(opt = {}) {
 
 
     async function insertAll(si, data) {
-        //node-adodb 5.0.3不支援transaction(舊版應該有支援), 查ADODB class內沒有transaction, 應該是還在修復中無法用, 故只能1次1組
+        //connMDB.exe目前未支援transaction, 故只能1次1組
 
         //pm
         let pm = genPm()
@@ -928,24 +916,30 @@ function WOrmMdb(opt = {}) {
      * @returns {Promise} 回傳Promise，resolve回傳創建結果，reject回傳錯誤訊息
      */
     async function createStorage() {
-        console.log('還不能createStorage產生mdb檔')
 
         //pm
         let pm = genPm()
 
-        // //initAdodb
-        // let si = await initAdodb()
+        //check, 已存在不重建
+        if (fs.existsSync(opt.storage)) {
+            pm.resolve('existed')
+            return pm
+        }
 
-        // //closeSequelize
-        // await closeSequelize('createStorage')
+        //databasePassword
+        let databasePassword = ''
+        if (opt.useEncryption) {
+            databasePassword = `${username}:${password}`
+        }
 
-        // //check
-        // if (si.err) {
-        //     pm.reject(si.err)
-        // }
-        // else {
-        //     pm.resolve('created')
-        // }
+        //create, 以ADOX建立新Jet4 mdb檔, 有密碼則建立加密檔
+        jetOpen({ path: opt.storage, password: databasePassword }).create()
+            .then(() => {
+                pm.resolve('created')
+            })
+            .catch((err) => {
+                pm.reject(err)
+            })
 
         return pm
     }

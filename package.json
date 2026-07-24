@@ -1,10 +1,9 @@
 {
   "name": "w-orm-mdb",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "main": "dist/w-orm-mdb.umd.js",
   "dependencies": {
     "lodash-es": "^4.18.1",
-    "node-adodb": "^5.0.3",
     "w-orm-reladb": "^1.0.45",
     "wsemi": "^1.8.67"
   },

@@ -7,15 +7,17 @@ import importModels from 'w-orm-reladb/src/importModels.mjs'
 
 async function initSequelize(opt) {
 
-    //sequelize
+    //sequelize, 需使用物件式設定, 若用連線字串[sqlite::memory:]因非合法URL, 會被node的url.parse觸發DEP0170棄用警告
     let setOpt = {
+        dialect: 'sqlite',
+        storage: ':memory:',
         logging: opt.logging,
         define: {
             timestamps: false
         },
         //sync: { force: true }, //強制同步
     }
-    let sequelize = new Sequelize('sqlite::memory:', setOpt)
+    let sequelize = new Sequelize(setOpt)
 
     //importModels, 若model內id不是pk則需要強制更改成為pk, 否則sequelize無法匯入
     let sync = true //需設定sync同步, 否則使用[sqlite::memory:]於importModels後, 無法執行指令如findAll

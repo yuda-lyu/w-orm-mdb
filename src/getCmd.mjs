@@ -30,7 +30,7 @@ function assignCmd(params, cmd) {
         else {
             c = cstr(c)
         }
-        cmd = replace(cmd, `\\$${i}`, c)
+        cmd = replace(cmd, `$${i}`, c) //wsemi replace為字面替換(replaceAll), 不可用regex跳脫\\$
     })
     return cmd
 }
@@ -92,7 +92,7 @@ async function getSelect(tableName, tableModel, useFind) {
 
 
 async function getInsert(tableName, tableModel, data) {
-    //node-adodb內因為是操作Access, 故核心就不支援VALUES做插入多組數據, 所以變成需一次處理1組data, Access不支援[INSERT INTO users(`id`, `name`, `value`) VALUES ("a9", "b", 123.321),("a10", "b", 123.321);]
+    //Access本身不支援VALUES插入多組數據, 需一次處理1組data, 例如不支援[INSERT INTO users(`id`, `name`, `value`) VALUES ("a9", "b", 123.321),("a10", "b", 123.321);]
 
     // //Access可插入多列方式, virtable為虛擬表, 得先於mdb新建, 且至少要有1列以上數據存在才能用此法
     // let t=`
