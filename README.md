@@ -35,7 +35,8 @@ let opt = {
     cl: 'users',
     fdModels: './models',
     // modelType: 'js', //default
-    // autoGenPK: false,
+    // pk: 'id', //default
+    // autoGenPk: true, //default
     storage: './worm.mdb',
 }
 
@@ -86,12 +87,12 @@ async function test() {
     let w = wo(opt)
 
 
-    //on
+    //on, change於資料實際異動成功後發出, error於整批性錯誤或逐筆失敗時發出
     w.on('change', function(mode, data, res) {
         console.log('change', mode)
     })
-    w.on('error', function(err) {
-        console.log('error', err)
+    w.on('error', function(mode, data, err) {
+        console.log('error', mode, err)
     })
 
 
@@ -105,7 +106,7 @@ async function test() {
         })
 
 
-    //insert
+    //insert, 僅於主鍵不存在時寫入, 已存在者跳過且不覆寫
     await w.insert(rs)
         .then(function(msg) {
             console.log('insert then', msg)
@@ -115,7 +116,48 @@ async function test() {
         })
 
 
-    //save
+    //insert, 主鍵已存在故跳過, nInserted為0而非錯誤
+    await w.insert([{ id: 'id-peter', name: 'peter(should be skipped)' }])
+        .then(function(msg) {
+            console.log('insert existed then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insert existed catch', msg)
+        })
+
+
+    //insert, option.returnList為true時改回傳與輸入等長且保序之逐筆結果, 供得知[是哪幾筆]為新資料
+    await w.insert([{ id: 'id-peter', name: 'existed' }, { id: 'id-new', name: 'new', value: 1 }], { returnList: true })
+        .then(function(msg) {
+            console.log('insert returnList then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insert returnList catch', msg)
+        })
+
+
+    //insertBulk, 全批視為一個單位: 全部插入成功, 或一筆都不寫入
+    await w.insertBulk([{ id: 'id-bulk-1', name: 'bulk1', value: 1 }, { id: 'id-bulk-2', name: 'bulk2', value: 2 }])
+        .then(function(msg) {
+            console.log('insertBulk then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insertBulk catch', msg)
+        })
+
+
+    //insertBulk, 任一筆主鍵已存在即整批reject且不寫入任何一筆
+    await w.insertBulk([{ id: 'id-bulk-3', name: 'bulk3' }, { id: 'id-peter', name: 'conflict' }])
+        .then(function(msg) {
+            console.log('insertBulk conflict then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insertBulk conflict catch', String(msg))
+        })
+    console.log('insertBulk conflict, id-bulk-3 =', await w.selectByPk('id-bulk-3'))
+
+
+    //save, 以主鍵為準更新既有數據, 未給之欄位保留
     await w.save(rsm, { autoInsert: false })
         .then(function(msg) {
             console.log('save then', msg)
@@ -123,6 +165,21 @@ async function test() {
         .catch(function(msg) {
             console.log('save catch', msg)
         })
+
+
+    //save, 合併後內容與現值相同則不寫入, nModified為0
+    await w.save([{ id: 'id-peter', name: 'peter(modify)' }])
+        .then(function(msg) {
+            console.log('save same then', msg)
+        })
+        .catch(function(msg) {
+            console.log('save same catch', msg)
+        })
+
+
+    //selectByPk, 由主鍵直讀單筆, 查無則回null
+    console.log('selectByPk', await w.selectByPk('id-rosemary'))
+    console.log('selectByPk not found', await w.selectByPk('id-not-exist'))
 
 
     //select all
@@ -141,13 +198,8 @@ async function test() {
 
 
     //select by $or, $gte, $lte
-    let spb = await w.select({ '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 200 } }] })
+    let spb = await w.select({ '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 400 } }] })
     console.log('select by $or, $gte, $lte', spb)
-
-
-    //select by $or, $and, $ne, $in, $nin (access mdb not support)
-    let spc = await w.select({ '$or': [{ '$and': [{ value: { '$ne': 123 } }, { value: { '$in': [123, 321, 123.456, 456] } }, { value: { '$nin': [456, 654] } }] }, { '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 400 } }] }] })
-    console.log('select by $or, $and, $ne, $in, $nin', spc)
 
 
     //select by regex
@@ -155,19 +207,23 @@ async function test() {
     console.log('selectReg', sr)
 
 
-    //del
-    let d = []
-    if (ss) {
-        d = ss.filter(function(v) {
-            return v.name !== 'kettle'
-        })
-    }
-    await w.del(d)
+    //del, 主鍵未命中為正常結果(ok:1), 未帶有效主鍵為該筆失敗(ok:0並附err)
+    await w.del([{ id: 'id-peter' }, { id: 'id-not-exist' }, { name: 'no-pk' }])
         .then(function(msg) {
             console.log('del then', msg)
         })
         .catch(function(msg) {
             console.log('del catch', msg)
+        })
+
+
+    //delAll, 依條件刪除, n為實際刪除筆數
+    await w.delAll({ value: { '$gte': 400 } })
+        .then(function(msg) {
+            console.log('delAll by find then', msg)
+        })
+        .catch(function(msg) {
+            console.log('delAll by find catch', msg)
         })
 
 
@@ -177,39 +233,46 @@ test().catch((err) => console.log('err:', err))
 // delAll then { n: 0, nDeleted: 0, ok: 1 }
 // change insert
 // insert then { n: 3, nInserted: 3, ok: 1 }
+// change insert
+// insert existed then { n: 1, nInserted: 0, ok: 1 } //主鍵已存在故跳過, 屬正常結果
+// change insert
+// insert returnList then [ { n: 1, nInserted: 0, ok: 1 }, { n: 1, nInserted: 1, ok: 1 } ] //與輸入等長保序
+// change insertBulk
+// insertBulk then { n: 2, nInserted: 2, ok: 1 }
+// error insertBulk The changes you requested to the table were not successful because they would create duplicate values...
+// insertBulk conflict catch Error: The changes you requested to the table were not successful because they would create duplicate values...
+// insertBulk conflict, id-bulk-3 = null //整批reject且不寫入任何一筆
 // change save
 // save then [
-//   { n: 1, nModified: 1, ok: 1 },
-//   { n: 1, nModified: 1, ok: 1 },
-//   { n: 0, nModified: 0, ok: 1 } //autoInsert=false
-//   { n: 1, nInserted: 1, ok: 1 } //autoInsert=true
+//   { n: 1, nInserted: 0, nModified: 1, ok: 1 },
+//   { n: 1, nInserted: 0, nModified: 1, ok: 1 },
+//   { n: 0, nInserted: 0, nModified: 0, ok: 1 } //主鍵不存在且autoInsert為false
 // ]
+// change save
+// save same then [ { n: 1, nInserted: 0, nModified: 0, ok: 1 } ] //合併後內容相同故未寫入
+// selectByPk { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
+// selectByPk not found null
 // select all [
 //   { id: 'id-peter', name: 'peter(modify)', value: 123 },
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: '{random id}', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 },
+//   { id: 'id-new', name: 'new', value: 1 },
+//   { id: 'id-bulk-1', name: 'bulk1', value: 1 },
+//   { id: 'id-bulk-2', name: 'bulk2', value: 2 }
 // ]
-// select [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
-// ]
-// select by $and, $gt, $lt [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
-// ]
-// select by $or, $gte, $lte [
-//   { id: '{random id}', name: 'kettle', value: 456 }
-// ]
-// select by $or, $and, $ne, $in, $nin [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: '{random id}', name: 'kettle', value: 456 }
-// ]
-// selectReg [
-//   { id: 'id-peter', name: 'peter(modify)', value: 123 }
-// ]
+// select [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
+// select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
+// select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
+// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
+// error del invalid id[undefined]
 // change del
 // del then [
-//   { n: 1, nDeleted: 1, ok: 1 },
-//   { n: 1, nDeleted: 1, ok: 1 }
+//   { n: 1, nDeleted: 1, ok: 1 },        //主鍵命中並刪除
+//   { n: 0, nDeleted: 0, ok: 1 },        //主鍵未命中, 屬正常結果
+//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid id[undefined]' } //未帶有效主鍵, 屬該筆失敗
 // ]
+// change delAll
+// delAll by find then { n: 1, nDeleted: 1, ok: 1 }
 ```
 
 #### Example by json settings 
@@ -227,7 +290,8 @@ let opt = {
     cl: 'users',
     fdModels: './models',
     modelType: 'json',
-    // autoGenPK: false,
+    // pk: 'id', //default
+    // autoGenPk: true, //default
     storage: './worm.mdb',
 }
 
@@ -278,12 +342,12 @@ async function test() {
     let w = wo(opt)
 
 
-    //on
+    //on, change於資料實際異動成功後發出, error於整批性錯誤或逐筆失敗時發出
     w.on('change', function(mode, data, res) {
         console.log('change', mode)
     })
-    w.on('error', function(err) {
-        console.log('error', err)
+    w.on('error', function(mode, data, err) {
+        console.log('error', mode, err)
     })
 
 
@@ -297,7 +361,7 @@ async function test() {
         })
 
 
-    //insert
+    //insert, 僅於主鍵不存在時寫入, 已存在者跳過且不覆寫
     await w.insert(rs)
         .then(function(msg) {
             console.log('insert then', msg)
@@ -307,7 +371,48 @@ async function test() {
         })
 
 
-    //save
+    //insert, 主鍵已存在故跳過, nInserted為0而非錯誤
+    await w.insert([{ id: 'id-peter', name: 'peter(should be skipped)' }])
+        .then(function(msg) {
+            console.log('insert existed then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insert existed catch', msg)
+        })
+
+
+    //insert, option.returnList為true時改回傳與輸入等長且保序之逐筆結果, 供得知[是哪幾筆]為新資料
+    await w.insert([{ id: 'id-peter', name: 'existed' }, { id: 'id-new', name: 'new', value: 1 }], { returnList: true })
+        .then(function(msg) {
+            console.log('insert returnList then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insert returnList catch', msg)
+        })
+
+
+    //insertBulk, 全批視為一個單位: 全部插入成功, 或一筆都不寫入
+    await w.insertBulk([{ id: 'id-bulk-1', name: 'bulk1', value: 1 }, { id: 'id-bulk-2', name: 'bulk2', value: 2 }])
+        .then(function(msg) {
+            console.log('insertBulk then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insertBulk catch', msg)
+        })
+
+
+    //insertBulk, 任一筆主鍵已存在即整批reject且不寫入任何一筆
+    await w.insertBulk([{ id: 'id-bulk-3', name: 'bulk3' }, { id: 'id-peter', name: 'conflict' }])
+        .then(function(msg) {
+            console.log('insertBulk conflict then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insertBulk conflict catch', String(msg))
+        })
+    console.log('insertBulk conflict, id-bulk-3 =', await w.selectByPk('id-bulk-3'))
+
+
+    //save, 以主鍵為準更新既有數據, 未給之欄位保留
     await w.save(rsm, { autoInsert: false })
         .then(function(msg) {
             console.log('save then', msg)
@@ -315,6 +420,21 @@ async function test() {
         .catch(function(msg) {
             console.log('save catch', msg)
         })
+
+
+    //save, 合併後內容與現值相同則不寫入, nModified為0
+    await w.save([{ id: 'id-peter', name: 'peter(modify)' }])
+        .then(function(msg) {
+            console.log('save same then', msg)
+        })
+        .catch(function(msg) {
+            console.log('save same catch', msg)
+        })
+
+
+    //selectByPk, 由主鍵直讀單筆, 查無則回null
+    console.log('selectByPk', await w.selectByPk('id-rosemary'))
+    console.log('selectByPk not found', await w.selectByPk('id-not-exist'))
 
 
     //select all
@@ -333,13 +453,8 @@ async function test() {
 
 
     //select by $or, $gte, $lte
-    let spb = await w.select({ '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 200 } }] })
+    let spb = await w.select({ '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 400 } }] })
     console.log('select by $or, $gte, $lte', spb)
-
-
-    //select by $or, $and, $ne, $in, $nin (access mdb not support)
-    let spc = await w.select({ '$or': [{ '$and': [{ value: { '$ne': 123 } }, { value: { '$in': [123, 321, 123.456, 456] } }, { value: { '$nin': [456, 654] } }] }, { '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 400 } }] }] })
-    console.log('select by $or, $and, $ne, $in, $nin', spc)
 
 
     //select by regex
@@ -347,19 +462,23 @@ async function test() {
     console.log('selectReg', sr)
 
 
-    //del
-    let d = []
-    if (ss) {
-        d = ss.filter(function(v) {
-            return v.name !== 'kettle'
-        })
-    }
-    await w.del(d)
+    //del, 主鍵未命中為正常結果(ok:1), 未帶有效主鍵為該筆失敗(ok:0並附err)
+    await w.del([{ id: 'id-peter' }, { id: 'id-not-exist' }, { name: 'no-pk' }])
         .then(function(msg) {
             console.log('del then', msg)
         })
         .catch(function(msg) {
             console.log('del catch', msg)
+        })
+
+
+    //delAll, 依條件刪除, n為實際刪除筆數
+    await w.delAll({ value: { '$gte': 400 } })
+        .then(function(msg) {
+            console.log('delAll by find then', msg)
+        })
+        .catch(function(msg) {
+            console.log('delAll by find catch', msg)
         })
 
 
@@ -369,43 +488,50 @@ test().catch((err) => console.log('err:', err))
 // delAll then { n: 0, nDeleted: 0, ok: 1 }
 // change insert
 // insert then { n: 3, nInserted: 3, ok: 1 }
+// change insert
+// insert existed then { n: 1, nInserted: 0, ok: 1 } //主鍵已存在故跳過, 屬正常結果
+// change insert
+// insert returnList then [ { n: 1, nInserted: 0, ok: 1 }, { n: 1, nInserted: 1, ok: 1 } ] //與輸入等長保序
+// change insertBulk
+// insertBulk then { n: 2, nInserted: 2, ok: 1 }
+// error insertBulk The changes you requested to the table were not successful because they would create duplicate values...
+// insertBulk conflict catch Error: The changes you requested to the table were not successful because they would create duplicate values...
+// insertBulk conflict, id-bulk-3 = null //整批reject且不寫入任何一筆
 // change save
 // save then [
-//   { n: 1, nModified: 1, ok: 1 },
-//   { n: 1, nModified: 1, ok: 1 },
-//   { n: 0, nModified: 0, ok: 1 } //autoInsert=false
-//   { n: 1, nInserted: 1, ok: 1 } //autoInsert=true
+//   { n: 1, nInserted: 0, nModified: 1, ok: 1 },
+//   { n: 1, nInserted: 0, nModified: 1, ok: 1 },
+//   { n: 0, nInserted: 0, nModified: 0, ok: 1 } //主鍵不存在且autoInsert為false
 // ]
-// select all [
+// change save
+// save same then [ { n: 1, nInserted: 0, nModified: 0, ok: 1 } ] //合併後內容相同故未寫入
+// selectByPk { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
+// selectByPk not found null
+// select all [ //以json格式之models設定, 結果與js格式相同
 //   { id: 'id-peter', name: 'peter(modify)', value: 123 },
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: '{random id}', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 },
+//   { id: 'id-new', name: 'new', value: 1 },
+//   { id: 'id-bulk-1', name: 'bulk1', value: 1 },
+//   { id: 'id-bulk-2', name: 'bulk2', value: 2 }
 // ]
-// select [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
-// ]
-// select by $and, $gt, $lt [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
-// ]
-// select by $or, $gte, $lte [
-//   { id: '{random id}', name: 'kettle', value: 456 }
-// ]
-// select by $or, $and, $ne, $in, $nin [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: '{random id}', name: 'kettle', value: 456 }
-// ]
-// selectReg [
-//   { id: 'id-peter', name: 'peter(modify)', value: 123 }
-// ]
+// select [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
+// select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
+// select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
+// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
+// error del invalid id[undefined]
 // change del
 // del then [
-//   { n: 1, nDeleted: 1, ok: 1 },
-//   { n: 1, nDeleted: 1, ok: 1 }
+//   { n: 1, nDeleted: 1, ok: 1 },        //主鍵命中並刪除
+//   { n: 0, nDeleted: 0, ok: 1 },        //主鍵未命中, 屬正常結果
+//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid id[undefined]' } //未帶有效主鍵, 屬該筆失敗
 // ]
+// change delAll
+// delAll by find then { n: 1, nDeleted: 1, ok: 1 }
 ```
 
 #### Example for encryption by js settings 
-> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
+> **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js-encryption.mjs)]
 ```alias
 import fs from 'fs'
 import wo from 'w-orm-mdb'
@@ -414,12 +540,13 @@ import wo from 'w-orm-mdb'
 let username = 'username'
 let password = 'password'
 let opt = {
-    url: `mdb://${username}:${password}`, //username:password
+    url: `mdb://${username}:${password}`, //加密檔之密碼組成為`${username}:${password}`
     db: 'worm',
     cl: 'users',
     fdModels: './models',
     // modelType: 'js', //default
-    // autoGenPK: false,
+    // pk: 'id', //default
+    // autoGenPk: true, //default
     storage: './worm.mdb',
     useEncryption: true,
 }
@@ -457,14 +584,10 @@ let rsm = [
         id: 'id-rosemary',
         name: 'rosemary(modify)'
     },
-    {
-        id: '',
-        name: 'kettle(modify)'
-    },
 ]
 
 async function test() {
-    //測試mdb
+    //測試加密mdb
 
 
     //w
@@ -475,8 +598,8 @@ async function test() {
     w.on('change', function(mode, data, res) {
         console.log('change', mode)
     })
-    w.on('error', function(err) {
-        console.log('error', err)
+    w.on('error', function(mode, data, err) {
+        console.log('error', mode, err)
     })
 
 
@@ -500,6 +623,16 @@ async function test() {
         })
 
 
+    //insertBulk
+    await w.insertBulk([{ id: 'id-bulk-1', name: 'bulk1', value: 1 }])
+        .then(function(msg) {
+            console.log('insertBulk then', msg)
+        })
+        .catch(function(msg) {
+            console.log('insertBulk catch', msg)
+        })
+
+
     //save
     await w.save(rsm, { autoInsert: false })
         .then(function(msg) {
@@ -510,29 +643,13 @@ async function test() {
         })
 
 
+    //selectByPk
+    console.log('selectByPk', await w.selectByPk('id-rosemary'))
+
+
     //select all
     let ss = await w.select()
     console.log('select all', ss)
-
-
-    //select
-    let so = await w.select({ id: 'id-rosemary' })
-    console.log('select', so)
-
-
-    //select by $and, $gt, $lt
-    let spa = await w.select({ '$and': [{ value: { '$gt': 123 } }, { value: { '$lt': 200 } }] })
-    console.log('select by $and, $gt, $lt', spa)
-
-
-    //select by $or, $gte, $lte
-    let spb = await w.select({ '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 200 } }] })
-    console.log('select by $or, $gte, $lte', spb)
-
-
-    //select by $or, $and, $ne, $in, $nin (access mdb not support)
-    let spc = await w.select({ '$or': [{ '$and': [{ value: { '$ne': 123 } }, { value: { '$in': [123, 321, 123.456, 456] } }, { value: { '$nin': [456, 654] } }] }, { '$or': [{ value: { '$lte': -1 } }, { value: { '$gte': 400 } }] }] })
-    console.log('select by $or, $and, $ne, $in, $nin', spc)
 
 
     //select by regex
@@ -541,18 +658,22 @@ async function test() {
 
 
     //del
-    let d = []
-    if (ss) {
-        d = ss.filter(function(v) {
-            return v.name !== 'kettle'
-        })
-    }
-    await w.del(d)
+    await w.del([{ id: 'id-peter' }])
         .then(function(msg) {
             console.log('del then', msg)
         })
         .catch(function(msg) {
             console.log('del catch', msg)
+        })
+
+
+    //delAll
+    await w.delAll()
+        .then(function(msg) {
+            console.log('delAll all then', msg)
+        })
+        .catch(function(msg) {
+            console.log('delAll all catch', msg)
         })
 
 
@@ -562,37 +683,23 @@ test().catch((err) => console.log('err:', err))
 // delAll then { n: 0, nDeleted: 0, ok: 1 }
 // change insert
 // insert then { n: 3, nInserted: 3, ok: 1 }
+// change insertBulk
+// insertBulk then { n: 1, nInserted: 1, ok: 1 }
 // change save
 // save then [
-//   { n: 1, nModified: 1, ok: 1 },
-//   { n: 1, nModified: 1, ok: 1 },
-//   { n: 0, nModified: 0, ok: 1 } //autoInsert=false
-//   { n: 1, nInserted: 1, ok: 1 } //autoInsert=true
+//   { n: 1, nInserted: 0, nModified: 1, ok: 1 },
+//   { n: 1, nInserted: 0, nModified: 1, ok: 1 }
 // ]
+// selectByPk { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
 // select all [
 //   { id: 'id-peter', name: 'peter(modify)', value: 123 },
 //   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: '{random id}', name: 'kettle', value: 456 }
+//   { id: '{random id}', name: 'kettle', value: 456 },
+//   { id: 'id-bulk-1', name: 'bulk1', value: 1 }
 // ]
-// select [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
-// ]
-// select by $and, $gt, $lt [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 }
-// ]
-// select by $or, $gte, $lte [
-//   { id: '{random id}', name: 'kettle', value: 456 }
-// ]
-// select by $or, $and, $ne, $in, $nin [
-//   { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 },
-//   { id: '{random id}', name: 'kettle', value: 456 }
-// ]
-// selectReg [
-//   { id: 'id-peter', name: 'peter(modify)', value: 123 }
-// ]
+// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
 // change del
-// del then [
-//   { n: 1, nDeleted: 1, ok: 1 },
-//   { n: 1, nDeleted: 1, ok: 1 }
-// ]
+// del then [ { n: 1, nDeleted: 1, ok: 1 } ]
+// change delAll
+// delAll all then { n: 3, nDeleted: 3, ok: 1 }
 ```

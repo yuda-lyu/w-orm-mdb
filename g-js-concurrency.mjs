@@ -10,7 +10,8 @@ let opt = {
     cl: 'users',
     fdModels: './models',
     // modelType: 'js', //default
-    // autoGenPK: false,
+    // autoGenPk: true, //default
+    // useStable: true, //default, 以佇列序列化同一行程內之併發呼叫
     storage: './worm.mdb',
 }
 
@@ -96,9 +97,9 @@ test()
 // call select 2
 // call save 3
 // call select 4
-// save then 1 msg= [ { n: 1, nInserted: 1, ok: 1 } ]
+// save then 1 msg= [ { n: 1, nInserted: 1, nModified: 0, ok: 1 } ]
 // select then 2 len= 1
-// save then 3 msg= [ { n: 1, nInserted: 1, ok: 1 } ]
+// save then 3 msg= [ { n: 1, nInserted: 1, nModified: 0, ok: 1 } ]
 // select then 4 len= 2
 
 

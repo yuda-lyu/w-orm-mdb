@@ -1,4 +1,5 @@
 import rollupFiles from 'w-package-tools/src/rollupFiles.mjs'
+import getFiles from 'w-package-tools/src/getFiles.mjs'
 
 
 let fdSrc = './src'
@@ -19,7 +20,6 @@ rollupFiles({
         'sqlite': 'sqlite',
         'async': 'async',
         'eslint': 'eslint', //w-auto-sequelize的auto-sequelize.js有使用eslint, 故得設定eslint為不打包名單
-        'node-adodb': 'node-adodb',
     },
     external: [
         'events',
@@ -30,7 +30,6 @@ rollupFiles({
         'sqlite',
         'async',
         'eslint',
-        'node-adodb',
     ],
 })
 
