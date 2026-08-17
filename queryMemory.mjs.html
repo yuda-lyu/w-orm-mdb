@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>queryMemory.mjs - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getDeleteByPks">getDeleteByPks</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">queryMemory.mjs</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import Sequelize from 'sequelize'
+import cloneDeep from 'lodash-es/cloneDeep.js'
+import each from 'lodash-es/each.js'
+import get from 'lodash-es/get.js'
+import isarr from 'wsemi/src/isarr.mjs'
+import arrHas from 'wsemi/src/arrHas.mjs'
+import pm2resolve from 'wsemi/src/pm2resolve.mjs'
+import importModels from './importModels.mjs'
+
+
+//字串類之型別, 於記憶體過濾表內一律改以CITEXT承載
+const tpsStr = ['STRING', 'TEXT', 'CHAR', 'CITEXT']
+
+
+/**
+ * 初始化sequelize
+ *
+ * 註: 本實例僅用於由sequelize產生SQL文字(見getCmd.mjs), 實際數據操作一律交Jet引擎,
+ * 故其資料表為記憶體sqlite且不承載任何數據
+ *
+ * @param {Object} opt 輸入設定物件
+ * @returns {Promise} 回傳Promise，resolve回傳{sequelize,mds}
+ */
+async function initSequelize(opt) {
+
+    //sequelize, 需使用物件式設定, 若用連線字串[sqlite::memory:]因非合法URL, 會被node的url.parse觸發DEP0170棄用警告
+    let setOpt = {
+        dialect: 'sqlite',
+        storage: ':memory:',
+        logging: opt.logging,
+        define: {
+            timestamps: false
+        },
+        //sync: { force: true }, //強制同步
+    }
+    let sequelize = new Sequelize(setOpt)
+
+    //importModels, 若model內id不是pk則需要強制更改成為pk, 否則sequelize無法匯入
+    //註: 不需sync, 因本實例僅供讀取欄位定義(rawAttributes), 不於其上執行任何查詢
+    let r = await pm2resolve(importModels)(opt.fdModels, sequelize, opt.cl, { sync: false, type: opt.modelType })
+
+    //check
+    if (r.state === 'error') {
+        let err = `can not import model: ${opt.cl}, need to use genModelsByDB, genModelsByTabs or create ${opt.cl}.${opt.modelType}`
+        return Promise.reject(err)
+    }
+
+    return {
+        sequelize,
+        mds: r.msg,
+    }
+}
+
+
+/**
+ * 取記憶體過濾表所用之欄位型別
+ *
+ * 字串類欄位一律改為CITEXT，於sqlite即[TEXT COLLATE NOCASE]，令比對不分大小寫
+ * 註: Jet引擎之字串比對不分大小寫(已實測'ID-PETER'命中'id-peter'，且主鍵唯一約束亦視兩者為同一鍵)，
+ * 而sqlite預設之BINARY定序分大小寫。記憶體過濾層係模擬後端行為之實作細節，
+ * 若不對齊將出現[selectByPk命中而select({主鍵})查無]之矛盾，與規格[命中判定基準須一致]相違
+ * 註: sqlite之NOCASE僅折疊ASCII之A-Z，非ASCII字元仍為逐位元組比對
+ *
+ * @ignore
+ * @param {Object} tp 輸入原欄位型別物件
+ * @returns {Object} 回傳供記憶體過濾表使用之欄位型別物件
+ */
+function getTypeNocase(tp) {
+
+    //key
+    let k = get(tp, 'key', '')
+
+    //check, 非字串類者維持原型別
+    if (!arrHas(k, tpsStr)) {
+        return tp
+    }
+
+    return Sequelize.CITEXT
+}
+
+
+/**
+ * 於記憶體內過濾數據
+ *
+ * 因Access之SQL方言不支援$in、$nin、$regex等條件，故由Jet取回全部數據後於記憶體sqlite內過濾
+ *
+ * @param {Object} opt 輸入設定物件
+ * @param {Object} attrs 輸入資料表欄位定義物件，取自model之rawAttributes
+ * @param {Array} data 輸入待過濾之數據陣列
+ * @param {Object} useFind 輸入已轉譯為sequelize運算子之查詢條件物件
+ * @returns {Promise} 回傳Promise，resolve回傳過濾後之數據陣列
+ */
+async function queryMemory(opt, attrs, data, useFind) {
+
+    //check
+    if (!isarr(data)) {
+        return Promise.reject('data is not an array')
+    }
+
+    //sequelize
+    let setOpt = {
+        dialect: 'sqlite',
+        storage: ':memory:',
+        logging: opt.logging,
+        define: {
+            timestamps: false
+        },
+    }
+    let sequelize = new Sequelize(setOpt)
+
+    //defs, 由來源model之欄位定義衍生, 字串類改CITEXT令比對不分大小寫以對齊Jet
+    let defs = {}
+    each(attrs, (at, k) => {
+        defs[k] = {
+            type: getTypeNocase(get(at, 'type')),
+            primaryKey: get(at, 'primaryKey', false) === true,
+            allowNull: true, //過濾表不承擔約束, 以免來源數據觸發非預期失敗
+        }
+    })
+
+    //check, 主鍵欄位須標記為primaryKey, 否則sequelize會自行添加id欄位,
+    //該欄位將混入findAll之結果而使select回傳資料庫外之內部欄位
+    if (get(defs, `${opt.pk}.primaryKey`) === false) {
+        defs[opt.pk].primaryKey = true
+    }
+
+    //md, 自行定義而不重新匯入models, 省一次匯入且得指定定序
+    let md = sequelize.define(opt.cl, defs, {
+        tableName: opt.cl,
+        timestamps: false,
+    })
+
+    //sync
+    await md.sync()
+
+    //bulkCreate
+    await md.bulkCreate(data)
+
+    //setting
+    let setting = {
+        where: useFind,
+        raw: true,
+    }
+
+    //findAll
+    let rs = await md.findAll(setting)
+
+    //cloneDeep
+    rs = cloneDeep(rs)
+
+    //close
+    if (sequelize !== null) {
+        await sequelize.close()
+    }
+
+    return rs
+}
+
+
+export { initSequelize, queryMemory }
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon Aug 17 2026 20:24:22 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

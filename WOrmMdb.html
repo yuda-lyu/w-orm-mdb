@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#jetOpen">jetOpen</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getDeleteByPks">getDeleteByPks</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -74,13 +74,20 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>操作關聯式資料庫</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>操作Access mdb資料庫</p>
+<p>註: 主鍵欄位取自opt.pk，預設為id，支援由呼叫端指定
+註: 本套件經connMDB.exe操作Windows內建之Jet 4.0引擎，僅支援.mdb(Jet4)不支援.accdb
+註: Jet引擎之字串比對不分大小寫，故主鍵之[命中]認定亦不分大小寫，
+且select之記憶體過濾層已一併對齊(見queryMemory.mjs)，令兩者判定一致
+註: sqlite之NOCASE僅折疊ASCII之A-Z，與Jet對部分非ASCII字元之折疊不同，
+故僅大小寫相異之非ASCII主鍵於select與selectByPk仍可能判定不一致
+註: insert與save之原子性倚賴資料表主鍵欄位具唯一約束(PRIMARY KEY)，資料表建立時須含之</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line48">line 48</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line75">line 75</a>
     </li></ul></dd>
     
 
@@ -287,12 +294,12 @@
             
                 <td class="default">
                 
-                    <code>'./worm.db'</code>
+                    <code>'./worm.mdb'</code>
                 
                 </td>
             
 
-            <td class="description last"><p>輸入mdb資料庫檔案位置字串，預設'./worm.db'</p></td>
+            <td class="description last"><p>輸入mdb資料庫檔案位置字串，預設'./worm.mdb'</p></td>
         </tr>
 
     
@@ -459,46 +466,6 @@
 
         <tr>
             
-                <td class="name"><code>dbType</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                    <code>'Access2007'</code>
-                
-                </td>
-            
-
-            <td class="description last"><p>輸入使用資料庫類型字串，可選'Access2000-2003'、'Access2007'，預設'Access2007'</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>modelType</code></td>
             
 
@@ -619,7 +586,7 @@
 
         <tr>
             
-                <td class="name"><code>autoGenPK</code></td>
+                <td class="name"><code>autoGenPk</code></td>
             
 
             <td class="type">
@@ -652,7 +619,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入若數據pk(id)欄位沒給時則自動給予隨機uuid，型別為布林值，預設true</p></td>
+            <td class="description last"><p>輸入若數據主鍵欄位沒給時則自動給予隨機uuid，型別為布林值，預設true</p></td>
         </tr>
 
     
@@ -692,7 +659,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入是否使用穩定模式，使用佇列管理同時只能進行一種操作故會犧牲效能，mdb需開啟穩定模式才不會有非預期錯誤，型別為布林值，預設true</p></td>
+            <td class="description last"><p>輸入是否使用穩定模式，使用佇列管理同時只能進行一種操作故會犧牲效能，型別為布林值，預設true</p></td>
         </tr>
 
     
@@ -773,6 +740,114 @@
 
     
 
+    <h4 class="name" id=".closeSequelize"><span class="type-signature type-signature-async, static">(async, static) </span>closeSequelize<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>關閉sequelize</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line371">line 371</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳Promise，resolve代表關閉成功，reject回傳錯誤訊息</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
     <h4 class="name" id=".createStorage"><span class="type-signature type-signature-async, static">(async, static) </span>createStorage<span class="signature">()</span><span class="type-signature"> &rarr; {Promise}</span></h4>
 
     
@@ -783,13 +858,14 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>創建mdb資料庫檔案</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>創建mdb資料庫檔案</p>
+<p>註: 建出者為空庫，資料表需另建</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line918">line 918</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1611">line 1611</a>
     </li></ul></dd>
     
 
@@ -891,13 +967,19 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>刪除數據</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>刪除數據</p>
+<p>註: 回傳陣列恆與輸入等長，各筆之n與nDeleted皆為主鍵命中筆數，值為0或1，未命中為0且屬正常結果
+註: 判斷某筆是否真的被刪除一律以nDeleted為準
+註: 未帶有效主鍵者為該筆之輸入問題，回ok為0與err且不送查詢條件(以免無效值被轉為null而誤中其他數據)，
+不中斷其餘筆數，以此與[主鍵未命中]之ok為1區辨
+註: 本函數不受opt.autoGenPk影響，於任一設定下皆不補值
+註: 由DELETE語句自身之影響列數判定命中，不另行查詢以免多一次往返且與刪除間存在競態</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line746">line 746</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1325">line 1325</a>
     </li></ul></dd>
     
 
@@ -1005,7 +1087,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入數據物件或陣列</p></td>
+            <td class="description last"><p>輸入數據物件或陣列，會查找各數據的opt.pk值，有存在者就刪除</p></td>
         </tr>
 
     
@@ -1112,46 +1194,6 @@
         </tr>
 
     
-
-        <tr>
-            
-                <td class="name"><code>transaction</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                    <code>null</code>
-                
-                </td>
-            
-
-            <td class="description last"><p>輸入交易(transaction)物件，預設為null</p></td>
-        </tr>
-
-    
     </tbody>
 </table>
 
@@ -1181,7 +1223,7 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve回傳刪除結果，reject回傳錯誤訊息</p>
+    <p>回傳Promise，resolve回傳與輸入等長之刪除結果陣列[{n,nDeleted,ok}]，reject回傳錯誤訊息</p>
 </div>
 
 
@@ -1218,13 +1260,19 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>刪除全部數據，需與del分開，避免未傳數據導致直接刪除全表</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>依條件刪除多筆數據，需與del分開，避免未傳數據導致直接刪除全表</p>
+<p>註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數
+註: find未給或為空物件時刪除全部數據；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
+註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵清單刪除，
+令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin、$regex等運算子，
+會出現[select查得到但delAll刪不到]或反之之不一致
+註: 分批之DELETE以交易包覆，令任一批失敗時整體回滾而不留下部份刪除</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line855">line 855</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1486">line 1486</a>
     </li></ul></dd>
     
 
@@ -1333,7 +1381,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入刪除條件物件</p></td>
+            <td class="description last"><p>輸入刪除條件物件，不給予find則代表刪除全部數據</p></td>
         </tr>
 
     
@@ -1440,46 +1488,6 @@
         </tr>
 
     
-
-        <tr>
-            
-                <td class="name"><code>transaction</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                    <code>null</code>
-                
-                </td>
-            
-
-            <td class="description last"><p>輸入交易(transaction)物件，預設為null</p></td>
-        </tr>
-
-    
     </tbody>
 </table>
 
@@ -1509,7 +1517,7 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve回傳刪除結果，reject回傳錯誤訊息</p>
+    <p>回傳Promise，resolve回傳刪除結果{n,nDeleted,ok}，reject回傳錯誤訊息</p>
 </div>
 
 
@@ -1552,7 +1560,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1011">line 1011</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1642">line 1642</a>
     </li></ul></dd>
     
 
@@ -1851,13 +1859,15 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>初始化adodb</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>初始化操作實例</p>
+<p>註: connMDB.exe為one-shot程序，每次呼叫各自開啟與關閉連線，故實例本身不持有資料庫連線；
+sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line184">line 184</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line336">line 336</a>
     </li></ul></dd>
     
 
@@ -1922,7 +1932,7 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve代表關閉成功，reject回傳錯誤訊息</p>
+    <p>回傳Promise，resolve回傳實例物件，reject回傳錯誤訊息</p>
 </div>
 
 
@@ -1959,13 +1969,22 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>插入數據，插入同樣數據會自動產生不同_id，故insert前需自行判斷有無重複</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>插入數據，僅於主鍵不存在時寫入，已存在者跳過且不覆寫</p>
+<p>由Jet於主鍵之唯一約束上原子完成[檢查主鍵不存在]與[寫入]，併發時同一主鍵僅有一次成功</p>
+<p>註: n為輸入筆數即本次嘗試插入之基準，nInserted為實際插入筆數，全數已存在而nInserted為0屬正常結果
+註: 同批含重複主鍵時僅首筆計入nInserted，其餘視為已存在
+註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+註: 全部插入語句於單次呼叫exe內循序送出且不因單筆衝突而中止，故一次往返即可取得精確之nInserted
+註: option.returnList為true時改回傳與輸入等長且保序之逐筆陣列[{n,nInserted,ok}]，
+供呼叫端得知[是哪幾筆]為新資料而非僅[有幾筆]；逐筆元素之n與ok恆為1，
+因insert之任何錯誤皆屬整批性錯誤而reject，故不出現ok為0與err。
+回傳形式之切換為靜態，僅由本選項之取值決定，不因數據內容或執行結果而變</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line517">line 517</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line723">line 723</a>
     </li></ul></dd>
     
 
@@ -2183,13 +2202,13 @@
 
         <tr>
             
-                <td class="name"><code>transaction</code></td>
+                <td class="name"><code>returnList</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type">Boolean</span>
 
 
 
@@ -2211,12 +2230,12 @@
             
                 <td class="default">
                 
-                    <code>null</code>
+                    <code>false</code>
                 
                 </td>
             
 
-            <td class="description last"><p>輸入交易(transaction)物件，預設為null</p></td>
+            <td class="description last"><p>輸入是否改回傳與輸入等長之逐筆結果陣列，預設為false</p></td>
         </tr>
 
     
@@ -2249,7 +2268,303 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve回傳插入結果，reject回傳錯誤訊息</p>
+    <p>回傳Promise，resolve回傳插入結果{n,nInserted,ok}，或於option.returnList為true時回傳[{n,nInserted,ok}]，reject回傳錯誤訊息</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".insertBulk"><span class="type-signature type-signature-async, static">(async, static) </span>insertBulk<span class="signature">(data, option<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>批次插入數據，全批視為一個單位：全部插入成功，或一筆都不寫入</p>
+<p>本函數非insert之加速版，兩者衝突政策不同：insert於主鍵已存在時跳過該筆且整批ok為1，
+本函數則整批reject且不寫入任何一筆，同批含重複主鍵者亦視為衝突。
+確無衝突時兩者之可觀察結果完全相同，差異僅於有衝突時顯現。</p>
+<p>註: n為輸入筆數即本次嘗試插入之基準；nInserted於成功時恆等於n，雖無額外資訊仍保留，
+令呼叫端得與insert共用同一段結果處理程式碼
+註: 不提供逐筆結果，故不出現ok為0與err；需要逐筆處置者改用insert
+註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+註: [全有全無]以Jet之交易(OleDbTransaction)包覆全部插入語句達成，任一筆失敗即回滾，
+故reject之後資料庫狀態與呼叫前相同，無須補償動作；同批含重複主鍵者亦於交易內被偵測為衝突</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line894">line 894</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>data</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+|
+
+<span class="param-type">Array</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入數據物件或陣列</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>option</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>{}</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入設定物件，預設為{}</p>
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>instance</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>null</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入實例instance物件，預設為null</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳Promise，resolve回傳插入結果{n,nInserted,ok}，reject回傳錯誤訊息</p>
 </div>
 
 
@@ -2286,13 +2601,27 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>儲存數據</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>儲存數據，以主鍵為準更新既有數據，未給之欄位保留；主鍵不存在且option.autoInsert為true(預設)時改為插入</p>
+<p>採條件寫入配合衝突偵測與重試: 每次寫入本身為單一條件式原子語句——插入由主鍵之唯一約束判定、
+更新由WHERE主鍵之比對判定，皆非由預讀值決定其成敗；預讀僅用於選擇發出哪一條語句，
+選錯不會產生錯誤結果，只會被偵測並重試(插入撞既有主鍵、更新未命中任何列)，故縱使預讀值已過期，
+最終結果仍與該次操作單獨執行時相同。</p>
+<p>註: 回傳陣列恆與輸入等長，輸入單一物件亦回傳長度1之陣列
+註: n為主鍵命中筆數，值為0或1，命中(不論內容有無變更)或經插入而產生皆為1；nInserted與nModified恆同時出現
+註: [內容相同]之判定基準為將待寫入物件合併進現值後與現值相同，非待寫入物件與現值全等，
+故只給部份欄位且該些欄位值皆與現值相同時，合併結果等於現值，nModified為0。
+合併取淺層以與Jet整欄取代之寫入行為一致，令nModified忠實反映資料庫端是否真的寫入
+註: 不以UPDATE之影響列數決定nModified，因Jet之影響列數為[符合WHERE之列數]而非[內容真的有變之列數]
+(已實測: 將欄位設為與現值相同之值仍回報影響1列)
+註: 本筆失敗不中斷整批，該筆以ok為0並附err回報
+註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+註: 各回合之預讀與寫入皆整批送出，故N筆數據於無衝突時僅需2次呼叫exe而非2N次</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line594">line 594</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1021">line 1021</a>
     </li></ul></dd>
     
 
@@ -2510,53 +2839,13 @@
 
         <tr>
             
-                <td class="name"><code>transaction</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-                <td class="default">
-                
-                    <code>null</code>
-                
-                </td>
-            
-
-            <td class="description last"><p>輸入交易(transaction)物件，預設為null</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>autoInsert</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">boolean</span>
+<span class="param-type">Boolean</span>
 
 
 
@@ -2616,7 +2905,7 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve回傳儲存結果，reject回傳錯誤訊息</p>
+    <p>回傳Promise，resolve回傳與輸入等長之儲存結果陣列[{n,nInserted,nModified,ok}]，reject回傳錯誤訊息</p>
 </div>
 
 
@@ -2653,13 +2942,16 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>查詢數據</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>查詢數據</p>
+<p>註: 恆回傳陣列，無符合數據回傳空陣列而不回傳null
+註: find未給或為空物件時回傳全部數據
+註: 本函數不得有副作用，故不創建資料表</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line472">line 472</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line526">line 526</a>
     </li></ul></dd>
     
 
@@ -2875,10 +3167,261 @@
         </tr>
 
     
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳Promise，resolve回傳數據陣列，reject回傳錯誤訊息</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Promise</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id=".selectByPk"><span class="type-signature type-signature-async, static">(async, static) </span>selectByPk<span class="signature">(pk, option<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>由主鍵查詢單筆數據，因由Jet依主鍵取值且僅回傳單筆，不需如select提取全部數據再過濾，故數據量大時效能較佳</p>
+<p>註: 主鍵欄位取自opt.pk，預設為id，支援由呼叫端指定
+註: 主鍵未命中或主鍵值無效皆回傳null而不reject，[命中]之判定基準與insert、save、del內對既有數據之認定一致
+註: Jet之字串比對不分大小寫，故主鍵之命中判定亦不分大小寫
+註: 本函數不得有副作用，故不創建資料表</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line592">line 592</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
 
         <tr>
             
-                <td class="name"><code>transaction</code></td>
+                <td class="name"><code>pk</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+|
+
+<span class="param-type">Number</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入主鍵值，即數據內opt.pk欄位之值</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>option</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>{}</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入設定物件，預設為{}</p>
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>instance</code></td>
             
 
             <td class="type">
@@ -2911,7 +3454,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入交易(transaction)物件，預設為null</p></td>
+            <td class="description last"><p>輸入實例instance物件，預設為null</p></td>
         </tr>
 
     
@@ -2944,7 +3487,7 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve回傳數據，reject回傳錯誤訊息</p>
+    <p>回傳Promise，resolve回傳數據物件，若無此主鍵或主鍵值無效則回傳null，reject回傳錯誤訊息</p>
 </div>
 
 
@@ -2986,7 +3529,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon Aug 17 2026 12:05:19 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon Aug 17 2026 20:24:22 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

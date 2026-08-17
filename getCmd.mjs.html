@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>getCmd.mjs - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getDeleteByPks">getDeleteByPks</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">getCmd.mjs</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import each from 'lodash-es/each.js'
+import get from 'lodash-es/get.js'
+import isDate from 'lodash-es/isDate.js'
+import isarr from 'wsemi/src/isarr.mjs'
+import isbol from 'wsemi/src/isbol.mjs'
+import isstr from 'wsemi/src/isstr.mjs'
+
+
+//產生送交Jet引擎執行之SQL文字
+//
+//本模組僅產生六種固定形狀之語句: 全表查詢、依主鍵查詢、插入、依主鍵更新、依主鍵刪除、依主鍵清單刪除。
+//複雜查詢條件($in、$nin、$regex等)一律不送Jet, 而由Jet取回全部數據後於記憶體sqlite內過濾(見queryMemory.mjs),
+//因Access之SQL方言不支援該些運算子。故此處不需要通用之WHERE產生器。
+//
+//註: 舊版係以sequelize之logging回調反推SQL文字, 已不採用。其有二問題:
+//    一為getInsert實際會對記憶體sqlite執行INSERT(產生副作用, 同一主鍵重試即撞唯一約束),
+//    二為值置換未對字串做跳脫(值內含單引號即產出壞SQL)。
+
+
+/**
+ * 轉為Jet之識別字(資料表名、欄位名)
+ *
+ * 註: Access以中括號引用識別字，其內不支援跳脫，故一律移除中括號字元
+ *
+ * @param {String} s 輸入識別字字串
+ * @returns {String} 回傳Jet識別字字串
+ */
+function escId(s) {
+    let t = String(s).replace(/[[\]]/g, '')
+    return `[${t}]`
+}
+
+
+/**
+ * 轉為Jet之值常值
+ *
+ * 註: 字串以單引號包覆，內部單引號以連續兩個單引號跳脫(Jet之標準跳脫方式)
+ * 註: 不可用N'...'前綴，該為SQL Server語法，Jet不支援
+ * 註: 日期物件以#...#表示，字串則維持引號由Jet自行隱式轉換
+ *
+ * @param {*} v 輸入值
+ * @returns {String} 回傳Jet值常值字串
+ */
+function escVal(v) {
+
+    //null
+    if (v === null || v === undefined) {
+        return 'NULL'
+    }
+
+    //boolean
+    if (isbol(v)) {
+        return v ? 'True' : 'False'
+    }
+
+    //number, 以typeof判定而非isnum, 因isnum對NaN為false會令其落入字串分支而產出'NaN'
+    if (typeof v === 'number') {
+        if (!isFinite(v)) {
+            return 'NULL' //NaN與Infinity於Jet無對應表示
+        }
+        return String(v)
+    }
+
+    //date
+    if (isDate(v)) {
+        let p = (n, w = 2) => {
+            return String(n).padStart(w, '0')
+        }
+        let s = `${v.getFullYear()}-${p(v.getMonth() + 1)}-${p(v.getDate())} ${p(v.getHours())}:${p(v.getMinutes())}:${p(v.getSeconds())}`
+        return `#${s}#`
+    }
+
+    //string與其餘型別
+    let s = isstr(v) ? v : String(v)
+    return `'${s.replace(/'/g, `''`)}'`
+}
+
+
+/**
+ * 取數據內屬於資料表欄位之鍵值對
+ *
+ * 註: 濾除非欄位之鍵，避免產出Jet不認得之欄位名
+ * 註: 值為undefined者不納入語句，令該欄位保留資料庫端之現值
+ *
+ * @ignore
+ * @param {Array} cols 輸入資料表欄位名陣列
+ * @param {Object} data 輸入數據物件
+ * @returns {Array} 回傳[{k,v}]陣列
+ */
+function pickCols(cols, data) {
+    let rs = []
+    each(cols, (k) => {
+        let v = get(data, k)
+        if (v === undefined) {
+            return
+        }
+        rs.push({ k, v })
+    })
+    return rs
+}
+
+
+/**
+ * 產生全表查詢語句
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @returns {String} 回傳SQL字串
+ */
+function getSelectAll(tableName) {
+    return `SELECT * FROM ${escId(tableName)}`
+}
+
+
+/**
+ * 產生依主鍵查詢語句
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @param {String} pk 輸入主鍵欄位名字串
+ * @param {String|Number} pkv 輸入主鍵值
+ * @returns {String} 回傳SQL字串
+ */
+function getSelectByPk(tableName, pk, pkv) {
+    return `SELECT * FROM ${escId(tableName)} WHERE ${escId(pk)} = ${escVal(pkv)}`
+}
+
+
+/**
+ * 產生依主鍵清單查詢語句，僅取主鍵欄位
+ *
+ * 註: 供insert於偵測到重複鍵錯誤後，核對該些主鍵是否確實已存在，
+ * 藉以區辨[主鍵已存在]與[撞及其他唯一索引]，因Jet之錯誤碼3022涵蓋兩者
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @param {String} pk 輸入主鍵欄位名字串
+ * @param {Array} pkvs 輸入主鍵值陣列
+ * @returns {String} 回傳SQL字串，清單為空時回傳null
+ */
+function getSelectByPks(tableName, pk, pkvs) {
+
+    //check
+    if (!isarr(pkvs) || pkvs.length === 0) {
+        return null
+    }
+
+    //vs
+    let vs = pkvs.map((v) => {
+        return escVal(v)
+    })
+
+    return `SELECT ${escId(pk)} FROM ${escId(tableName)} WHERE ${escId(pk)} IN (${vs.join(', ')})`
+}
+
+
+/**
+ * 產生插入語句
+ *
+ * 註: Access不支援一次插入多組VALUES，故一次僅處理一筆
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @param {Array} cols 輸入資料表欄位名陣列
+ * @param {Object} data 輸入數據物件
+ * @returns {String} 回傳SQL字串
+ */
+function getInsert(tableName, cols, data) {
+
+    //kvs
+    let kvs = pickCols(cols, data)
+
+    //check
+    if (kvs.length === 0) {
+        return null
+    }
+
+    //ks, vs
+    let ks = kvs.map((v) => {
+        return escId(v.k)
+    })
+    let vs = kvs.map((v) => {
+        return escVal(v.v)
+    })
+
+    return `INSERT INTO ${escId(tableName)} (${ks.join(', ')}) VALUES (${vs.join(', ')})`
+}
+
+
+/**
+ * 產生依主鍵更新語句
+ *
+ * 註: 主鍵欄位不納入SET，避免更新時改動主鍵本身
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @param {Array} cols 輸入資料表欄位名陣列
+ * @param {Object} data 輸入數據物件
+ * @param {String} pk 輸入主鍵欄位名字串
+ * @param {String|Number} pkv 輸入主鍵值
+ * @returns {String} 回傳SQL字串，無可更新欄位時回傳null
+ */
+function getUpdate(tableName, cols, data, pk, pkv) {
+
+    //kvs, 排除主鍵欄位
+    let kvs = pickCols(cols, data)
+        .filter((v) => {
+            return v.k !== pk
+        })
+
+    //check
+    if (kvs.length === 0) {
+        return null
+    }
+
+    //sets
+    let sets = kvs.map((v) => {
+        return `${escId(v.k)} = ${escVal(v.v)}`
+    })
+
+    return `UPDATE ${escId(tableName)} SET ${sets.join(', ')} WHERE ${escId(pk)} = ${escVal(pkv)}`
+}
+
+
+/**
+ * 產生依主鍵刪除語句
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @param {String} pk 輸入主鍵欄位名字串
+ * @param {String|Number} pkv 輸入主鍵值
+ * @returns {String} 回傳SQL字串
+ */
+function getDeleteByPk(tableName, pk, pkv) {
+    return `DELETE FROM ${escId(tableName)} WHERE ${escId(pk)} = ${escVal(pkv)}`
+}
+
+
+/**
+ * 產生依主鍵清單刪除語句
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @param {String} pk 輸入主鍵欄位名字串
+ * @param {Array} pkvs 輸入主鍵值陣列
+ * @returns {String} 回傳SQL字串，清單為空時回傳null
+ */
+function getDeleteByPks(tableName, pk, pkvs) {
+
+    //check
+    if (!isarr(pkvs) || pkvs.length === 0) {
+        return null
+    }
+
+    //vs
+    let vs = pkvs.map((v) => {
+        return escVal(v)
+    })
+
+    return `DELETE FROM ${escId(tableName)} WHERE ${escId(pk)} IN (${vs.join(', ')})`
+}
+
+
+/**
+ * 產生清空全表語句
+ *
+ * @param {String} tableName 輸入資料表名稱字串
+ * @returns {String} 回傳SQL字串
+ */
+function getDeleteAll(tableName) {
+    return `DELETE FROM ${escId(tableName)}`
+}
+
+
+export {
+    escId,
+    escVal,
+    getSelectAll,
+    getSelectByPk,
+    getSelectByPks,
+    getInsert,
+    getUpdate,
+    getDeleteByPk,
+    getDeleteByPks,
+    getDeleteAll
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon Aug 17 2026 20:24:22 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>
