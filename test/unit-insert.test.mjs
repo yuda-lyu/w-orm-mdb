@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt, getRt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 insert(data)
+//spec: w-orm系列套件統一規格.md 之 insert(data)
 //僅於主鍵不存在時寫入, 已存在者跳過且不覆寫; n為輸入筆數, nInserted為實際插入筆數
 //T7: [檢查主鍵不存在]與[寫入]由Jet之主鍵唯一約束原子完成
 

@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt, getRt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 insertBulk(data)
+//spec: w-orm系列套件統一規格.md 之 insertBulk(data)
 //全批視為一個單位: 全部插入成功, 或一筆都不寫入
 //本函數非insert之加速版, 兩者衝突政策不同
 

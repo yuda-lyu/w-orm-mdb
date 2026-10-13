@@ -6,7 +6,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 T8 併發保證之宣告義務
+//spec: w-orm系列套件統一規格.md 之 T8 併發保證之宣告義務
 //本檔為[單一行程內併發]與[跨行程併發]兩範圍皆成立之實測依據(記載於規格文件之[各套件符合狀態]);
 //依T8, 僅於某範圍[無法保證]時才須於README宣告, 兩範圍皆成立故README不另提及
 //

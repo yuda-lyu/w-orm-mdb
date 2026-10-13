@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt, getRt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 T6 主鍵補值與autoGenPk
+//spec: w-orm系列套件統一規格.md 之 T6 主鍵補值與autoGenPk
 //預設為true; 為false時套件一律不產生主鍵值, 未帶有效主鍵者以Promise.reject拋出整批性錯誤
 //del不受本設定影響, 未帶有效主鍵者回該筆ok為0並附err
 

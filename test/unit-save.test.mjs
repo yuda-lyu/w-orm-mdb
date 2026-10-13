@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 save(data, option)
+//spec: w-orm系列套件統一規格.md 之 save(data, option)
 //以主鍵為準更新既有數據, 未給之欄位保留; 主鍵不存在且option.autoInsert為true(預設)時改為插入
 //[內容相同]之判定基準為: 把待寫入物件合併進現值之後, 結果與現值相同
 

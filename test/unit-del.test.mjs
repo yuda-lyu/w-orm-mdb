@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 del(data)
+//spec: w-orm系列套件統一規格.md 之 del(data)
 //[未帶有效主鍵]與[主鍵未命中]須以ok分辨: 前者為輸入問題(ok:0+err), 後者為正常結果(ok:1)
 
 

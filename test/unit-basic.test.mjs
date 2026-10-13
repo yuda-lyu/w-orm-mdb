@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md
+//spec: w-orm系列套件統一規格.md
 //本檔涵蓋: 七函數之回傳型別與鍵集合固定(T2)、輸入無效之處置(T5)、select之查詢條件與不含資料庫內部欄位
 
 

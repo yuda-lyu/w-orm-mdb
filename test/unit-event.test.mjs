@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt, getRt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 T10 事件
+//spec: w-orm系列套件統一規格.md 之 T10 事件
 //change(mode,data,res)於資料實際異動成功後整批發出一次
 //error(mode,data,err)於整批性錯誤之reject前、逐筆失敗於該筆定案後各一次, err為字串
 //核心不變式: 操作行為不得因監聽者之有無而改變

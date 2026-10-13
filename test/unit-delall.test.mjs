@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 delAll(find)
+//spec: w-orm系列套件統一規格.md 之 delAll(find)
 //n與nDeleted皆為實際刪除筆數, n不得取全表筆數; find未給或為空物件時刪除全部數據
 
 

@@ -3,7 +3,7 @@ import wo from '../src/WOrmMdb.mjs'
 import { isWindows, setupStorage, cleanStorage, mkOpt } from './unit-setup.mjs'
 
 
-//spec: 資料庫函數回傳定義計算.md 之 selectByPk(pk)
+//spec: w-orm系列套件統一規格.md 之 selectByPk(pk)
 //命中回數據物件、未命中回null、主鍵值無效回null且不reject
 //命中之判定基準須與insert、save、del內對既有數據之認定一致
 
