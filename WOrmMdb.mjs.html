@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getDeleteByPks">getDeleteByPks</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -79,18 +79,18 @@ import {
     getInsert,
     getUpdate,
     getDeleteByPk,
-    getDeleteByPks,
     getDeleteAll
 } from './getCmd.mjs'
 import { initSequelize, queryMemory } from './queryMemory.mjs'
+import { TPS_STR, getPkType, normPk, kFast, castPkFind, genInnerKeys } from './pk.mjs'
 
 
 //放置於全域宣告, 若使用useStable=true才可於當創建多實例時仍能全域控管
 let pmq = pmQueue(1)
 
 
-//單一DELETE語句所能容納之主鍵數量上限, 避免IN清單過長超出Jet之查詢文字長度限制
-const nPkPerDelete = 200
+//insert撞鍵核對時單一IN查詢所能容納之主鍵數量上限, 避免IN清單過長超出Jet之查詢文字長度限制
+const nPkPerIn = 200
 
 
 /**
@@ -98,10 +98,16 @@ const nPkPerDelete = 200
  *
  * 註: 主鍵欄位取自opt.pk，預設為id，支援由呼叫端指定
  * 註: 本套件經connMDB.exe操作Windows內建之Jet 4.0引擎，僅支援.mdb(Jet4)不支援.accdb
- * 註: Jet引擎之字串比對不分大小寫，故主鍵之[命中]認定亦不分大小寫，
- * 且select之記憶體過濾層已一併對齊(見queryMemory.mjs)，令兩者判定一致
- * 註: sqlite之NOCASE僅折疊ASCII之A-Z，與Jet對部分非ASCII字元之折疊不同，
- * 故僅大小寫相異之非ASCII主鍵於select與selectByPk仍可能判定不一致
+ * 註: 主鍵之[命中]一律以Jet引擎之判定為準: Jet之字串等值不分大小寫(含非ASCII)、忽略尾端半形空白、
+ * 忽略全半形寬度與平片假名、ß視同ss(已實測); selectByPk、insertBulk、save、del之判定皆交Jet以=語句為之,
+ * insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 主鍵之定位不依賴IN之結果(Jet對長字串之IN與=不等價)
+ * 註: 主鍵值送出前依主鍵欄型別正規化(見pk.mjs之normPk): 字串類主鍵欄之有限數字以String(v)處置(與w-serv-orm一致),
+ * 數值類主鍵欄之標準數字字串轉為數字; 型別不符者selectByPk回null、insert/insertBulk/save於寫入前reject、del該筆ok為0
+ * 註: 字串類主鍵超過255字元、含NUL或非良構UTF-16者不可能存在於資料表, 讀取類視為未命中且不送Jet
+ * (Jet對超過255字元之字面值於SELECT/DELETE會截斷後比對, 送出將命中或刪除另一列)
+ * 註: select與delAll之主鍵等值類條件($eq、$ne、$in、$nin、$not及隱含等值)改寫為由Jet判定之命中列, 不以JS仿製之等值鍵判定;
+ * 主鍵之範圍運算子與$regex、非主鍵欄之條件依記憶體sqlite(字串欄為NOCASE); 否定語境之無效主鍵值reject; select回傳Jet原列, 內容與selectByPk相同
+ * 註: 主鍵欄須為文字或數值型, Jet之GUID型別與DATETIME型別之主鍵欄不支援
  * 註: insert與save之原子性倚賴資料表主鍵欄位具唯一約束(PRIMARY KEY)，資料表建立時須含之
  *
  * @class
@@ -288,12 +294,12 @@ function WOrmMdb(opt = {}) {
 
 
     /**
-     * 判定主鍵值是否有效
-     * 註: select以外之六函數對主鍵之認定一律以本函數為準，令selectByPk之[命中]與insert、save、del內對既有數據之認定一致
+     * 判定資料表內之主鍵存值是否可定位，供delAll核對命中數據之主鍵
+     * 註: 輸入之主鍵值一律經normPk判定，本函數僅用於Jet回傳之存值(字串或有限數字)
      *
      * @ignore
-     * @param {*} v 輸入主鍵值
-     * @returns {Boolean} 回傳主鍵值是否有效布林值
+     * @param {*} v 輸入主鍵存值
+     * @returns {Boolean} 回傳是否可定位布林值
      */
     function isEffPk(v) {
 
@@ -302,8 +308,8 @@ function WOrmMdb(opt = {}) {
             return true
         }
 
-        //數值, 含0, 供整數型主鍵使用
-        if (isnum(v)) {
+        //有限數值, 含0
+        if (typeof v === 'number' &amp;&amp; Number.isFinite(v)) {
             return true
         }
 
@@ -312,16 +318,28 @@ function WOrmMdb(opt = {}) {
 
 
     /**
-     * 取主鍵值之比對鍵
-     * 註: Jet之字串比對不分大小寫，故核對主鍵是否已存在時亦須不分大小寫，
-     * 否則以'ID-X'插入而庫內存有'id-x'時，會誤判為[非主鍵衝突]而錯報為整批性錯誤
+     * 取資料表之主鍵欄型別類別
      *
      * @ignore
-     * @param {String|Number} v 輸入主鍵值
-     * @returns {String} 回傳比對鍵字串
+     * @param {Object} md 輸入資料表model物件
+     * @returns {String} 回傳'str'、'int'、'flt'或'other'
      */
-    function pkKey(v) {
-        return String(v).toLowerCase()
+    function getMdPkType(md) {
+        return getPkType(get(md, 'rawAttributes', {}), opt.pk)
+    }
+
+
+    /**
+     * 取主鍵值之顯示字串, 供錯誤訊息使用, 過長者截斷
+     *
+     * @ignore
+     */
+    function showPk(v) {
+        let s = String(v)
+        if (s.length > 40) {
+            s = `${s.slice(0, 40)}...(${s.length})`
+        }
+        return s
     }
 
 
@@ -333,18 +351,41 @@ function WOrmMdb(opt = {}) {
      * 註: 本函數須於任何寫入之前一次對全部數據完成，令拋錯時同批之有效筆數亦不會被寫入
      * 註: 自動產生之主鍵值為字串，故補值前檢查主鍵欄位確為字串類型，不符者以明確訊息拋出，
      * 而非任由資料庫回報型別錯誤; 本套件之model定義於手上得知主鍵型別，故不適用T6之[套件無從得知主鍵型別]例外
+     * 註: 有效主鍵依主鍵欄型別正規化後就地寫回數據(見pk.mjs之normPk)，令寫入值與其後各函數之比對值一致;
+     * 型別不符者為呼叫端未履行契約，比照T6以整批性錯誤拋出(比照w-orm-postgresql之處置);
+     * 不可能存在者(字串類主鍵超過255字元、含NUL或非良構UTF-16)於insert與insertBulk亦整批拋出，
+     * 於save則回傳cannot為true，由save將該筆定為ok為0(autoInsert為false則n為0)而不送Jet
      *
      * @ignore
      * @param {Object} md 輸入資料表model物件
      * @param {Object} v 輸入數據物件
      * @param {Number} k 輸入數據於陣列內之索引
-     * @returns {Object} 回傳補齊主鍵之數據物件
+     * @param {String} mode 輸入呼叫之函數名稱字串
+     * @returns {Object} 回傳{v,cannot}，v為補齊或正規化主鍵之數據物件
      */
-    function procPk(md, v, k) {
+    function procPk(md, v, k, mode) {
 
-        //check
-        if (isEffPk(get(v, opt.pk))) {
-            return v
+        //normPk
+        let pkv = get(v, opt.pk)
+        let r = normPk(pkv, getMdPkType(md))
+
+        //check, 有效者寫回正規化值
+        if (r.kind === 'ok') {
+            v[opt.pk] = r.v
+            return { v, cannot: false }
+        }
+
+        //check, 型別不符
+        if (r.kind === 'mismatch') {
+            throw new Error(`invalid data[${k}].${opt.pk}[${showPk(pkv)}], type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`)
+        }
+
+        //check, 不可能存在
+        if (r.kind === 'cannot') {
+            if (mode === 'save') {
+                return { v, cannot: true }
+            }
+            throw new Error(`invalid data[${k}].${opt.pk}[${showPk(pkv)}], can not be stored: exceeds 255 characters or contains NUL or unpaired surrogate`)
         }
 
         //check, autoGenPk為false時主鍵須由呼叫端自備
@@ -360,14 +401,14 @@ function WOrmMdb(opt = {}) {
 
         //check, 自動產生之主鍵值為字串, 主鍵欄位須為字串類型方能容納
         let tp = get(at, 'type.key', '')
-        if (!arrHas(tp, ['STRING', 'TEXT', 'CHAR', 'UUID', 'CITEXT'])) {
+        if (!arrHas(tp, TPS_STR)) {
             throw new Error(`autoGenPk is true but pk column [${opt.pk}] in model [${opt.cl}] is [${tp}], auto generated pk is a string, need to set autoGenPk to false and supply pk by caller`)
         }
 
         //genIDSeq, 為UUIDv7格式而具單調遞增性, 主鍵接近順序遞增可減少索引頁面分裂
         v[opt.pk] = genIDSeq()
 
-        return v
+        return { v, cannot: false }
     }
 
 
@@ -530,28 +571,127 @@ function WOrmMdb(opt = {}) {
 
 
     /**
+     * 解析查詢條件內各主鍵值所命中之列序號, 由Jet判定等值
+     *
+     * 註: 先以全表數據之主鍵存值之快速鍵(kFast, 只會少判)對應; 對不上者(全半形、假名、非ASCII大小寫、長字串等變體)
+     * 於單次exe往返內逐筆以=語句交Jet判定, 取回之存值再對應回全表數據之序號
+     * 註: 不以JS仿製之等值鍵判定: 近似鍵多判則select/delAll命中Jet視為相異之列, 少判則$ne/$nin把Jet視為同鍵之列當成相異而刪除
+     *
+     * @ignore
+     * @param {Object} si 輸入實例物件
+     * @param {Array} data 輸入全表數據
+     * @param {Array} vals 輸入正規化後之主鍵值陣列
+     * @returns {Promise} 回傳Promise，resolve回傳函數(主鍵值→命中列之序號陣列)
+     */
+    async function resolvePkIdx(si, data, vals) {
+
+        //keyOf, 區分型別之精確鍵
+        let keyOf = (v) => {
+            return `${typeof v}:${String(v)}`
+        }
+
+        //mExact, mFast, 存值→序號
+        let mExact = new Map()
+        let mFast = new Map()
+        each(data, (row, i) => {
+            let s = get(row, opt.pk)
+            if (s === null || s === undefined) {
+                return
+            }
+            mExact.set(keyOf(s), i)
+            mFast.set(kFast(s), i)
+        })
+
+        //res, 主鍵值→序號陣列
+        let res = new Map()
+        let unmatched = []
+        each(vals, (v) => {
+            let k = keyOf(v)
+            if (res.has(k)) {
+                return
+            }
+            let i = mFast.get(kFast(v))
+            if (i !== undefined) {
+                res.set(k, [i])
+                return
+            }
+            res.set(k, [])
+            unmatched.push(v)
+        })
+
+        //unmatched, 逐筆以=語句交Jet判定
+        if (size(unmatched) > 0) {
+            let r = await si.jet.run(map(unmatched, (v) => {
+                return {
+                    type: 'query',
+                    sql: getSelectByPk(opt.cl, opt.pk, v),
+                    stopOnError: false,
+                }
+            }))
+            if (!r.ok) {
+                throw new Error(r.error)
+            }
+            each(unmatched, (v, j) => {
+                let is = []
+                each(get(r, `results.${j}.rows`, []), (row) => {
+                    let i = mExact.get(keyOf(get(row, opt.pk)))
+                    if (i !== undefined) {
+                        is.push(i)
+                    }
+                })
+                res.set(keyOf(v), is)
+            })
+        }
+
+        return (v) => {
+            return res.get(keyOf(v)) || []
+        }
+    }
+
+
+    /**
      * 由Jet取回全表數據後於記憶體內依條件過濾
      *
      * 註: Access之SQL方言不支援$in、$nin、$regex等條件，故不將條件送Jet而由記憶體過濾
+     * 註: 主鍵之等值類條件由castPkFind改寫為命中列之序號(以resolvePkIdx由Jet判定)，故命中判定與selectByPk、insert、save、del一致；
+     * 主鍵之範圍運算子與$regex仍於記憶體sqlite比對(近似)
      *
      * @ignore
      * @param {Object} si 輸入實例物件
      * @param {Object} find 輸入查詢條件物件
-     * @returns {Promise} 回傳Promise，resolve回傳數據陣列
+     * @returns {Promise} 回傳Promise，resolve回傳數據陣列(Jet原列)
      */
     async function findAll(si, find) {
 
         //md
         let md = getMd(si)
+        let attrs = get(md, 'rawAttributes', {})
+        let pkType = getMdPkType(md)
 
         //data, 先查詢出access mdb內全部資料
         let data = await si.jet.query(getSelectAll(opt.cl))
 
+        //keys, 記憶體過濾表之原列序號欄名稱, 附加亂數令其不與使用者之欄位或條件同名
+        let keys = genInnerKeys(attrs)
+
+        //vals, 先以記錄用之idxOf取得條件內之全部主鍵值; 否定語境之無效主鍵值於此拋出(見pk.mjs之castPkFind)
+        let vals = []
+        castPkFind(find, opt.pk, pkType, keys.wi, (v) => {
+            vals.push(v)
+            return []
+        })
+
+        //idxOf, 由Jet判定各主鍵值之命中列
+        let idxOf = await resolvePkIdx(si, data, vals)
+
+        //findPk, 主鍵等值類條件改寫為序號條件, 其餘條件原樣交getUseFind
+        let findPk = castPkFind(find, opt.pk, pkType, keys.wi, idxOf)
+
         //useFind
-        let useFind = getUseFind(find)
+        let useFind = getUseFind(findPk)
 
         //queryMemory
-        let rs = await queryMemory(opt, get(md, 'rawAttributes', {}), data, useFind)
+        let rs = await queryMemory(opt, attrs, data, useFind, keys)
 
         return rs
     }
@@ -626,20 +766,22 @@ function WOrmMdb(opt = {}) {
      * 由主鍵查詢單筆數據，因由Jet依主鍵取值且僅回傳單筆，不需如select提取全部數據再過濾，故數據量大時效能較佳
      *
      * 註: 主鍵欄位取自opt.pk，預設為id，支援由呼叫端指定
-     * 註: 主鍵未命中或主鍵值無效皆回傳null而不reject，[命中]之判定基準與insert、save、del內對既有數據之認定一致
-     * 註: Jet之字串比對不分大小寫，故主鍵之命中判定亦不分大小寫
+     * 註: 主鍵未命中、主鍵值無效(未給、型別不符)或不可能存在(字串類主鍵超過255字元、含NUL或非良構UTF-16)皆回傳null而不reject，
+     * [命中]以Jet之判定為準，與insert、save、del一致
+     * 註: Jet之字串等值不分大小寫、忽略尾端半形空白與全半形寬度等，故主鍵之命中判定亦同(見類別註解)
      * 註: 本函數不得有副作用，故不創建資料表
      *
      * @memberOf WOrmMdb
-     * @param {String|Number} pk 輸入主鍵值，即數據內opt.pk欄位之值
+     * @param {String|Number} pk 輸入主鍵值，即數據內opt.pk欄位之值，字串類主鍵欄之有限數字以String(v)處置，數值類主鍵欄之標準數字字串轉為數字
      * @param {Object} [option={}] 輸入設定物件，預設為{}
      * @param {Object} [option.instance=null] 輸入實例instance物件，預設為null
      * @returns {Promise} 回傳Promise，resolve回傳數據物件，若無此主鍵或主鍵值無效則回傳null，reject回傳錯誤訊息
      */
     async function selectByPk(pk, option = {}) {
 
-        //check, 未給有效主鍵值視為查無數據, 不送查詢以免無效值被轉為null而誤中其他數據
-        if (!isEffPk(pk)) {
+        //check, 與型別無關之無效值(未給、空字串、NaN、±Infinity、非字串非數字)視為查無數據, 不需初始化,
+        //亦不送查詢以免無效值被轉為null而誤中其他數據
+        if (normPk(pk, 'other').kind === 'invalid') {
             return null
         }
 
@@ -663,16 +805,25 @@ function WOrmMdb(opt = {}) {
                 throw si.err
             }
 
-            //query
-            let rs = await si.jet.query(getSelectByPk(opt.cl, opt.pk, pk))
+            //normPk, 依主鍵欄型別正規化, 型別不符或不可能存在者視為查無而不送Jet
+            let r = normPk(pk, getMdPkType(getMd(si)))
+            if (r.kind === 'ok') {
 
-            //check, 判定基準與insert、save、del內對既有數據之認定一致
-            let v = get(rs, 0, null)
-            if (iseobj(v)) {
-                res = v
+                //query
+                let rs = await si.jet.query(getSelectByPk(opt.cl, opt.pk, r.v))
+
+                //check, 判定基準與insert、save、del內對既有數據之認定一致
+                let v = get(rs, 0, null)
+                if (iseobj(v)) {
+                    res = v
+                }
+                else {
+                    //不存在主鍵, 回傳null
+                    res = null
+                }
+
             }
             else {
-                //不存在主鍵, 回傳null
                 res = null
             }
 
@@ -705,11 +856,13 @@ function WOrmMdb(opt = {}) {
      *
      * 註: Jet之重複鍵錯誤碼3022涵蓋主鍵與其他唯一索引之衝突，兩者無從由錯誤碼區辨，
      * 故須另行核對；若該主鍵並不存在，即表示係撞及其他唯一索引，屬影響該筆以外之錯誤而不得視為[已存在則跳過]
+     * 註: 先以批次IN取回存值並以快速鍵(kFast)對應，對不上者再逐筆以=語句交Jet判定(getExistPksExact)，
+     * 因快速鍵只涵蓋尾端空白與ASCII大小寫，且Jet對長字串之IN與=不等價(已實測255個é之主鍵IN不中而=命中)
      *
      * @ignore
      * @param {Object} si 輸入實例物件
      * @param {Array} pkvs 輸入主鍵值陣列
-     * @returns {Promise} 回傳Promise，resolve回傳已存在之主鍵比對鍵Set
+     * @returns {Promise} 回傳Promise，resolve回傳已存在主鍵之快速鍵Set
      */
     async function getExistPks(si, pkvs) {
 
@@ -722,7 +875,7 @@ function WOrmMdb(opt = {}) {
         }
 
         //cmds, 分批以免IN清單過長
-        let cmds = map(chunk(pkvs, nPkPerDelete), (vs) => {
+        let cmds = map(chunk(pkvs, nPkPerIn), (vs) => {
             return {
                 type: 'query',
                 sql: getSelectByPks(opt.cl, opt.pk, vs),
@@ -738,11 +891,49 @@ function WOrmMdb(opt = {}) {
         //collect
         each(r.results, (rr) => {
             each(get(rr, 'rows', []), (v) => {
-                hs.add(pkKey(get(v, opt.pk)))
+                hs.add(kFast(get(v, opt.pk)))
             })
         })
 
         return hs
+    }
+
+
+    /**
+     * 逐筆以=語句核對主鍵是否確實存在於資料表，由Jet判定等值
+     *
+     * 註: 供快速鍵對應不到者使用(如全半形、平片假名、非ASCII大小寫之變體，或IN失效之長字串)，
+     * 各筆於單次exe往返內送出; 每筆query各寫一個jsonl，成本約2ms，故不作為常態路徑
+     *
+     * @ignore
+     * @param {Object} si 輸入實例物件
+     * @param {Array} pkvs 輸入主鍵值陣列
+     * @returns {Promise} 回傳Promise，resolve回傳與pkvs等長之是否存在布林陣列
+     */
+    async function getExistPksExact(si, pkvs) {
+
+        //check
+        if (size(pkvs) === 0) {
+            return []
+        }
+
+        //run
+        let r = await si.jet.run(map(pkvs, (v) => {
+            return {
+                type: 'query',
+                sql: getSelectByPk(opt.cl, opt.pk, v),
+                stopOnError: false,
+            }
+        }))
+
+        //check, 任一筆查詢失敗即無從判定, 屬整批性錯誤
+        if (!r.ok) {
+            throw new Error(r.error)
+        }
+
+        return map(pkvs, (v, k) => {
+            return size(get(r, `results.${k}.rows`, [])) > 0
+        })
     }
 
 
@@ -752,8 +943,10 @@ function WOrmMdb(opt = {}) {
      * 由Jet於主鍵之唯一約束上原子完成[檢查主鍵不存在]與[寫入]，併發時同一主鍵僅有一次成功
      *
      * 註: n為輸入筆數即本次嘗試插入之基準，nInserted為實際插入筆數，全數已存在而nInserted為0屬正常結果
-     * 註: 同批含重複主鍵時僅首筆計入nInserted，其餘視為已存在
+     * 註: 同批含重複主鍵時僅首筆計入nInserted，其餘視為已存在；重複之判定以Jet為準(含大小寫、尾端空白、全半形等變體)
      * 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+     * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
+     * 註: 撞鍵者之核對以Jet為準：先以快速鍵對應，對不上者逐筆以=語句查詢，仍不存在即撞及其他唯一索引而整批reject
      * 註: 全部插入語句於單次呼叫exe內循序送出且不因單筆衝突而中止，故一次往返即可取得精確之nInserted
      * 註: option.returnList為true時改回傳與輸入等長且保序之逐筆陣列[{n,nInserted,ok}]，
      * 供呼叫端得知[是哪幾筆]為新資料而非僅[有幾筆]；逐筆元素之n與ok恆為1，
@@ -816,9 +1009,9 @@ function WOrmMdb(opt = {}) {
                 data = [data]
             }
 
-            //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false而拋錯時同批之有效筆數亦不會被寫入
+            //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false、主鍵型別不符或不可能存在而拋錯時同批之有效筆數亦不會被寫入
             data = map(data, (v, k) => {
-                return procPk(md, v, k)
+                return procPk(md, v, k, 'insert').v
             })
 
             //nAll, n之基準為輸入筆數
@@ -861,9 +1054,16 @@ function WOrmMdb(opt = {}) {
                     return get(data, `${v.k}.${opt.pk}`)
                 })
                 let hs = await getExistPks(si, pkvs)
-                each(dups, (v) => {
-                    let pkv = get(data, `${v.k}.${opt.pk}`)
-                    if (!hs.has(pkKey(pkv))) {
+
+                //unmatched, 快速鍵對應不到者, 逐筆以=語句交Jet判定
+                let unmatched = dups.filter((v) => {
+                    return !hs.has(kFast(get(data, `${v.k}.${opt.pk}`)))
+                })
+                let bs = await getExistPksExact(si, map(unmatched, (v) => {
+                    return get(data, `${v.k}.${opt.pk}`)
+                }))
+                each(unmatched, (v, j) => {
+                    if (!bs[j]) {
                         //主鍵並不存在, 即撞及其他唯一索引, 不得靜默跳過
                         throw new Error(v.rr.error)
                     }
@@ -929,6 +1129,7 @@ function WOrmMdb(opt = {}) {
      * 令呼叫端得與insert共用同一段結果處理程式碼
      * 註: 不提供逐筆結果，故不出現ok為0與err；需要逐筆處置者改用insert
      * 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+     * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
      * 註: [全有全無]以Jet之交易(OleDbTransaction)包覆全部插入語句達成，任一筆失敗即回滾，
      * 故reject之後資料庫狀態與呼叫前相同，無須補償動作；同批含重複主鍵者亦於交易內被偵測為衝突
      *
@@ -981,9 +1182,9 @@ function WOrmMdb(opt = {}) {
                 data = [data]
             }
 
-            //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false而拋錯時同批皆不會被寫入
+            //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false、主鍵型別不符或不可能存在而拋錯時同批皆不會被寫入
             data = map(data, (v, k) => {
-                return procPk(md, v, k)
+                return procPk(md, v, k, 'insertBulk').v
             })
 
             //nAll, n之基準為輸入筆數
@@ -1056,6 +1257,9 @@ function WOrmMdb(opt = {}) {
      * (已實測: 將欄位設為與現值相同之值仍回報影響1列)
      * 註: 本筆失敗不中斷整批，該筆以ok為0並附err回報
      * 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+     * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符者於任何寫入之前整批reject(比照w-orm-postgresql)；
+     * 不可能存在之主鍵(字串類主鍵超過255字元、含NUL或非良構UTF-16)視為不存在且不送Jet，
+     * autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
      * 註: 各回合之預讀與寫入皆整批送出，故N筆數據於無衝突時僅需2次呼叫exe而非2N次
      *
      * @memberOf WOrmMdb
@@ -1113,9 +1317,14 @@ function WOrmMdb(opt = {}) {
                 data = [data]
             }
 
-            //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false而拋錯時同批之有效筆數亦不會被寫入
+            //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false或主鍵型別不符而拋錯時同批之有效筆數亦不會被寫入
+            let cannots = []
             data = map(data, (v, k) => {
-                return procPk(md, v, k)
+                let r = procPk(md, v, k, 'save')
+                if (r.cannot) {
+                    cannots.push(k)
+                }
+                return r.v
             })
 
             //rests, 逐筆結果, 未定案者為null
@@ -1123,9 +1332,33 @@ function WOrmMdb(opt = {}) {
                 return null
             })
 
+            //check, 不可能存在之主鍵視為不存在且不送Jet: autoInsert為true時因無法寫入而該筆失敗, 為false時為未命中
+            each(cannots, (k) => {
+                if (autoInsert) {
+                    rests[k] = {
+                        n: 1,
+                        nInserted: 0,
+                        nModified: 0,
+                        ok: 0,
+                        err: `can not save data by ${opt.pk}[${showPk(get(data, `${k}.${opt.pk}`))}], ${opt.pk} exceeds 255 characters or contains NUL or unpaired surrogate`,
+                    }
+                }
+                else {
+                    rests[k] = {
+                        n: 0,
+                        nInserted: 0,
+                        nModified: 0,
+                        ok: 1,
+                    }
+                }
+            })
+
             //pends, 待處理之索引
-            let pends = map(data, (v, k) => {
-                return k
+            let pends = []
+            each(rests, (v, k) => {
+                if (v === null) {
+                    pends.push(k)
+                }
             })
 
             for (let iTry = 0; iTry &lt; nTry &amp;&amp; size(pends) > 0; iTry++) {
@@ -1360,6 +1593,9 @@ function WOrmMdb(opt = {}) {
      * 註: 判斷某筆是否真的被刪除一律以nDeleted為準
      * 註: 未帶有效主鍵者為該筆之輸入問題，回ok為0與err且不送查詢條件(以免無效值被轉為null而誤中其他數據)，
      * 不中斷其餘筆數，以此與[主鍵未命中]之ok為1區辨
+     * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符者該筆ok為0並附err；
+     * 不可能存在之主鍵(字串類主鍵超過255字元、含NUL或非良構UTF-16)視為未命中且不送Jet，
+     * 因Jet對超過255字元之字面值會截斷後比對，送出將刪除另一列
      * 註: 本函數不受opt.autoGenPk影響，於任一設定下皆不補值
      * 註: 由DELETE語句自身之影響列數判定命中，不另行查詢以免多一次往返且與刪除間存在競態
      *
@@ -1400,7 +1636,8 @@ function WOrmMdb(opt = {}) {
             }
 
             //check, 確認model存在, 令資料表設定有誤時為整批性錯誤
-            getMd(si)
+            let md = getMd(si)
+            let pkType = getMdPkType(md)
 
             //check
             if (!isarr(data)) {
@@ -1416,23 +1653,48 @@ function WOrmMdb(opt = {}) {
             let dels = []
             each(data, (v, k) => {
 
-                //pkv
+                //pkv, r
                 let pkv = get(v, opt.pk)
+                let r = normPk(pkv, pkType)
 
                 //check, 未帶有效主鍵者不補值亦不送查詢, 直接視為該筆無法處理
-                if (!isEffPk(pkv)) {
+                if (r.kind === 'invalid') {
                     rests[k] = {
                         n: 0,
                         nDeleted: 0,
                         ok: 0,
-                        err: `invalid ${opt.pk}[${pkv}]`,
+                        err: `invalid ${opt.pk}[${showPk(pkv)}]`,
                     }
                     return
                 }
 
+                //check, 型別不符者為該筆無法處理
+                if (r.kind === 'mismatch') {
+                    rests[k] = {
+                        n: 0,
+                        nDeleted: 0,
+                        ok: 0,
+                        err: `invalid ${opt.pk}[${showPk(pkv)}], type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`,
+                    }
+                    return
+                }
+
+                //check, 不可能存在者為未命中且不送Jet(送出時Jet會截斷超長字面值而刪除另一列)
+                if (r.kind === 'cannot') {
+                    rests[k] = {
+                        n: 0,
+                        nDeleted: 0,
+                        ok: 1,
+                    }
+                    return
+                }
+
+                //寫回正規化值, 令事件之數據與實際送出者一致
+                v[opt.pk] = r.v
+
                 dels.push({
                     k,
-                    sql: getDeleteByPk(opt.cl, opt.pk, pkv),
+                    sql: getDeleteByPk(opt.cl, opt.pk, r.v),
                 })
             })
 
@@ -1519,10 +1781,11 @@ function WOrmMdb(opt = {}) {
      *
      * 註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數
      * 註: find未給或為空物件時刪除全部數據；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
-     * 註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵清單刪除，
+     * 註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵逐筆以DELETE … WHERE 主鍵 =刪除，
      * 令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin、$regex等運算子，
      * 會出現[select查得到但delAll刪不到]或反之之不一致
-     * 註: 分批之DELETE以交易包覆，令任一批失敗時整體回滾而不留下部份刪除
+     * 註: 不用IN清單刪除，因Jet對長字串之IN與=不等價(已實測255個é之主鍵IN不中而=命中)，用IN會使命中之列刪不到
+     * 註: 逐筆之DELETE於單次exe往返內以交易包覆，令任一筆失敗時整體回滾而不留下部份刪除
      *
      * @memberOf WOrmMdb
      * @param {Object} [find={}] 輸入刪除條件物件，不給予find則代表刪除全部數據
@@ -1590,15 +1853,15 @@ function WOrmMdb(opt = {}) {
 
                 if (size(pkvs) > 0) {
 
-                    //cmds, 分批以免IN清單過長超出Jet之查詢文字長度限制
-                    let cmds = map(chunk(pkvs, nPkPerDelete), (vs) => {
+                    //cmds, 逐筆以=語句刪除, 不用IN: Jet對長字串之IN與=不等價(已實測255個é之主鍵IN不中), 改用IN會使命中之列刪不到
+                    let cmds = map(pkvs, (v) => {
                         return {
                             type: 'execute',
-                            sql: getDeleteByPks(opt.cl, opt.pk, vs),
+                            sql: getDeleteByPk(opt.cl, opt.pk, v),
                         }
                     })
 
-                    //run, 以交易包覆令任一批失敗時整體回滾
+                    //run, 以交易包覆令任一筆失敗時整體回滾
                     let r = await si.jet.run(cmds, { useTransaction: true })
 
                     //check
@@ -1749,7 +2012,7 @@ export default WOrmMdb
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 15:25:02 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 13:23:26 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
