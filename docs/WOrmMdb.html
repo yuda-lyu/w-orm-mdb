@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getDeleteByPks">getDeleteByPks</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -77,17 +77,23 @@
     <dd class="tag-description"><ul class="dummy"><li><p>操作Access mdb資料庫</p>
 <p>註: 主鍵欄位取自opt.pk，預設為id，支援由呼叫端指定
 註: 本套件經connMDB.exe操作Windows內建之Jet 4.0引擎，僅支援.mdb(Jet4)不支援.accdb
-註: Jet引擎之字串比對不分大小寫，故主鍵之[命中]認定亦不分大小寫，
-且select之記憶體過濾層已一併對齊(見queryMemory.mjs)，令兩者判定一致
-註: sqlite之NOCASE僅折疊ASCII之A-Z，與Jet對部分非ASCII字元之折疊不同，
-故僅大小寫相異之非ASCII主鍵於select與selectByPk仍可能判定不一致
+註: 主鍵之[命中]一律以Jet引擎之判定為準: Jet之字串等值不分大小寫(含非ASCII)、忽略尾端半形空白、
+忽略全半形寬度與平片假名、ß視同ss(已實測); selectByPk、insertBulk、save、del之判定皆交Jet以=語句為之,
+insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 主鍵之定位不依賴IN之結果(Jet對長字串之IN與=不等價)
+註: 主鍵值送出前依主鍵欄型別正規化(見pk.mjs之normPk): 字串類主鍵欄之有限數字以String(v)處置(與w-serv-orm一致),
+數值類主鍵欄之標準數字字串轉為數字; 型別不符者selectByPk回null、insert/insertBulk/save於寫入前reject、del該筆ok為0
+註: 字串類主鍵超過255字元、含NUL或非良構UTF-16者不可能存在於資料表, 讀取類視為未命中且不送Jet
+(Jet對超過255字元之字面值於SELECT/DELETE會截斷後比對, 送出將命中或刪除另一列)
+註: select與delAll之主鍵等值類條件($eq、$ne、$in、$nin、$not及隱含等值)改寫為由Jet判定之命中列, 不以JS仿製之等值鍵判定;
+主鍵之範圍運算子與$regex、非主鍵欄之條件依記憶體sqlite(字串欄為NOCASE); 否定語境之無效主鍵值reject; select回傳Jet原列, 內容與selectByPk相同
+註: 主鍵欄須為文字或數值型, Jet之GUID型別與DATETIME型別之主鍵欄不支援
 註: insert與save之原子性倚賴資料表主鍵欄位具唯一約束(PRIMARY KEY)，資料表建立時須含之</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line75">line 75</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line81">line 81</a>
     </li></ul></dd>
     
 
@@ -756,7 +762,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line371">line 371</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line412">line 412</a>
     </li></ul></dd>
     
 
@@ -865,7 +871,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1611">line 1611</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1874">line 1874</a>
     </li></ul></dd>
     
 
@@ -972,6 +978,9 @@
 註: 判斷某筆是否真的被刪除一律以nDeleted為準
 註: 未帶有效主鍵者為該筆之輸入問題，回ok為0與err且不送查詢條件(以免無效值被轉為null而誤中其他數據)，
 不中斷其餘筆數，以此與[主鍵未命中]之ok為1區辨
+註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符者該筆ok為0並附err；
+不可能存在之主鍵(字串類主鍵超過255字元、含NUL或非良構UTF-16)視為未命中且不送Jet，
+因Jet對超過255字元之字面值會截斷後比對，送出將刪除另一列
 註: 本函數不受opt.autoGenPk影響，於任一設定下皆不補值
 註: 由DELETE語句自身之影響列數判定命中，不另行查詢以免多一次往返且與刪除間存在競態</p></li></ul></dd>
     
@@ -979,7 +988,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1325">line 1325</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1561">line 1561</a>
     </li></ul></dd>
     
 
@@ -1263,16 +1272,17 @@
     <dd class="tag-description"><ul class="dummy"><li><p>依條件刪除多筆數據，需與del分開，避免未傳數據導致直接刪除全表</p>
 <p>註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數
 註: find未給或為空物件時刪除全部數據；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
-註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵清單刪除，
+註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵逐筆以DELETE … WHERE 主鍵 =刪除，
 令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin、$regex等運算子，
 會出現[select查得到但delAll刪不到]或反之之不一致
-註: 分批之DELETE以交易包覆，令任一批失敗時整體回滾而不留下部份刪除</p></li></ul></dd>
+註: 不用IN清單刪除，因Jet對長字串之IN與=不等價(已實測255個é之主鍵IN不中而=命中)，用IN會使命中之列刪不到
+註: 逐筆之DELETE於單次exe往返內以交易包覆，令任一筆失敗時整體回滾而不留下部份刪除</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1486">line 1486</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1749">line 1749</a>
     </li></ul></dd>
     
 
@@ -1560,7 +1570,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1642">line 1642</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1905">line 1905</a>
     </li></ul></dd>
     
 
@@ -1867,7 +1877,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line336">line 336</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line377">line 377</a>
     </li></ul></dd>
     
 
@@ -1972,8 +1982,10 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     <dd class="tag-description"><ul class="dummy"><li><p>插入數據，僅於主鍵不存在時寫入，已存在者跳過且不覆寫</p>
 <p>由Jet於主鍵之唯一約束上原子完成[檢查主鍵不存在]與[寫入]，併發時同一主鍵僅有一次成功</p>
 <p>註: n為輸入筆數即本次嘗試插入之基準，nInserted為實際插入筆數，全數已存在而nInserted為0屬正常結果
-註: 同批含重複主鍵時僅首筆計入nInserted，其餘視為已存在
+註: 同批含重複主鍵時僅首筆計入nInserted，其餘視為已存在；重複之判定以Jet為準(含大小寫、尾端空白、全半形等變體)
 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
+註: 撞鍵者之核對以Jet為準：先以快速鍵對應，對不上者逐筆以=語句查詢，仍不存在即撞及其他唯一索引而整批reject
 註: 全部插入語句於單次呼叫exe內循序送出且不因單筆衝突而中止，故一次往返即可取得精確之nInserted
 註: option.returnList為true時改回傳與輸入等長且保序之逐筆陣列[{n,nInserted,ok}]，
 供呼叫端得知[是哪幾筆]為新資料而非僅[有幾筆]；逐筆元素之n與ok恆為1，
@@ -1984,7 +1996,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line723">line 723</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line916">line 916</a>
     </li></ul></dd>
     
 
@@ -2313,6 +2325,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
 令呼叫端得與insert共用同一段結果處理程式碼
 註: 不提供逐筆結果，故不出現ok為0與err；需要逐筆處置者改用insert
 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
 註: [全有全無]以Jet之交易(OleDbTransaction)包覆全部插入語句達成，任一筆失敗即回滾，
 故reject之後資料庫狀態與呼叫前相同，無須補償動作；同批含重複主鍵者亦於交易內被偵測為衝突</p></li></ul></dd>
     
@@ -2320,7 +2333,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line894">line 894</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1095">line 1095</a>
     </li></ul></dd>
     
 
@@ -2615,13 +2628,16 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
 (已實測: 將欄位設為與現值相同之值仍回報影響1列)
 註: 本筆失敗不中斷整批，該筆以ok為0並附err回報
 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
+註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符者於任何寫入之前整批reject(比照w-orm-postgresql)；
+不可能存在之主鍵(字串類主鍵超過255字元、含NUL或非良構UTF-16)視為不存在且不送Jet，
+autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
 註: 各回合之預讀與寫入皆整批送出，故N筆數據於無衝突時僅需2次呼叫exe而非2N次</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1021">line 1021</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1225">line 1225</a>
     </li></ul></dd>
     
 
@@ -2951,7 +2967,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line526">line 526</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line666">line 666</a>
     </li></ul></dd>
     
 
@@ -3235,15 +3251,16 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     <dt class="tag-description">Description:</dt>
     <dd class="tag-description"><ul class="dummy"><li><p>由主鍵查詢單筆數據，因由Jet依主鍵取值且僅回傳單筆，不需如select提取全部數據再過濾，故數據量大時效能較佳</p>
 <p>註: 主鍵欄位取自opt.pk，預設為id，支援由呼叫端指定
-註: 主鍵未命中或主鍵值無效皆回傳null而不reject，[命中]之判定基準與insert、save、del內對既有數據之認定一致
-註: Jet之字串比對不分大小寫，故主鍵之命中判定亦不分大小寫
+註: 主鍵未命中、主鍵值無效(未給、型別不符)或不可能存在(字串類主鍵超過255字元、含NUL或非良構UTF-16)皆回傳null而不reject，
+[命中]以Jet之判定為準，與insert、save、del一致
+註: Jet之字串等值不分大小寫、忽略尾端半形空白與全半形寬度等，故主鍵之命中判定亦同(見類別註解)
 註: 本函數不得有副作用，故不創建資料表</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line592">line 592</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line733">line 733</a>
     </li></ul></dd>
     
 
@@ -3351,7 +3368,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
                 </td>
             
 
-            <td class="description last"><p>輸入主鍵值，即數據內opt.pk欄位之值</p></td>
+            <td class="description last"><p>輸入主鍵值，即數據內opt.pk欄位之值，字串類主鍵欄之有限數字以String(v)處置，數值類主鍵欄之標準數字字串轉為數字</p></td>
         </tr>
 
     
@@ -3529,7 +3546,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 15:25:02 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 13:23:26 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

@@ -7,6 +7,7 @@ import get from 'lodash-es/get.js'
 import trim from 'lodash-es/trim.js'
 import join from 'lodash-es/join.js'
 import iseobj from 'wsemi/src/iseobj.mjs'
+import isestr from 'wsemi/src/isestr.mjs'
 import genPm from 'wsemi/src/genPm.mjs'
 import requireModel from 'w-orm-reladb/src/requireModel.js'
 
@@ -27,15 +28,17 @@ import requireModel from 'w-orm-reladb/src/requireModel.js'
 
 
 /**
- * 強制js格式之model將id設為主鍵
+ * 強制js格式之model將主鍵欄設為主鍵
  *
- * 註: 若id沒有被設定為pk, 則需要強制設為pk, 否則sequelize無法匯入
+ * 註: 若主鍵欄沒有被設定為pk, 則需要強制設為pk, 否則sequelize無法匯入
+ * 註: 主鍵欄取自呼叫端之opt.pk, 不寫死id; 否則主鍵另名而model另有非主鍵欄id時, 會把id改為主鍵並改寫使用者之model檔
  *
  * @ignore
  * @param {String} h 輸入model檔內容字串
+ * @param {String} pk 輸入主鍵欄位名
  * @returns {String} 回傳處理後之內容字串
  */
-function forJS(h) {
+function forJS(h, pk) {
 
     //eol, 保留原檔之行尾字元, 否則Windows之CRLF檔會被正規化為LF而每次皆判定為[有變更]
     let eol = h.indexOf('\r\n') >= 0 ? '\r\n' : '\n'
@@ -49,7 +52,7 @@ function forJS(h) {
     let indHasPK = false
     each(s, (v, k) => {
         v = trim(v)
-        if (v === `'id': {`) {
+        if (v === `'${pk}': {`) {
             indIDs = k
         }
         if (indIDs !== null && indIDe === null && v.indexOf('primaryKey: true') >= 0) {
@@ -60,7 +63,7 @@ function forJS(h) {
         }
     })
 
-    //check, 無id欄位或已設為主鍵者原樣返回, 令常態下完全不觸碰使用者之原始檔
+    //check, 無主鍵欄位或已設為主鍵者原樣返回, 令常態下完全不觸碰使用者之原始檔
     if (indIDs === null || indHasPK) {
         return h
     }
@@ -73,13 +76,14 @@ function forJS(h) {
 
 
 /**
- * 強制json格式之model將id設為主鍵
+ * 強制json格式之model將主鍵欄設為主鍵
  *
  * @ignore
  * @param {String} h 輸入model檔內容字串
+ * @param {String} pk 輸入主鍵欄位名
  * @returns {String} 回傳處理後之內容字串
  */
-function forJSON(h) {
+function forJSON(h, pk) {
 
     //s
     let s = JSON5.parse(h)
@@ -89,10 +93,10 @@ function forJSON(h) {
         throw new Error('invalid fields')
     }
 
-    //自動針對id設定為主鍵
+    //自動針對主鍵欄設定為主鍵, 不觸碰其他欄
     let bMod = false
     each(s.fields, (v, k) => {
-        if (k === 'id' && v.primaryKey !== true) {
+        if (k === pk && v.primaryKey !== true) {
             v.primaryKey = true
             bMod = true
         }
@@ -108,14 +112,16 @@ function forJSON(h) {
 
 
 /**
- * 視需要修正model檔，令id為主鍵
+ * 視需要修正model檔，令opt.pk指定之欄為主鍵
  *
  * 註: 內容未變更者不寫檔，確需變更者以原子寫入完成，見本檔頭之說明
+ * 註: 不對主鍵欄以外之欄補主鍵；主鍵欄已為主鍵或不存在者一律不寫檔
  *
  * @ignore
  * @param {String} fn 輸入model檔位置字串
  * @param {Object} [opt={}] 輸入設定物件
  * @param {String} [opt.type='js'] 輸入資料表設定檔類型字串
+ * @param {String} [opt.pk='id'] 輸入主鍵欄位名字串
  * @returns {undefined} 無回傳值
  */
 function modifyModel(fn, opt = {}) {
@@ -126,16 +132,22 @@ function modifyModel(fn, opt = {}) {
         type = 'js'
     }
 
+    //pk
+    let pk = get(opt, 'pk')
+    if (!isestr(pk)) {
+        pk = 'id'
+    }
+
     //h
     let h = fs.readFileSync(fn, 'utf8')
 
     //h2
     let h2 = h
     if (type === 'js') {
-        h2 = forJS(h)
+        h2 = forJS(h, pk)
     }
     else if (type === 'json') {
-        h2 = forJSON(h)
+        h2 = forJSON(h, pk)
     }
 
     //check, 內容未變更即不寫檔, 令常態下完全不觸碰使用者之原始檔
@@ -200,6 +212,7 @@ function readJsonModel(fn, sequelize) {
  * @param {Object} [opt={}] 輸入設定物件
  * @param {String} [opt.type='js'] 輸入資料表設定檔類型字串，可有'js'、'json'
  * @param {Boolean} [opt.sync=false] 輸入是否將models資料同步至資料庫
+ * @param {String} [opt.pk='id'] 輸入主鍵欄位名字串，僅該欄於未設主鍵時被補為主鍵
  * @returns {Promise} 回傳Promise，resolve回傳models物件，reject回傳錯誤訊息
  */
 async function importModels(fdModels, sequelize, name, opt = {}) {
@@ -221,7 +234,7 @@ async function importModels(fdModels, sequelize, name, opt = {}) {
 
     //modifyModel
     try {
-        modifyModel(fn, { type })
+        modifyModel(fn, { type, pk: get(opt, 'pk') })
     }
     catch (err) {
         pm.reject(err)

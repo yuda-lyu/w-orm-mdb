@@ -8,7 +8,8 @@ import isstr from 'wsemi/src/isstr.mjs'
 
 //產生送交Jet引擎執行之SQL文字
 //
-//本模組僅產生六種固定形狀之語句: 全表查詢、依主鍵查詢、插入、依主鍵更新、依主鍵刪除、依主鍵清單刪除。
+//本模組僅產生固定形狀之語句: 全表查詢、依主鍵查詢、依主鍵清單查詢(僅供insert撞鍵核對之快速路徑)、插入、依主鍵更新、依主鍵刪除、清空全表。
+//主鍵之定位(查詢、更新、刪除)一律用=而不用IN下結論, 因Jet對長字串之IN與=不等價(已實測255個é之主鍵IN不中而=命中)。
 //複雜查詢條件($in、$nin、$regex等)一律不送Jet, 而由Jet取回全部數據後於記憶體sqlite內過濾(見queryMemory.mjs),
 //因Access之SQL方言不支援該些運算子。故此處不需要通用之WHERE產生器。
 //
@@ -231,30 +232,6 @@ function getDeleteByPk(tableName, pk, pkv) {
 
 
 /**
- * 產生依主鍵清單刪除語句
- *
- * @param {String} tableName 輸入資料表名稱字串
- * @param {String} pk 輸入主鍵欄位名字串
- * @param {Array} pkvs 輸入主鍵值陣列
- * @returns {String} 回傳SQL字串，清單為空時回傳null
- */
-function getDeleteByPks(tableName, pk, pkvs) {
-
-    //check
-    if (!isarr(pkvs) || pkvs.length === 0) {
-        return null
-    }
-
-    //vs
-    let vs = pkvs.map((v) => {
-        return escVal(v)
-    })
-
-    return `DELETE FROM ${escId(tableName)} WHERE ${escId(pk)} IN (${vs.join(', ')})`
-}
-
-
-/**
  * 產生清空全表語句
  *
  * @param {String} tableName 輸入資料表名稱字串
@@ -274,6 +251,5 @@ export {
     getInsert,
     getUpdate,
     getDeleteByPk,
-    getDeleteByPks,
     getDeleteAll
 }

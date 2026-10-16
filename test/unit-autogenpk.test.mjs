@@ -85,9 +85,14 @@ if (isWindows()) {
             })
 
             it('主鍵值為數值0者視為有效而不補值', async function() {
-                //以truthy判斷會把0誤判為無效
-                let res = await wDef.del([{ id: 0 }])
-                assert.strict.strictEqual(res[0].ok, 1, '0須視為有效主鍵值')
+                //以truthy判斷會把0誤判為無效; 字串主鍵欄之有限數字以String(v)處置(CLAUDE_rulebook.md之R-PK-02), 故存為'0'而非被補成UUID(T6)
+                //表內先有他列, 令數字之比對不因空表而偶然成立(Jet於表非空時對文字欄以數字比對回報型別不符)
+                await wDef.insert([{ id: 'other', name: 'o' }])
+                let res = await wDef.insert([{ id: 0, name: 'zero' }])
+                assert.strict.deepStrictEqual(res, { n: 1, nInserted: 1, ok: 1 })
+                let r = await wDef.selectByPk(0)
+                assert.strict.ok(r !== null && r.id === '0', '0須視為有效主鍵值且不被補值')
+                assert.strict.deepStrictEqual(await wDef.del([{ id: 0 }]), [{ n: 1, nDeleted: 1, ok: 1 }])
             })
 
         })

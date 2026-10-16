@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getDeleteByPks">getDeleteByPks</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -130,6 +130,270 @@
 
     
 
+    <h4 class="name" id="castPkFind"><span class="type-signature"></span>castPkFind<span class="signature">(find, pk, tp, wi, idxOf)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>改寫查詢條件內之主鍵條件</p>
+<p>註: 主鍵等值類條件(隱含等值、陣列值、$eq、$ne、$in、$nin, 及其下之$not)改寫為原列序號欄wi之$in/$nin,
+序號集合由idxOf(正規化後之主鍵值)提供(呼叫端以Jet判定命中列), 故命中判定與selectByPk、del等一致, 不經任何近似鍵
+註: 範圍運算子($gt、$gte、$lt、$lte)以正規化值留於原欄比對(記憶體sqlite之語意, 為近似), $regex等其餘運算子原樣留於原欄
+註: 肯定語境之無效、型別不符、不可能存在之值不命中; 否定語境($ne、$nin、$not, 以及頂層$not與$nor之內)之無效或型別不符之值一律拋出:
+依[無效值不命中]推得之否定為[全部命中], 用於delAll即清空全表, 而此類值多為呼叫端之錯誤(如變數為undefined);
+修正前sequelize對undefined亦為reject, 故拋出不使既有呼叫改為刪光全表; 不可能存在之值於否定語境依其語意為必不相等
+註: 非運算子物件(如{})視為主鍵值而非條件, 屬無效值, 不得因其無運算子而使主鍵條件消失(修正初版即因此使delAll({id:{}})刪光全表)
+註: 主鍵所衍生之條件一律併入同層之$and, 以免與既有鍵或彼此覆寫
+註: 僅處理主鍵欄, 其餘欄位與運算子原樣返回(條件轉譯本身另議, 不在本函數範圍)
+註: 本函數為純函數, 呼叫端得先以記錄用之idxOf跑一次取得全部主鍵值(並觸發否定語境之檢核), 解析後再以實際idxOf改寫</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line230">line 230</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>find</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入mongo風格之查詢條件</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>pk</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入主鍵欄位名</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>tp</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入主鍵欄型別類別</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>wi</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入原列序號欄名稱, 取自genInnerKeys</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>idxOf</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入函數, 給正規化後之主鍵值回傳命中列之序號陣列</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳改寫後之查詢條件</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
     <h4 class="name" id="escId"><span class="type-signature"></span>escId<span class="signature">(s)</span><span class="type-signature"> &rarr; {String}</span></h4>
 
     
@@ -147,7 +411,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line28">line 28</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line29">line 29</a>
     </li></ul></dd>
     
 
@@ -308,7 +572,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line44">line 44</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line45">line 45</a>
     </li></ul></dd>
     
 
@@ -450,6 +714,164 @@
 
     
 
+    <h4 class="name" id="genInnerKeys"><span class="type-signature"></span>genInnerKeys<span class="signature">(attrs)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>產生記憶體過濾表之原列序號欄名稱, 附加亂數令其不與使用者之欄位或條件同名</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line183">line 183</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>attrs</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入model之rawAttributes</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳{wi}</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
     <h4 class="name" id="getDeleteAll"><span class="type-signature"></span>getDeleteAll<span class="signature">(tableName)</span><span class="type-signature"> &rarr; {String}</span></h4>
 
     
@@ -466,7 +888,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line263">line 263</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line240">line 240</a>
     </li></ul></dd>
     
 
@@ -624,7 +1046,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line228">line 228</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line229">line 229</a>
     </li></ul></dd>
     
 
@@ -817,212 +1239,6 @@
 
     
 
-    <h4 class="name" id="getDeleteByPks"><span class="type-signature"></span>getDeleteByPks<span class="signature">(tableName, pk, pkvs)</span><span class="type-signature"> &rarr; {String}</span></h4>
-
-    
-
-
-
-
-<dl class="details">
-    
-    <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>產生依主鍵清單刪除語句</p></li></ul></dd>
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line241">line 241</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <h5 class="h5-parameters">Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>tableName</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>輸入資料表名稱字串</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>pk</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>輸入主鍵欄位名字串</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>pkvs</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>輸入主鍵值陣列</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5 class="h5-returns">Returns:</h5>
-
-        
-<div class="param-desc">
-    <p>回傳SQL字串，清單為空時回傳null</p>
-</div>
-
-
-
-<dl class="param-type">
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">String</span>
-
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-        
-            
-
-    
-
     <h4 class="name" id="getInsert"><span class="type-signature"></span>getInsert<span class="signature">(tableName, cols, data)</span><span class="type-signature"> &rarr; {String}</span></h4>
 
     
@@ -1040,7 +1256,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line164">line 164</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line165">line 165</a>
     </li></ul></dd>
     
 
@@ -1230,6 +1446,188 @@
 
     
 
+    <h4 class="name" id="getPkType"><span class="type-signature"></span>getPkType<span class="signature">(attrs, pk)</span><span class="type-signature"> &rarr; {String}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>取主鍵欄型別類別</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line44">line 44</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>attrs</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入model之rawAttributes</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>pk</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入主鍵欄位名</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳'str'、'int'、'flt'或'other'</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">String</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
     <h4 class="name" id="getSelectAll"><span class="type-signature"></span>getSelectAll<span class="signature">(tableName)</span><span class="type-signature"> &rarr; {String}</span></h4>
 
     
@@ -1246,7 +1644,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line109">line 109</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line110">line 110</a>
     </li></ul></dd>
     
 
@@ -1404,7 +1802,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line122">line 122</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line123">line 123</a>
     </li></ul></dd>
     
 
@@ -1615,7 +2013,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line138">line 138</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line139">line 139</a>
     </li></ul></dd>
     
 
@@ -1822,7 +2220,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line198">line 198</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line199">line 199</a>
     </li></ul></dd>
     
 
@@ -2079,7 +2477,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="importModels.mjs.html">importModels.mjs</a>, <a href="importModels.mjs.html#line205">line 205</a>
+        <a href="importModels.mjs.html">importModels.mjs</a>, <a href="importModels.mjs.html#line218">line 218</a>
     </li></ul></dd>
     
 
@@ -2403,6 +2801,46 @@
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>pk</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>'id'</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入主鍵欄位名字串，僅該欄於未設主鍵時被補為主鍵</p></td>
+        </tr>
+
+    
     </tbody>
 </table>
 
@@ -2477,7 +2915,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line24">line 24</a>
+        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line20">line 20</a>
     </li></ul></dd>
     
 
@@ -2905,7 +3343,7 @@
 
     
 
-    <h4 class="name" id="queryMemory"><span class="type-signature type-signature-async">(async) </span>queryMemory<span class="signature">(opt, attrs, data, useFind)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+    <h4 class="name" id="kFast"><span class="type-signature"></span>kFast<span class="signature">(v)</span><span class="type-signature"> &rarr; {String}</span></h4>
 
     
 
@@ -2915,14 +3353,15 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>於記憶體內過濾數據</p>
-<p>因Access之SQL方言不支援$in、$nin、$regex等條件，故由Jet取回全部數據後於記憶體sqlite內過濾</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>快速對應鍵: 去尾端半形空白並僅將ASCII字母轉小寫</p>
+<p>註: 此二者Jet必視為相等(已實測), 故快速鍵相同者必為同一主鍵, 只會少判不會多判;
+寬度、假名、非ASCII大小寫等之對應不在此判定, 對不上者另以Jet之=查詢判定</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line93">line 93</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line170">line 170</a>
     </li></ul></dd>
     
 
@@ -2994,13 +3433,16 @@
 
         <tr>
             
-                <td class="name"><code>opt</code></td>
+                <td class="name"><code>v</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Object</span>
+<span class="param-type">String</span>
+|
+
+<span class="param-type">Number</span>
 
 
 
@@ -3011,79 +3453,7 @@
 
             
 
-            <td class="description last"><p>輸入設定物件</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>attrs</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>輸入資料表欄位定義物件，取自model之rawAttributes</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>data</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>輸入待過濾之數據陣列</p></td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>useFind</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>輸入已轉譯為sequelize運算子之查詢條件物件</p></td>
+            <td class="description last"><p>輸入主鍵值</p></td>
         </tr>
 
     
@@ -3109,7 +3479,499 @@
 
         
 <div class="param-desc">
-    <p>回傳Promise，resolve回傳過濾後之數據陣列</p>
+    <p>回傳快速鍵字串</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">String</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="normPk"><span class="type-signature"></span>normPk<span class="signature">(v, tp)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>依主鍵欄型別正規化主鍵值</p>
+<p>註: kind為'ok'(v為正規化後之值)、'invalid'(未給或非有效值, 依T6處置)、'mismatch'(與主鍵欄型別不符)、'cannot'(不可能存在於資料表)
+註: 字串類主鍵欄之有限數字以String(v)處置, 與w-serv-orm一致; 數值類主鍵欄僅轉換標準數字字串(String(Number(s))===s),
+其餘字串因Jet之INSERT轉型會改變鍵(如'012'存為12)而視為型別不符; 整數類主鍵欄之非整數因Jet會四捨六入五成雙而視為型別不符
+註: ±Infinity、NaN、空字串、布林、物件、陣列、Date、BigInt、null、undefined為無效
+註: 超過255字元(不計尾端半形空白)之字串於字串類與其他型別(含model未定義主鍵欄而無從得知型別者)皆為不可能存在</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line114">line 114</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>v</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">*</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入主鍵值</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>tp</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入主鍵欄型別類別, 取自getPkType</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳{kind,v}</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="queryMemory"><span class="type-signature type-signature-async">(async) </span>queryMemory<span class="signature">(opt, attrs, data, useFind, keys<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>於記憶體內過濾數據</p>
+<p>因Access之SQL方言不支援$in、$nin、$regex等條件，故由Jet取回全部數據後於記憶體sqlite內過濾</p>
+<p>註: 主鍵之等值類條件已由castPkFind改寫為原列序號欄keys.wi之$in/$nin(序號由Jet判定命中列)，
+令尾端空白、全半形、平片假名、非ASCII大小寫等變體之命中與selectByPk、insert、save、del一致
+註: 原列序號欄之名稱由呼叫端以genInnerKeys產生(附加亂數)，與castPkFind所用者須相同，且不與使用者之欄位或條件同名
+註: 過濾表以原列序號keys.wi為主鍵，主鍵欄不設主鍵與唯一；
+結果依序號取回Jet之原列並依Jet回傳序排列，故select之內容即Jet原值(如DATE欄之字串、BOOLEAN欄之true/false)，
+與selectByPk相同，而非經sqlite往返轉換之值</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line99">line 99</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>opt</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>輸入設定物件</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>attrs</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>輸入資料表欄位定義物件，取自model之rawAttributes</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>data</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>輸入待過濾之數據陣列</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>useFind</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>輸入已轉譯為sequelize運算子之查詢條件物件，主鍵條件須已經castPkFind處理</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>keys</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last"><p>輸入原列序號欄之名稱{wi}，未給則自行產生(此時條件不得引用序號欄)</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳Promise，resolve回傳過濾後之數據陣列(Jet原列)</p>
 </div>
 
 
@@ -3151,7 +4013,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 15:25:02 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 13:23:26 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
