@@ -2,6 +2,7 @@
 import fs from 'fs'
 import path from 'path'
 import assert from 'assert'
+import Sequelize from 'sequelize'
 import wo from '../src/WOrmMdb.mjs'
 import jetOpen from '../src/jet.mjs'
 import { escVal } from '../src/getCmd.mjs'
@@ -23,6 +24,7 @@ let fdModels = `${fdTmp}/models`
 let fpStorage = `${fdTmp}/${nm}.mdb`
 
 const S255 = 'x'.repeat(255)
+const Op = Sequelize.Op
 const E255 = 'é'.repeat(255)
 
 
@@ -118,20 +120,63 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
         assert.strict.deepStrictEqual(pk.normPk(S255, 'other'), { kind: 'ok', v: S255 })
     })
 
-    it('castPkFind: 主鍵等值類條件改寫為序號條件並併入$and, 範圍與$regex留於原欄', function() {
-        //R-PK-05; idxOf為測試用之命中表
+    it('castPkFind: 主鍵等值類條件改寫為序號條件並以Op.and包覆, 範圍與$regex留於原欄', function() {
+        //R-PK-05、R-FIND-03(原載併入呼叫端之$and, 2026-10-16改為Op.and包覆); idxOf為測試用之命中表
+        //(2026-10-16 run02 外審後: castPkFind 改為單趟走訪, 回傳 {find, slots}, 序號以 fillPkSlots 填入; 空集合以 -1 表示, 其餘為空時不放 {})
         let io = (v) => {
             return v === 'k2' ? [0] : (v === 'a' ? [1] : [])
         }
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: 'k2' }, 'id', 'str', 'W', io), { $and: [{ W: { $in: [0] } }] })
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: ['k2', 'a', 'zz'] }, 'id', 'str', 'W', io), { $and: [{ W: { $in: [0, 1] } }] })
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $in: 'k2' } }, 'id', 'str', 'W', io), { $and: [{ W: { $in: [0] } }] }, '$in純量視為單元素陣列')
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: 'zz' }, 'id', 'str', 'W', io), { $and: [{ W: { $in: [-1] } }] }, '未命中以不存在之序號表示')
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $ne: 'zz' } }, 'id', 'str', 'W', io), {}, '$ne未命中之值為恆成立')
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $not: ['k2', 'a'] } }, 'id', 'str', 'W', io), { $and: [{ W: { $nin: [0, 1] } }] })
-        assert.strict.deepStrictEqual(pk.castPkFind({ $not: { id: 'k2' } }, 'id', 'str', 'W', io), { $not: { $and: [{ W: { $in: [0] } }] } })
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $ne: 'k2' }, $and: [{ name: 'x' }] }, 'id', 'str', 'W', io), { $and: [{ name: 'x' }, { W: { $nin: [0] } }] })
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $regex: 'k', $gte: 5 } }, 'id', 'str', 'W', io), { id: { $regex: 'k', $gte: '5' } })
+        let cpf = (find, tp = 'str', pkName = 'id') => {
+            let r = pk.castPkFind(find, pkName, tp, 'W')
+            pk.fillPkSlots(r.slots, io)
+            return r.find
+        }
+        assert.strict.deepStrictEqual(cpf({ id: 'k2' }), { [Op.and]: [{ W: { $in: [0] } }] })
+        assert.strict.deepStrictEqual(cpf({ id: ['k2', 'a', 'zz'] }), { [Op.and]: [{ W: { $in: [0, 1] } }] })
+        assert.strict.deepStrictEqual(cpf({ id: { $in: 'k2' } }), { [Op.and]: [{ W: { $in: [0] } }] }, '$in純量視為單元素陣列')
+        assert.strict.deepStrictEqual(cpf({ id: 'zz' }), { [Op.and]: [{ W: { $in: [-1] } }] }, '未命中以不存在之序號表示')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: 'zz' } }), { [Op.and]: [{ W: { $nin: [-1] } }] }, '$ne未命中之值為恆成立')
+        assert.strict.deepStrictEqual(cpf({ id: { $not: ['k2', 'a'] } }), { [Op.and]: [{ W: { $nin: [0, 1] } }] })
+        assert.strict.deepStrictEqual(cpf({ $not: { id: 'k2' } }), { [Op.and]: [{ [Op.not]: { [Op.and]: [{ W: { $in: [0] } }] } }] }, '頂層$not轉為Op.not(Q2)')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: 'k2' }, $and: [{ name: 'x' }] }), { [Op.and]: [{ $and: [{ name: 'x' }] }, { W: { $nin: [0] } }] }, '不併入呼叫端之$and')
+        assert.strict.deepStrictEqual(cpf({ id: { $regex: 'k', $gte: 5 } }), { id: { $regex: 'k', $gte: '5' } })
+    })
+
+    it('castPkFind: Symbol鍵、length鍵與非一般物件原樣保留, 主鍵RegExp即$regex', function() {
+        //R-FIND-02/03: 不得於cvFind之前丟棄條件(1.0.35以lodash each走訪而使條件變{}, delAll刪光全表)
+        let io = (v) => {
+            return v === 'k2' ? [0] : []
+        }
+        let cpf = (find, tp = 'str', pkName = 'id') => {
+            let r = pk.castPkFind(find, pkName, tp, 'W')
+            pk.fillPkSlots(r.slots, io)
+            return r.find
+        }
+        assert.strict.deepStrictEqual(cpf({ length: 0 }), { length: 0 })
+        assert.strict.deepStrictEqual(cpf({ [Op.or]: [{ id: 'k2' }] }), { [Op.or]: [{ [Op.and]: [{ W: { $in: [0] } }] }] })
+        assert.strict.deepStrictEqual(cpf({ id: { [Op.in]: ['k2'] } }), { [Op.and]: [{ W: { $in: [0] } }] }, '主鍵欄之Op.in比照$in')
+        let d = new Date()
+        assert.strict.strictEqual(cpf(d), d, '非一般物件原樣返回, 交cvFind拒收')
+        assert.strict.deepStrictEqual(cpf({ id: /k/ }), { id: { $regex: /k/ } }, 'Q4')
+        assert.strict.deepStrictEqual(cpf({ ID: 'k2' }), { ID: 'k2' }, '近似鍵不視為主鍵, 原樣交cvFind由嚴格鍵拒收')
+        assert.strict.deepStrictEqual(cpf({ id: 'k2' }, 'str', null), { id: 'k2' }, 'pk為null(model無此屬性)時不辨識主鍵條件, 交cvFind以嚴格鍵拒收')
+        assert.strict.deepStrictEqual(cpf({ id: { $eq: 'k2', $options: undefined } }), { [Op.and]: [{ W: { $in: [0] } }] }, '視同未給之$options不留成無運算子之物件')
+    })
+
+    it('castPkFind: 單趟走訪, 每個條件值只讀一次', function() {
+        //R-FIND-02/03(run02外審opus、sol): 覆寫valueOf之包裝物件以內建valueOf讀內部值; 偽造toStringTag者非包裝物件, 屬無效值
+        let n = 0
+        let s = new String('k2') // eslint-disable-line no-new-wrappers
+        s.valueOf = () => {
+            n++
+            return n === 1 ? 'k2' : 'zz'
+        }
+        let r = pk.castPkFind({ id: { $ne: s } }, 'id', 'str', 'W')
+        assert.strict.deepStrictEqual(r.slots.map((x) => x.vals), [['k2']])
+        assert.strict.strictEqual(n, 0, '不呼叫物件自身之valueOf')
+        let fake = { [Symbol.toStringTag]: 'String', valueOf: () => 'k2' }
+        assert.strict.throws(() => pk.castPkFind({ id: { $nin: [fake] } }, 'id', 'str', 'W'), '偽造之包裝物件為無效值, 否定語境拋出')
+        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $eq: fake } }, 'id', 'str', 'W'), { find: { [Op.and]: [{ W: { $in: [-1] } }] }, slots: [] }, '肯定語境不命中(無佔位)')
     })
 
     it('castPkFind: 非運算子物件為無效值, 肯定語境不命中、否定語境拋出', function() {
@@ -139,14 +184,19 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
         let io = () => {
             return [0]
         }
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: {} }, 'id', 'str', 'W', io), { $and: [{ W: { $in: [-1] } }] })
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: undefined }, 'id', 'str', 'W', io), { $and: [{ W: { $in: [-1] } }] })
-        assert.strict.throws(() => pk.castPkFind({ id: { $ne: undefined } }, 'id', 'str', 'W', io))
-        assert.strict.throws(() => pk.castPkFind({ id: { $nin: ['a', NaN] } }, 'id', 'str', 'W', io))
-        assert.strict.throws(() => pk.castPkFind({ id: { $not: {} } }, 'id', 'str', 'W', io))
-        assert.strict.throws(() => pk.castPkFind({ $not: { id: undefined } }, 'id', 'str', 'W', io))
-        assert.strict.throws(() => pk.castPkFind({ id: { $ne: '012' } }, 'id', 'int', 'W', io), '型別不符於否定語境亦拋出')
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $ne: S255 + 'y' } }, 'id', 'str', 'W', io), {}, '不可能存在之值於否定語境為必不相等')
+        let cpf = (find, tp = 'str') => {
+            let r = pk.castPkFind(find, 'id', tp, 'W')
+            pk.fillPkSlots(r.slots, io)
+            return r.find
+        }
+        assert.strict.deepStrictEqual(cpf({ id: {} }), { [Op.and]: [{ W: { $in: [-1] } }] })
+        assert.strict.deepStrictEqual(cpf({ id: undefined }), { [Op.and]: [{ W: { $in: [-1] } }] })
+        assert.strict.throws(() => cpf({ id: { $ne: undefined } }))
+        assert.strict.throws(() => cpf({ id: { $nin: ['a', NaN] } }))
+        assert.strict.throws(() => cpf({ id: { $not: {} } }))
+        assert.strict.throws(() => cpf({ $not: { id: undefined } }))
+        assert.strict.throws(() => cpf({ id: { $ne: '012' } }, 'int'), '型別不符於否定語境亦拋出')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: S255 + 'y' } }), {}, '不可能存在之值於否定語境為必不相等')
     })
 
 })

@@ -4,6 +4,7 @@ import get from 'lodash-es/get.js'
 import isarr from 'wsemi/src/isarr.mjs'
 import arrHas from 'wsemi/src/arrHas.mjs'
 import pm2resolve from 'wsemi/src/pm2resolve.mjs'
+import cvFind from 'w-orm-reladb/src/cvFind.mjs'
 import importModels from './importModels.mjs'
 import { TPS_STR, genInnerKeys } from './pk.mjs'
 
@@ -84,6 +85,9 @@ function getTypeNocase(tp) {
  *
  * 註: 主鍵之等值類條件已由castPkFind改寫為原列序號欄keys.wi之$in/$nin(序號由Jet判定命中列)，
  * 令尾端空白、全半形、平片假名、非ASCII大小寫等變體之命中與selectByPk、insert、save、del一致
+ * 註: 條件由w-orm-reladb之cvFind轉譯(非主鍵條件之單一擁有者: 運算子白名單、依欄型檢核值、$regex字面化、嚴格鍵)，
+ * ctx依其帳本之深引用者接線契約: attrs取過濾表本身之rawAttributes(字串欄為CITEXT、含序號欄)、dialect為sqlite、
+ * escape用本實例、dateNoTz為'local'(Jet之DATETIME無時區, 無時區字串依主機時區)；不傳pk(主鍵等值由Jet判定, 不交sqlite)
  * 註: 原列序號欄之名稱由呼叫端以genInnerKeys產生(附加亂數)，與castPkFind所用者須相同，且不與使用者之欄位或條件同名
  * 註: 過濾表以原列序號keys.wi為主鍵，主鍵欄不設主鍵與唯一；
  * 結果依序號取回Jet之原列並依Jet回傳序排列，故select之內容即Jet原值(如DATE欄之字串、BOOLEAN欄之true/false)，
@@ -92,11 +96,11 @@ function getTypeNocase(tp) {
  * @param {Object} opt 輸入設定物件
  * @param {Object} attrs 輸入資料表欄位定義物件，取自model之rawAttributes
  * @param {Array} data 輸入待過濾之數據陣列
- * @param {Object} useFind 輸入已轉譯為sequelize運算子之查詢條件物件，主鍵條件須已經castPkFind處理
+ * @param {Object} find 輸入查詢條件物件，主鍵條件須已經castPkFind改寫，其餘為呼叫端之原始條件
  * @param {Object} [keys] 輸入原列序號欄之名稱{wi}，未給則自行產生(此時條件不得引用序號欄)
- * @returns {Promise} 回傳Promise，resolve回傳過濾後之數據陣列(Jet原列)
+ * @returns {Promise} 回傳Promise，resolve回傳過濾後之數據陣列(Jet原列)，條件不合法時reject
  */
-async function queryMemory(opt, attrs, data, useFind, keys) {
+async function queryMemory(opt, attrs, data, find, keys) {
 
     //keys
     if (!keys) {
@@ -119,9 +123,17 @@ async function queryMemory(opt, attrs, data, useFind, keys) {
     }
     let sequelize = new Sequelize(setOpt)
 
+    //cols, Jet列實有之欄名(connMDB.exe每列輸出全部欄位, 值為NULL者亦有其鍵, 故取首列); 無列時無從得知, 不篩選
+    let cols = data.length > 0 ? new Set(Object.keys(data[0] || {})) : null
+
     //defs, 由來源model之欄位定義衍生, 字串類改CITEXT令比對不分大小寫以對齊Jet
+    //註: model有而Jet列無之屬性(model過時、欄名大小寫不符)不納入過濾表, 引用之條件由cvFind以嚴格鍵拒收;
+    //否則該欄於過濾表恆為NULL, {欄:null}、$exists:false等條件命中全部列而使delAll刪光全表(run02外審opus)
     let defs = {}
     each(attrs, (at, k) => {
+        if (cols !== null && !cols.has(k)) {
+            return
+        }
         defs[k] = {
             type: getTypeNocase(get(at, 'type')),
             primaryKey: false,
@@ -141,25 +153,39 @@ async function queryMemory(opt, attrs, data, useFind, keys) {
         timestamps: false,
     })
 
-    //sync
-    await md.sync()
+    let ts
+    try {
 
-    //bulkCreate
-    let rows = data.map((v, i) => {
-        return { ...v, [keys.wi]: i }
-    })
-    await md.bulkCreate(rows)
+        //where, 以cvFind轉譯, 條件不合法時拋錯; 先於寫入數據, 拒收時不做無謂之寫入
+        let where = cvFind(find, {
+            escape: (v) => sequelize.escape(v),
+            attrs: md.rawAttributes,
+            dialect: 'sqlite',
+            dateNoTz: 'local',
+        })
 
-    //findAll, 只取原列序號
-    let ts = await md.findAll({
-        where: useFind,
-        attributes: [keys.wi],
-        raw: true,
-    })
+        //sync
+        await md.sync()
 
-    //close
-    if (sequelize !== null) {
+        //bulkCreate
+        let rows = data.map((v, i) => {
+            return { ...v, [keys.wi]: i }
+        })
+        await md.bulkCreate(rows)
+
+        //findAll, 只取原列序號
+        ts = await md.findAll({
+            where,
+            attributes: [keys.wi],
+            raw: true,
+        })
+
+    }
+    finally {
+
+        //close, 條件拒收或查詢失敗時亦關閉
         await sequelize.close()
+
     }
 
     //rs, 依序號取回Jet原列並依Jet回傳序排列

@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -47,7 +47,6 @@
         <article>
             <pre class="prettyprint source linenums"><code>import path from 'path'
 import fs from 'fs'
-import Sequelize from 'sequelize'
 import jetOpen, { CODE_DUP_KEY } from './jet.mjs'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import get from 'lodash-es/get.js'
@@ -64,7 +63,6 @@ import evem from 'wsemi/src/evem.mjs'
 import genIDSeq from 'wsemi/src/genIDSeq.mjs'
 import isarr from 'wsemi/src/isarr.mjs'
 import isearr from 'wsemi/src/isearr.mjs'
-import isobj from 'wsemi/src/isobj.mjs'
 import iseobj from 'wsemi/src/iseobj.mjs'
 import isbol from 'wsemi/src/isbol.mjs'
 import isnum from 'wsemi/src/isnum.mjs'
@@ -82,7 +80,7 @@ import {
     getDeleteAll
 } from './getCmd.mjs'
 import { initSequelize, queryMemory } from './queryMemory.mjs'
-import { TPS_STR, getPkType, normPk, kFast, castPkFind, genInnerKeys } from './pk.mjs'
+import { TPS_STR, getPkType, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys, isPlainObj } from './pk.mjs'
 
 
 //放置於全域宣告, 若使用useStable=true才可於當創建多實例時仍能全域控管
@@ -164,10 +162,6 @@ function WOrmMdb(opt = {}) {
     if (!isbol(opt.useEncryption)) {
         opt.useEncryption = false
     }
-
-
-    //Op
-    let Op = Sequelize.Op
 
 
     //ee, 採wsemi之evem(即eventemitter3), 其於'error'無監聽者時僅回傳false而不拋出,
@@ -495,78 +489,116 @@ function WOrmMdb(opt = {}) {
 
 
     /**
-     * 將mongo風格之查詢條件轉為sequelize運算子
+     * 查詢條件之快照, 每個值只讀一次
+     *
+     * 註: castPkFind之兩趟與cvFind皆讀快照, 令讀值結果會變之getter或Proxy不致前後不一; 讀值拋錯者於呼叫端之try內拋出(reject並發error事件)
+     * 註: 一般物件與陣列逐層複製, 保留Symbol鍵、不可列舉之鍵(複本為可列舉)、__proto__自有鍵(以defineProperty建構)、陣列之洞與原型;
+     * 不用cloneDeep(會丟不可列舉之鍵)與lodash之each(具數值length之物件被當成陣列樣迭代);
+     * 非一般物件與純量原樣保留(交cvFind判定)
+     * 註: 同一物件於多處出現者共用同一份複本(否則共用之子物件逐層展開為指數成長); 循環參照與深度超過上限者拋錯:
+     * 上限取cvFind之巢狀上限(32)之兩倍再加2, 因cvFind每層至多對應快照之兩層(物件與其下之陣列), 超過者cvFind亦必拒收;
+     * 不可於超過上限時原樣返回, 否則其下之getter由castPkFind兩趟與cvFind各讀一次而前後不一(主鍵條件可因此消失而全刪)
      *
      * @ignore
-     * @param {Object} find 輸入查詢條件物件
-     * @returns {Object} 回傳轉譯後之查詢條件物件
+     * @param {*} v 輸入查詢條件
+     * @returns {*} 回傳快照
      */
-    function getUseFind(find) {
-
-        function getKNew(k) {
-            let kNew = null
-            if (k === 'regex') {
-                kNew = Op.substring
+    function snapFind(v) {
+        let done = new Map() //已完成者: 原物件→複本
+        let ing = new Set() //走訪中之祖先, 再遇即循環參照
+        let snap = (x, depth) => {
+            if (x !== null &amp;&amp; typeof x === 'object' &amp;&amp; !Array.isArray(x) &amp;&amp; !isPlainObj(x)) {
+                return snapBuiltin(x)
             }
-            else if (k === 'options') {
-                kNew = null
+            if (!Array.isArray(x) &amp;&amp; !isPlainObj(x)) {
+                return x
             }
-            else if (k === 'nin') {
-                kNew = Op.notIn
+            if (done.has(x)) {
+                return done.get(x)
+            }
+            if (ing.has(x)) {
+                throw new Error('invalid find: circular reference')
+            }
+            if (depth > 66) {
+                throw new Error('invalid find: nesting too deep')
+            }
+            ing.add(x)
+            let r
+            if (Array.isArray(x)) {
+                r = new Array(x.length)
+                for (let i = 0; i &lt; x.length; i++) {
+                    if (i in x) {
+                        r[i] = snap(x[i], depth + 1)
+                    }
+                }
             }
             else {
-                kNew = Op[k]
+                r = Object.create(Object.getPrototypeOf(x))
+                for (let k of Reflect.ownKeys(x)) {
+                    Object.defineProperty(r, k, { value: snap(x[k], depth + 1), enumerable: true, writable: true, configurable: true })
+                }
             }
-            return kNew
+            ing.delete(x)
+            done.set(x, r)
+            return r
         }
+        return snap(v, 0)
+    }
 
-        function cvObj(o) {
-            let oNew = {}
-            each(o, (v, k) => {
-                let kNew = k
-                if (k.indexOf('$') >= 0) {
-                    k = k.replace('$', '')
-                    kNew = getKNew(k) //只針對開頭為$的指令轉譯
-                }
-                let vNew = v
-                if (isarr(v)) {
-                    vNew = cvArray(v)
-                }
-                else if (isobj(v)) {
-                    vNew = cvObj(v)
-                }
-                if (kNew !== null) {
-                    oNew[kNew] = vNew
-                }
-            })
-            return oNew
+
+    /**
+     * 快照之內建型別值: Date與RegExp以內建方法讀其內部值後重建
+     *
+     * 註: 不經物件自身可被覆寫之屬性(getTime、source、flags等), 令其後cvFind之檢核與送出讀到同一個值;
+     * 呼叫端覆寫之getTime或source getter若每次讀值不同, cvFind先檢後讀而送出未檢核之值(run02外審opus E4、sol pk-moving-regexp);
+     * 非內建型別(含偽造原型者, 內建方法對其拋錯)與其他物件原樣保留(交cvFind判定)
+     *
+     * @ignore
+     * @param {Object} x 輸入非一般物件
+     * @returns {Object} 回傳重建之值或原物件
+     */
+    function snapBuiltin(x) {
+        try {
+            return new Date(Date.prototype.getTime.call(x))
         }
-
-        function cvArray(o) {
-            let oNew = []
-            each(o, (v) => {
-                let vNew = v
-                if (isarr(v)) {
-                    vNew = cvArray(v)
-                }
-                else if (isobj(v)) {
-                    vNew = cvObj(v)
-                }
-                oNew.push(vNew)
-            })
-            return oNew
+        catch (err) {}
+        try {
+            let g = (k) => {
+                let d = Object.getOwnPropertyDescriptor(RegExp.prototype, k)
+                return d &amp;&amp; d.get ? d.get.call(x) : false
+            }
+            let src = g('source') //非RegExp則拋錯
+            let flags = [['hasIndices', 'd'], ['global', 'g'], ['ignoreCase', 'i'], ['multiline', 'm'], ['dotAll', 's'], ['unicode', 'u'], ['unicodeSets', 'v'], ['sticky', 'y']]
+                .filter(([k]) => g(k) === true)
+                .map(([, f]) => f)
+                .join('')
+            return new RegExp(src, flags)
         }
+        catch (err) {}
+        return x
+    }
 
-        //find
-        if (!isobj(find)) {
-            find = {}
+
+    /**
+     * 查詢條件之入口判定與快照, select與delAll共用
+     *
+     * 註: 非物件(undefined、null、字串、數值等純量)與陣列視為未給(系列現況保留), 不讀其內容:
+     * 令select與delAll一致(原先select先快照陣列而讀其元素, 讀值拋錯時select為reject而delAll全刪, run02外審sol)
+     * 註: 函數屬物件而非一般物件, 其自有鍵上之條件不得被丟棄而成{}, 拒收(w-orm-reladb之cvFind視函數為非物件而回{}, 已列建議)
+     * 註: 須於呼叫端之try內呼叫, 令Array.isArray對已撤銷之Proxy拋錯、快照讀值拋錯時經reject與error事件回報
+     *
+     * @ignore
+     * @param {*} find 輸入查詢條件
+     * @returns {Object} 回傳查詢條件之快照, 非物件與陣列回傳{}
+     */
+    function normFind(find) {
+        if (typeof find === 'function') {
+            throw new Error('invalid find: find must be a plain object')
         }
-        find = cloneDeep(find)
-
-        //useFind
-        let useFind = cvObj(find)
-
-        return useFind
+        if (find === null || typeof find !== 'object' || Array.isArray(find)) {
+            return {}
+        }
+        return snapFind(find)
     }
 
 
@@ -655,6 +687,7 @@ function WOrmMdb(opt = {}) {
      * 註: Access之SQL方言不支援$in、$nin、$regex等條件，故不將條件送Jet而由記憶體過濾
      * 註: 主鍵之等值類條件由castPkFind改寫為命中列之序號(以resolvePkIdx由Jet判定)，故命中判定與selectByPk、insert、save、del一致；
      * 主鍵之範圍運算子與$regex仍於記憶體sqlite比對(近似)
+     * 註: 其餘條件原樣交w-orm-reladb之cvFind轉譯(於queryMemory內)，不支援之運算子與無法轉譯之值reject(見CLAUDE_rulebook.md之R-FIND)
      *
      * @ignore
      * @param {Object} si 輸入實例物件
@@ -662,6 +695,9 @@ function WOrmMdb(opt = {}) {
      * @returns {Promise} 回傳Promise，resolve回傳數據陣列(Jet原列)
      */
     async function findAll(si, find) {
+
+        //find, 入口之形式判定與快照, 以下castPkFind與cvFind皆讀快照
+        find = normFind(find)
 
         //md
         let md = getMd(si)
@@ -674,24 +710,21 @@ function WOrmMdb(opt = {}) {
         //keys, 記憶體過濾表之原列序號欄名稱, 附加亂數令其不與使用者之欄位或條件同名
         let keys = genInnerKeys(attrs)
 
-        //vals, 先以記錄用之idxOf取得條件內之全部主鍵值; 否定語境之無效主鍵值於此拋出(見pk.mjs之castPkFind)
+        //findPk, 單趟走訪: 主鍵等值類條件改寫為序號佔位條件, 其餘條件原樣保留, 於queryMemory內交cvFind轉譯; 否定語境之無效主鍵值於此拋出
+        //註: opt.pk非model之屬性時不辨識主鍵條件, 主鍵名之鍵交cvFind以嚴格鍵拒收(否則近似之主鍵名繞過嚴格鍵, run02外審opus)
+        let pkKey = Object.prototype.hasOwnProperty.call(attrs, opt.pk) ? opt.pk : null
+        let { find: findPk, slots } = castPkFind(find, pkKey, pkType, keys.wi)
+
+        //idxOf, 由Jet判定各主鍵值之命中列, 填入序號佔位
         let vals = []
-        castPkFind(find, opt.pk, pkType, keys.wi, (v) => {
-            vals.push(v)
-            return []
-        })
-
-        //idxOf, 由Jet判定各主鍵值之命中列
+        for (let s of slots) {
+            vals.push(...s.vals)
+        }
         let idxOf = await resolvePkIdx(si, data, vals)
-
-        //findPk, 主鍵等值類條件改寫為序號條件, 其餘條件原樣交getUseFind
-        let findPk = castPkFind(find, opt.pk, pkType, keys.wi, idxOf)
-
-        //useFind
-        let useFind = getUseFind(findPk)
+        fillPkSlots(slots, idxOf)
 
         //queryMemory
-        let rs = await queryMemory(opt, attrs, data, useFind, keys)
+        let rs = await queryMemory(opt, attrs, data, findPk, keys)
 
         return rs
     }
@@ -702,6 +735,9 @@ function WOrmMdb(opt = {}) {
      *
      * 註: 恆回傳陣列，無符合數據回傳空陣列而不回傳null
      * 註: find未給或為空物件時回傳全部數據
+     * 註: 條件之語法與規則同w-orm-reladb之cvFind(欄位層$eq、$ne、$gt、$gte、$lt、$lte、$in、$nin、$not、$regex、$options、$exists，文件層$and、$or、$nor，另保留文件層之$not)，
+     * 欄名須與model完全相符，值依欄位型別檢核，$regex為字面子字串，DATE欄之無時區字串依主機時區；不支援之運算子與無法轉譯之值reject；
+     * 主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-FIND、R-PK)
      * 註: 本函數不得有副作用，故不創建資料表
      *
      * @memberOf WOrmMdb
@@ -1781,6 +1817,8 @@ function WOrmMdb(opt = {}) {
      *
      * 註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數
      * 註: find未給或為空物件時刪除全部數據；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
+     * 註: 僅[未給、非物件、陣列、無任何自有鍵之一般物件]視為無條件；只有Symbol鍵(如Op.and)、不可列舉之鍵或具length鍵之條件皆照常過濾，
+     * 不合法之條件(含非一般物件)reject且不刪除任何數據；條件規則同select
      * 註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵逐筆以DELETE … WHERE 主鍵 =刪除，
      * 令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin、$regex等運算子，
      * 會出現[select查得到但delAll刪不到]或反之之不一致
@@ -1794,12 +1832,6 @@ function WOrmMdb(opt = {}) {
      * @returns {Promise} 回傳Promise，resolve回傳刪除結果{n,nDeleted,ok}，reject回傳錯誤訊息
      */
     async function delAll(find = {}, option = {}) {
-
-        //find
-        if (!isobj(find)) {
-            find = {}
-        }
-        find = cloneDeep(find)
 
         //instance
         let instance = get(option, 'instance', null)
@@ -1827,8 +1859,13 @@ function WOrmMdb(opt = {}) {
             //nDel
             let nDel = 0
 
-            if (size(keys(find)) === 0) {
+            //find, 入口之形式判定與快照, 與select共用normFind; 於try內, 判定或讀值拋錯經reject與error事件回報
+            //註: 不cloneDeep(會丟不可列舉之鍵); 非物件與陣列為{}(系列現況保留)
+            find = normFind(find)
+
+            if (isPlainObj(find) &amp;&amp; Reflect.ownKeys(find).length === 0) {
                 //無條件, 直接清空全表, 不需先取主鍵清單
+                //註: 僅一般物件且無任何自有鍵(含Symbol與不可列舉之鍵)者才屬無條件; 只有Op.and等Symbol鍵、具length鍵、非一般物件者皆經findAll由cvFind判定
 
                 let rr = await si.jet.execute(getDeleteAll(opt.cl))
                 nDel = isnum(rr.n) ? rr.n : 0
@@ -2012,7 +2049,7 @@ export default WOrmMdb
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 13:23:26 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 21:06:51 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

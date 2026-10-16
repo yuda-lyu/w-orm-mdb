@@ -25,6 +25,12 @@ let sqlsPk = [
     'CREATE TABLE [ukey] ([uid] TEXT(255) CONSTRAINT [pk] PRIMARY KEY, [id] TEXT(255), [name] TEXT(255))', //主鍵欄名非id且另有非主鍵欄id
 ]
 
+//條件(find)轉譯測試用之各資料表(空表, 資料列由test/unit-find-setup.mjs於測試時寫入), 對應model於test/assets/models/
+let sqlsFind = [
+    'CREATE TABLE [tc] ([id] TEXT(255) CONSTRAINT [pk] PRIMARY KEY, [name] TEXT(255), [value] DOUBLE, [n] LONG, [dt] DATETIME, [b] BIT, [p$x] TEXT(50), [length] LONG)', //字串主鍵與各型別欄位, 含欄名length與p$x
+    'CREATE TABLE [tk] ([k] LONG CONSTRAINT [pk] PRIMARY KEY, [id] TEXT(50), [v] DOUBLE)', //整數主鍵k且另有非主鍵文字欄id
+]
+
 async function gen(fn, password, sqls) {
 
     //fp
@@ -61,6 +67,7 @@ async function main() {
         ['worm_def.mdb', '', [sqlCreateTable]], //一般測試檔
         ['worm_encryption_def.mdb', 'username:password', [sqlCreateTable]], //加密測試檔, 密碼組成比照WOrmMdb: `${username}:${password}`
         ['worm_pk_def.mdb', '', sqlsPk], //主鍵命中判定測試檔
+        ['worm_find_def.mdb', '', sqlsFind], //條件(find)轉譯測試檔
     ]
 
     //fns, 未給則全部

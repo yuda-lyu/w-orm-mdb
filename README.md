@@ -203,7 +203,7 @@ async function test() {
 
 
     //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: '$i' } })
+    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
     console.log('selectReg', sr)
 
 
@@ -458,7 +458,7 @@ async function test() {
 
 
     //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: '$i' } })
+    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
     console.log('selectReg', sr)
 
 
@@ -653,7 +653,7 @@ async function test() {
 
 
     //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: '$i' } })
+    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
     console.log('selectReg', sr)
 
 
