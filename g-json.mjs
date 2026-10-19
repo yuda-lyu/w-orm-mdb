@@ -177,9 +177,9 @@ async function test() {
     console.log('select by $or, $gte, $lte', spb)
 
 
-    //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
-    console.log('selectReg', sr)
+    //select by name, Jet之字串比對不分大小寫(條件僅支援系列白名單, 不支援$regex)
+    let sr = await w.select({ name: 'PETER(MODIFY)' })
+    console.log('selectNocase', sr)
 
 
     //del, 主鍵未命中為正常結果(ok:1), 未帶有效主鍵為該筆失敗(ok:0並附err)
@@ -238,7 +238,7 @@ test().catch((err) => console.log('err:', err))
 // select [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
-// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
+// selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
 // error del invalid id[undefined]
 // change del
 // del then [

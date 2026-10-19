@@ -20,6 +20,60 @@ npm i w-orm-mdb
 
 > **Zero-install requirement:** Runs on Windows only. The package operates mdb files through the bundled `connMDB.exe`, which uses the Windows built-in Jet 4.0 engine and built-in .NET Framework 4.x — no need to install AccessDatabaseEngine, Java or any SDK. Supports `.mdb` (Jet4, Access 2000-2003 format, max 2GB) including password-protected files; `.accdb` is not supported.
 
+### Condition (`find`) whitelist for `select` and `delAll`
+
+`select(find)` and `delAll(find)` accept the same series wide whitelist (shared with the other `w-orm-*` packages through `cvOrmFind` of `wsemi`) and filter through one code path, so **the rows `delAll` deletes are exactly the rows `select` returns** for the same `find`. Anything outside the whitelist **rejects as a whole** (and emits `error`) before the model files are loaded, before the mdb file is opened and before any SQL is sent: nothing is ignored, reinterpreted or deleted. (The checks of the next paragraph, column names and value types against the model, run after the table has been read; they reject as a whole too and delete nothing.) The error message is `invalid find: <reason> at [<path>]`; the shared whitelist check never echoes the offending value (the column type check described below may quote it).
+
+| Form | Meaning |
+|---|---|
+| `find` omitted, `undefined` or `{}` | all rows (for `delAll`: **every row is deleted**, see below) |
+| `{ col: value }` | equality; several columns are combined with AND; the value is a string (no NUL, no lone surrogate), a finite number, a boolean, a valid `Date`, or `null` (`IS NULL`) |
+| `$eq` `$ne` `$gt` `$gte` `$lt` `$lte` | comparison with a scalar (`null` only for `$eq` / `$ne`); several operators on one column are combined with AND |
+| `$in` `$nin` | an array of scalars (no `null`), **at most 2000 values** (and at most 2000 distinct primary key values in the whole `find`); `$in: []` matches nothing, `$nin: []` rejects |
+| `$and` `$or` | a non empty array of non empty condition objects, **at most 999 items** (the in memory filter runs on SQLite, which fails at 1000 flat items) |
+
+Limits: nesting depth 32, `$in` / `$nin` at most 2000 values (Jet decides every primary key value one statement at a time, about 1.6 ms each, so 2000 values already take a few seconds; the same limit holds for the number of distinct primary key values in the whole `find`, spread over several arrays inside `$or` / `$and` or not, and a `find` over it rejects with `too many primary key values (> 2000)` after the table has been read and before Jet is asked about any key), at most 100000 nodes, column names of 1 to 128 characters matching `^[\p{L}_][\p{L}\p{M}\p{N}_]*$` (so no dots, quotes, hyphens, spaces or a leading `$`; Chinese letters are fine).
+
+Everything else rejects, among them: a `find` that is not a plain condition object (`null`, an array, a string, a number, a boolean, a function, a `Date`, a `RegExp`, a `Map`, a class instance …, which are **never** treated as `{}`), `$not` `$nor` `$regex` `$options` `$exists` `$where` `$expr` `$like` `$ilike` and any other operator, `$and` / `$or` inside a column, sequelize `Op` symbols, a `RegExp` value, an array as a column value (write `$in`), `undefined`, functions, symbols, `BigInt`, `Buffer`, `NaN`, `±Infinity`, invalid `Date` and `String` / `Number` wrapper objects as values, symbol keys, getters and non enumerable keys, sparse arrays or arrays with extra properties, empty operator objects, empty `$and` / `$or` or a `{}` inside them.
+
+On top of the whitelist the rows are filtered in memory through the model (`w-orm-reladb`), which rejects what cannot be translated with its meaning intact (an empty table cannot show which columns exist, so there a column that the model lists but the table lacks is only rejected once the table has rows): values that do not fit the column type (for example `'abc'` against a numeric column, or a date string without a time such as `'2026-01-01'`; a date-time string without a zone is read as local time of the host, as Jet stores no zone) and column names that the model does not list or that Jet does not have. Column names in a `find` must match the model exactly (`ID` for `id` is rejected). A column whose name is outside the grammar above (for example `p$x`) can still be read with `select()` but can no longer be used in a `find`.
+
+Primary key conditions (`{ id: value }`, `$eq` `$ne` `$in` `$nin`) are decided by Jet itself, with the same rules as `selectByPk`, `del` and `insert`: the strings `'K2 '` and `'k2'` are the same key (letter case, trailing spaces, full width forms and kana are ignored). A `$ne` / `$nin` value that is not a valid key (`null`, a boolean, a `Date`, `''` or a type that does not fit the key column) rejects, because treating it as "matches nothing" would turn the negation into "matches everything"; in positive conditions such a value simply matches no row. A primary key is never `NULL`, so write `{ id: { $ne: x } }` directly: the portable form `{ id: { $ne: null } }` rejects here. A bound of `$gt` `$gte` `$lt` `$lte` on the primary key must be a valid key value of the key's type; a bound that is not (for example `2.5` for an integer key, or a string of more than 255 characters) matches no row.
+
+Differences from MongoDB you should know: `NULL` follows SQL three valued logic, so `$ne` and `$nin` do not match rows whose column is `NULL`. To say it explicitly use the portable forms (they return the same rows on every `w-orm-*` package): leave `NULL` out with `{ $and: [{ f: { $ne: null } }, { f: { $ne: x } }] }`, or keep it with `{ $or: [{ f: null }, { f: { $ne: x } }] }`. Strings are compared by Jet and by the in memory filter without regard to letter case (`{ name: 'PETER' }` finds `peter`), and there is no pattern matching: to search for a substring, `select()` and filter in memory. A Yes/No column cannot hold `NULL` in Jet (it is stored as false), so `{ flag: { $ne: true } }` also returns rows that were written without a value.
+
+**`delAll` needs care.** `delAll()`, `delAll(undefined)` and `delAll({})` delete every row without asking; only a condition makes it a partial delete. Use it sparingly and prefer `del` for single rows; a `find` that is not a condition object rejects instead of deleting everything. Check what a condition matches with `select(find)` first. If the condition comes from a variable that may be `undefined`, `null` or an empty array, decide that yourself before calling: `undefined` values and `$nin: []` reject (they are never ignored), `$in: []` matches nothing.
+
+### Breaking changes: condition whitelist
+
+The condition syntax was cut down to the whitelist above (series wide, issue "condition whitelist"). The "before" column is what the previous release (1.0.36, with `w-orm-reladb` 1.1.9) did, checked by running it against an eleven row table; there is no transition period.
+
+| `find` | before (1.0.36) | now |
+|---|---|---|
+| `null`, `[]`, `[{ id: 'a' }]`, a string, a number, `true`, a `BigInt`, a `Symbol`, a `Proxy` around `{}` as the whole `find` | `select` returned **every row** and `delAll` **deleted every row** (treated as `{}`) | rejects: `invalid find: condition must be a plain object …` (a `Proxy` around `{}`: `an empty find must be an ordinary object`) |
+| `$not` (on a column and at document level), `$nor`, `$exists` | supported | rejects (`unsupported operator`); express it with `$ne` / `$nin` / `$gt` … / `$and` / `$or` (see the portable forms above) |
+| `$regex` with `$options`, a `RegExp` value | substring match, case insensitive (`{ name: { $regex: 'pet' } }` matched `peter` and `Peter`) | rejects; use equality (case insensitive) or `select()` and filter in memory |
+| an array as a column value, `{ id: ['a', 'b'] }`; a scalar as `$in`, `{ id: { $in: 'a' } }` | treated as `$in` | rejects: `array value is not supported`, `value must be an array`; write `{ id: { $in: ['a', 'b'] } }` |
+| sequelize `Op` symbols as keys (`Op.or`, `Op.in`, `Op.like`, `Op.and`, `Op.not` …) | accepted | rejects: `symbol key is not allowed` |
+| `null` inside `$in` | accepted (`{ name: { $in: [null, 'abc'] } }` matched the `NULL` row and `abc`) | rejects; use `{ $or: [{ col: null }, { col: { $in: […] } }] }` |
+| `null` inside `$nin` | accepted (`$nin: [null]` meant "is not NULL") | rejects; use `{ col: { $ne: null } }`, or drop the `null` (`$nin` already skips `NULL` rows) |
+| `$nin: []` | matched **every row** (`delAll` deleted all) | rejects |
+| `$and: [{}]`, `$or: [{}]` | matched **every row** | rejects: `empty condition` |
+| `undefined` or a `BigInt` as a primary key value, `{ id: undefined }`, `{ id: { $in: ['a', undefined] } }`, `{ id: 123n }`, `{ id: {} }` | matched no row (`{ id: { $in: ['a', undefined] } }` matched `a`); `delAll` deleted nothing (on the other columns `undefined` already rejected) | rejects: `undefined is not allowed`, `unsupported value type`, `empty operator object` |
+| a `String` / `Number` wrapper object as a primary key value, `{ id: new String('a') }` | unwrapped and matched (on the other columns it already rejected) | rejects: `unsupported value type` |
+| a string containing NUL or a lone surrogate as a value | matched no row | rejects |
+| a getter or non enumerable property, an array with extra properties | accepted (the getter was called) | rejects: `accessor property is not allowed`, `non-enumerable` |
+| a column name outside `^[\p{L}_][\p{L}\p{M}\p{N}_]*$` (for example `p$x`) | accepted when the model listed that column | rejects: `unsupported column name` |
+| `$in` / `$nin` with more than 2000 values | accepted (5000 values worked; every primary key value costs one statement) | rejects: `array is too large (> 2000)` |
+| `$and` / `$or` with 999 items | database error `Expression tree is too large` | accepted; the limit is 999 items |
+| `$and` / `$or` with more than 999 items | database error `Expression tree is too large` | rejects: `array is too large (> 999)` |
+| a chain of 32 nested `$and` levels | rejects (`find is too deep`) | accepted (the limit is 32 levels) |
+| error message format | `invalid find: unsupported operator [$foo] at [name.$foo]` | `invalid find: unsupported operator [$foo] at [find.name.$foo]` (the path starts with `find`, and the wording of the value errors changed: `value must be a string, finite number, boolean, Date or null` became `unsupported value type [x]`; a primary key value that is not valid under `$ne` / `$nin` used to reject with `invalid id in negative condition: <value>` and now with `invalid find: invalid primary key value in negative condition at [find.id.$ne]`, without echoing the value) |
+
+Unchanged: a `find` that is a function, a `Date` or a class instance rejects, `$and: []` / `$or: []` reject, unknown or misspelled column names reject, and `{ id: { $ne: null } }` / `{ id: { $ne: undefined } }` keep rejecting (a primary key can never be `NULL`).
+
+`select(null)` and `delAll(null)` style calls must become `select({})` / `delAll({})` (or no argument).
+
 #### Example by js settings 
 > **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
 ```alias
@@ -202,9 +256,9 @@ async function test() {
     console.log('select by $or, $gte, $lte', spb)
 
 
-    //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
-    console.log('selectReg', sr)
+    //select by name, Jet之字串比對不分大小寫(條件僅支援系列白名單, 不支援$regex)
+    let sr = await w.select({ name: 'PETER(MODIFY)' })
+    console.log('selectNocase', sr)
 
 
     //del, 主鍵未命中為正常結果(ok:1), 未帶有效主鍵為該筆失敗(ok:0並附err)
@@ -263,7 +317,7 @@ test().catch((err) => console.log('err:', err))
 // select [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
-// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
+// selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
 // error del invalid id[undefined]
 // change del
 // del then [
@@ -457,9 +511,9 @@ async function test() {
     console.log('select by $or, $gte, $lte', spb)
 
 
-    //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
-    console.log('selectReg', sr)
+    //select by name, Jet之字串比對不分大小寫(條件僅支援系列白名單, 不支援$regex)
+    let sr = await w.select({ name: 'PETER(MODIFY)' })
+    console.log('selectNocase', sr)
 
 
     //del, 主鍵未命中為正常結果(ok:1), 未帶有效主鍵為該筆失敗(ok:0並附err)
@@ -518,7 +572,7 @@ test().catch((err) => console.log('err:', err))
 // select [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
-// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
+// selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
 // error del invalid id[undefined]
 // change del
 // del then [
@@ -652,9 +706,9 @@ async function test() {
     console.log('select all', ss)
 
 
-    //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
-    console.log('selectReg', sr)
+    //select by name, Jet之字串比對不分大小寫(條件僅支援系列白名單, 不支援$regex)
+    let sr = await w.select({ name: 'PETER(MODIFY)' })
+    console.log('selectNocase', sr)
 
 
     //del
@@ -697,7 +751,7 @@ test().catch((err) => console.log('err:', err))
 //   { id: '{random id}', name: 'kettle', value: 456 },
 //   { id: 'id-bulk-1', name: 'bulk1', value: 1 }
 // ]
-// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
+// selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
 // change del
 // del then [ { n: 1, nDeleted: 1, ok: 1 } ]
 // change delAll

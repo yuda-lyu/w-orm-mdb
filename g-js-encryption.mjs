@@ -117,9 +117,9 @@ async function test() {
     console.log('select all', ss)
 
 
-    //select by regex
-    let sr = await w.select({ name: { $regex: 'PeT', $options: 'i' } })
-    console.log('selectReg', sr)
+    //select by name, Jet之字串比對不分大小寫(條件僅支援系列白名單, 不支援$regex)
+    let sr = await w.select({ name: 'PETER(MODIFY)' })
+    console.log('selectNocase', sr)
 
 
     //del
@@ -162,7 +162,7 @@ test().catch((err) => console.log('err:', err))
 //   { id: '{random id}', name: 'kettle', value: 456 },
 //   { id: 'id-bulk-1', name: 'bulk1', value: 1 }
 // ]
-// selectReg [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
+// selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
 // change del
 // del then [ { n: 1, nDeleted: 1, ok: 1 } ]
 // change delAll

@@ -156,8 +156,10 @@ if (isWindows()) {
                 assert.strict.strictEqual(rs[1].name, 'kettle')
             })
 
-            it('select以$regex不分大小寫查詢', async function() {
-                let rs = await w.select({ name: { $regex: 'PeT', $options: '$i' } })
+            it('select以$regex(系列白名單外)整批reject; 字串等值不分大小寫(Jet)為其白名單內之替代', async function() {
+                //spec: dspec〈一之三〉5. 白名單外之運算子($regex $options)一律整批reject(1.0.36 為字面子字串比對)
+                await assert.strict.rejects(w.select({ name: { $regex: 'PeT', $options: '$i' } }), /unsupported operator \[\$regex\]/)
+                let rs = await w.select({ name: 'PETER' })
                 assert.strict.deepStrictEqual(rs, [{ id: 'id-peter', name: 'peter', value: 123 }])
             })
 

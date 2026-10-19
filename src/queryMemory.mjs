@@ -58,7 +58,7 @@ async function initSequelize(opt) {
  * 而sqlite預設之BINARY定序分大小寫。記憶體過濾層係模擬後端行為之實作細節，
  * 若不對齊將出現[selectByPk命中而select({主鍵})查無]之矛盾，與規格[命中判定基準須一致]相違
  * 註: sqlite之NOCASE僅折疊ASCII之A-Z且不忽略尾端空白，故主鍵之等值條件不在此比對，而由castPkFind改寫為以Jet判定之命中列序號(見WOrmMdb.mjs之resolvePkIdx)，
- * 本函數之CITEXT僅決定非主鍵字串欄與主鍵之範圍比較、$regex之語意
+ * 本函數之CITEXT僅決定非主鍵字串欄與主鍵之範圍比較之語意
  *
  * @ignore
  * @param {Object} tp 輸入原欄位型別物件
@@ -81,13 +81,14 @@ function getTypeNocase(tp) {
 /**
  * 於記憶體內過濾數據
  *
- * 因Access之SQL方言不支援$in、$nin、$regex等條件，故由Jet取回全部數據後於記憶體sqlite內過濾
+ * 因Access之SQL方言不支援$in、$nin等條件，故由Jet取回全部數據後於記憶體sqlite內過濾
  *
  * 註: 主鍵之等值類條件已由castPkFind改寫為原列序號欄keys.wi之$in/$nin(序號由Jet判定命中列)，
  * 令尾端空白、全半形、平片假名、非ASCII大小寫等變體之命中與selectByPk、insert、save、del一致
- * 註: 條件由w-orm-reladb之cvFind轉譯(非主鍵條件之單一擁有者: 運算子白名單、依欄型檢核值、$regex字面化、嚴格鍵)，
- * ctx依其帳本之深引用者接線契約: attrs取過濾表本身之rawAttributes(字串欄為CITEXT、含序號欄)、dialect為sqlite、
- * escape用本實例、dateNoTz為'local'(Jet之DATETIME無時區, 無時區字串依主機時區)；不傳pk(主鍵等值由Jet判定, 不交sqlite)
+ * 註: 條件由w-orm-reladb之cvFind轉譯(非主鍵條件之欄位型別/DATE/嚴格鍵單一擁有者; 運算子白名單與形狀層由wsemi之cvOrmFind檢核, 入口已於WOrmMdb.mjs之normFind完成, cvFind對複本再檢核一次, 冪等)，
+ * ctx依其帳本之深引用者接線契約: attrs取過濾表本身之rawAttributes(字串欄為CITEXT、含序號欄)、
+ * dateNoTz為'local'(Jet之DATETIME無時區, 無時區字串依主機時區)；不傳pk(主鍵等值由Jet判定, 不交sqlite)；
+ * reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
  * 註: 原列序號欄之名稱由呼叫端以genInnerKeys產生(附加亂數)，與castPkFind所用者須相同，且不與使用者之欄位或條件同名
  * 註: 過濾表以原列序號keys.wi為主鍵，主鍵欄不設主鍵與唯一；
  * 結果依序號取回Jet之原列並依Jet回傳序排列，故select之內容即Jet原值(如DATE欄之字串、BOOLEAN欄之true/false)，
@@ -158,9 +159,7 @@ async function queryMemory(opt, attrs, data, find, keys) {
 
         //where, 以cvFind轉譯, 條件不合法時拋錯; 先於寫入數據, 拒收時不做無謂之寫入
         let where = cvFind(find, {
-            escape: (v) => sequelize.escape(v),
             attrs: md.rawAttributes,
-            dialect: 'sqlite',
             dateNoTz: 'local',
         })
 

@@ -45,8 +45,7 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import Sequelize from 'sequelize'
-import get from 'lodash-es/get.js'
+            <pre class="prettyprint source linenums"><code>import get from 'lodash-es/get.js'
 
 
 //主鍵之型別判定、正規化與等值判定之輔助
@@ -55,7 +54,7 @@ import get from 'lodash-es/get.js'
 //主鍵等值一律以Jet唯一索引之判定為準, 本模組只負責:
 //  1. normPk: 依主鍵欄型別正規化主鍵值, 並判定無效、型別不符與不可能存在
 //  2. kFast: 快速對應鍵, 只會少判不會多判, 對不上者另以Jet之=查詢判定(insert撞鍵核對與select/delAll之主鍵條件共用)
-//  3. castPkFind: 把查詢條件內之主鍵等值類條件改寫為[命中列之序號集合], 序號集合由呼叫端以Jet判定後提供;
+//  3. castPkFind: 把查詢條件(normFind回傳之複本)內之主鍵等值類條件改寫為[命中列之序號集合], 序號集合由呼叫端以Jet判定後提供;
 //     主鍵以外之條件原樣保留, 交w-orm-reladb之cvFind轉譯(見CLAUDE_rulebook.md之R-FIND)
 //
 //Jet 4.0之字串等值(已實測): 不分大小寫(含非ASCII)、忽略尾端半形空白、忽略全半形寬度與平片假名、ß視同ss、ς視同σ, 且忽略增補平面字元;
@@ -78,24 +77,6 @@ const LEN_TEXT_MAX = 255
 
 //記憶體過濾表之原列序號欄名稱前綴, 實際名稱由genInnerKeys附加亂數產生, 以免與使用者之欄位或條件同名
 const KEY_WI = '__worm_wi'
-
-
-//sequelize之運算子Symbol(以Symbol.for註冊, 與w-orm-reladb之cvFind所用者相同)
-let Op = Sequelize.Op
-
-
-//主鍵欄之sequelize原生Symbol運算子所比照之$運算子(同reladb之cvFind於欄位層之處置), 其他原生Symbol原樣留於原欄交cvFind
-const MAP_OP_SYM = new Map([
-    [Op.eq, '$eq'],
-    [Op.ne, '$ne'],
-    [Op.gt, '$gt'],
-    [Op.gte, '$gte'],
-    [Op.lt, '$lt'],
-    [Op.lte, '$lte'],
-    [Op.in, '$in'],
-    [Op.notIn, '$nin'],
-    [Op.not, '$not'],
-])
 
 
 //主鍵欄之範圍運算子, 以正規化值留於原欄比對
@@ -269,7 +250,7 @@ function genInnerKeys(attrs) {
  * 是否為一般物件: 原型為Object.prototype或null
  *
  * 註: 查詢條件之判定與走訪不得用wsemi之isobj與lodash之each/keys: 具數值length之物件會被當成陣列樣迭代,
- * Symbol鍵(如Op.and)與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪光全表(見CLAUDE_rulebook.md之R-FIND-02)
+ * Symbol鍵與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪光全表(見CLAUDE_rulebook.md之R-FIND-02)
  *
  * @param {*} v 輸入任意值
  * @returns {Boolean} 回傳是否為一般物件
@@ -311,44 +292,43 @@ function isOpObj(c) {
 /**
  * 改寫查詢條件內之主鍵條件
  *
- * 註: 主鍵等值類條件(隱含等值、陣列值、$eq、$ne、$in、$nin, 及其下之$not)改寫為原列序號欄wi之$in/$nin,
+ * 註: 輸入為WOrmMdb.mjs之normFind(wsemi之cvOrmFind)回傳之複本, 已在系列條件白名單內(見CLAUDE_rulebook.md之R-WL): 欄位等值、$eq $ne $gt $gte $lt $lte $in $nin、文件層$and $or,
+ * 純量為字串、有限數字、布林、Date、null; 本函數在複本上單趟走訪, 每個值只讀一次
+ * 註: 主鍵等值類條件(隱含等值、$eq、$ne、$in、$nin)改寫為原列序號欄wi之$in/$nin,
  * 序號集合以佔位陣列置於條件內並列於回傳之slots(各含正規化後之主鍵值vals與佔位陣列is), 呼叫端以Jet判定命中列後以fillPkSlots就地填入,
  * 故命中判定與selectByPk、del等一致, 不經任何近似鍵
- * 註: 單趟走訪, 每個條件值只讀一次: 原先之兩趟呼叫(先收集主鍵值、解析後再改寫)於兩趟讀值不一時(覆寫valueOf之包裝物件、陷阱會變之Proxy),
- * 第二趟之值未經收集而查無序號, $ne/$nin之條件因此消失而使delAll刪光全表(run02外審opus、sol)
  * 註: 主鍵欄只認鍵與pk完全相符者(與reladb之cvFind之嚴格鍵一致), 大小寫或尾端空白不同之近似鍵原樣交cvFind拒收
- * 註: 範圍運算子($gt、$gte、$lt、$lte)以正規化值留於原欄比對(記憶體sqlite之語意, 為近似), $regex等其餘運算子原樣留於原欄;
- * sequelize原生Symbol運算子之Op.eq/ne/gt/gte/lt/lte/in/notIn/not比照對應之$運算子, 其他原生Symbol原樣留於原欄
- * 註: 肯定語境之無效、型別不符、不可能存在之值不命中(範圍運算子亦同, 不留null給cvFind);
- * 否定語境($ne、$nin、$not之內, 以及文件層$not、Op.not與$nor之內)之無效或型別不符之值一律拋出:
- * 依[無效值不命中]推得之否定為[全部命中], 用於delAll即清空全表, 而此類值多為呼叫端之錯誤(如變數為undefined);
- * 修正前sequelize對undefined亦為reject, 故拋出不使既有呼叫改為刪光全表; 不可能存在之值於否定語境依其語意為必不相等
- * 註: 主鍵欄之$not(含Op.not)整體取反NOT(A∧B), 內層以否定語境遞迴改寫, 各$not各自成一子式而不互相覆寫; 值為純量或陣列者即$nin
- * 註: 主鍵欄之RegExp值視為$regex(主控裁示Q4); 非運算子物件(如{})視為主鍵值而非條件, 屬無效值, 不得因其無運算子而使主鍵條件消失(修正初版即因此使delAll({id:{}})刪光全表)
- * 註: 主鍵所衍生之條件以{[Op.and]:[其餘, ...主鍵條件]}包覆(其餘為空時省略), 不併入呼叫端之$and(呼叫端之空$and仍由cvFind拒收)
- * 註: 走訪以Reflect.ownKeys(含Symbol鍵與不可列舉之鍵)並以defineProperty建構, 不用lodash之each: 具數值length之物件會被當成陣列樣迭代而使條件消失;
- * 非一般物件原樣返回(交cvFind拒收); 主鍵以外之欄位、運算子與值原樣保留交cvFind檢核與轉譯
- * 註: 文件層之$not(頂層與$and/$or/$nor/Op.not之元素內, 值為一般物件)轉為Op.not子式(主控裁示Q2: 本輪保留1.0.35之支援; reladb之cvFind對其為reject)
- * 註: 序號條件不產生sequelize之literal(空集合以不存在之序號-1表示), 令cvFind所用之sequelize與記憶體sqlite者不同份時, 主鍵條件不因literal無法辨識而拒收
+ * 註: 範圍運算子($gt、$gte、$lt、$lte)以正規化值留於原欄比對(記憶體sqlite之語意, 為近似); 其餘運算子正常不可能到達(cvOrmFind已拒), 若到達則原樣留於原欄, 由cvFind再拒
+ * 註: 肯定語境($eq、$in、隱含等值、範圍運算子)之無效、型別不符、不可能存在之值不命中(範圍運算子亦同, 不留null給cvFind);
+ * 否定語境($ne、$nin)之無效或型別不符之值(如null、布林、Date)一律拋出:
+ * 依[無效值不命中]推得之否定為[全部命中], 用於delAll即清空全表, 而此類值多為呼叫端之錯誤(如變數為null);
+ * 不可能存在之值於否定語境依其語意為必不相等
+ * 註: 非運算子物件(如{})視為主鍵值而非條件, 屬無效值, 不得因其無運算子而使主鍵條件消失(cvOrmFind已拒空運算子物件, 此為單獨呼叫本函數時之防線)
+ * 註: 主鍵所衍生之序號條件併入同一物件(欄位wi之運算子物件{$in,$nin}), 不增巢狀層(增層會把合法深度放大而於其後cvFind內之再檢核被拒); 同運算子重複者才另以字串鍵{$and:[其餘, ...]}置放;
+ * 邏輯陣列之元素若其主鍵條件皆化簡掉(如$ne僅含不可能存在之值)則以恆真之序號條件{wi:{$nin:[-1]}}代替空物件(白名單拒空條件); 不得用sequelize之Symbol Op(cvOrmFind拒Symbol鍵, reladb 1.1.10之cvFind對其reject)
+ * 註: 序號條件不產生sequelize之literal(空集合以不存在之序號-1表示)
+ * 註: 走訪以Reflect.ownKeys並以defineProperty建構, 不用lodash之each: 具數值length之物件會被當成陣列樣迭代而使條件消失;
+ * 非一般物件原樣返回(不可能到達, 交cvFind拒收); 主鍵以外之欄位、運算子與值原樣保留交cvFind檢核與轉譯
+ * 註: 第33項批2已移除: $not(欄位層與文件層)與其整體取反、$nor、$regex、$options、Symbol Op、陣列值即$in、RegExp值、頂層$not保留功能
  *
- * @param {Object} find 輸入mongo風格之查詢條件, 一般物件(呼叫端已處理非物件與陣列)
+ * @param {Object} find 輸入條件, normFind回傳之複本
  * @param {String} pk 輸入主鍵欄位名, 給null則不辨識主鍵條件(model無此屬性時, 令主鍵名之鍵交cvFind以嚴格鍵拒收)
  * @param {String} tp 輸入主鍵欄型別類別
  * @param {String} wi 輸入原列序號欄名稱, 取自genInnerKeys
- * @returns {Object} 回傳{find:改寫後之查詢條件, slots:[{vals:正規化後之主鍵值陣列, is:序號佔位陣列}]}
+ * @returns {Object} 回傳{find:改寫後之條件, slots:[{vals:正規化後之主鍵值陣列, is:序號佔位陣列}]}
  */
 function castPkFind(find, pk, tp, wi) {
 
     //slots, 序號集合之佔位
     let slots = []
 
-    //err, 否定語境之無效值
-    function err(v) {
-        return new Error(`invalid ${pk} in negative condition: ${String(v)}`)
+    //err, 否定語境之無效值: 同cvOrmFind之錯誤格式invalid find: 原因 at [路徑], 不回顯值
+    function err(path) {
+        return new Error(`invalid find: invalid primary key value in negative condition at [${path}]`)
     }
 
-    //normVals, 多值之正規化(純量視為單元素陣列); 肯定語境之無效、型別不符與不可能存在者略過(不命中); 否定語境之無效或型別不符拋出
-    function normVals(vs, neg) {
+    //normVals, 多值之正規化(純量視為單元素陣列); 肯定語境之無效、型別不符與不可能存在者略過(不命中); 否定語境之無效或型別不符拋出(path為錯誤訊息之路徑)
+    function normVals(vs, neg, path) {
         if (!Array.isArray(vs)) {
             vs = [vs]
         }
@@ -359,7 +339,7 @@ function castPkFind(find, pk, tp, wi) {
                 r.push(n.v)
             }
             else if (neg &amp;&amp; (n.kind === 'invalid' || n.kind === 'mismatch')) {
-                throw err(vs[k])
+                throw err(path)
             }
         }
         return r
@@ -383,14 +363,11 @@ function castPkFind(find, pk, tp, wi) {
         return { [wi]: { $nin: slot(vals) } }
     }
 
-    //rangeVal, 範圍運算子之值: ok回{v}; 否定語境之無效或型別不符拋出; 其餘(肯定語境之無效、型別不符, 與不可能存在)回{no:true}表該子式不命中
-    function rangeVal(v, neg) {
+    //rangeVal, 範圍運算子之值: ok回{v}; 其餘(無效、型別不符與不可能存在)回{no:true}表該子式不命中
+    function rangeVal(v) {
         let r = normPk(v, tp)
         if (r.kind === 'ok') {
             return { v: r.v }
-        }
-        if (neg &amp;&amp; (r.kind === 'invalid' || r.kind === 'mismatch')) {
-            throw err(v)
         }
         return { no: true }
     }
@@ -402,74 +379,30 @@ function castPkFind(find, pk, tp, wi) {
         }
     }
 
-    //nameOf, 運算子名稱: Symbol鍵取其比照之$運算子(非比照者為null), 字串鍵原樣
-    function nameOf(k) {
-        if (typeof k === 'symbol') {
-            return MAP_OP_SYM.get(k) || null
-        }
-        return k
-    }
-
-    //putPk, 以主鍵欄為鍵之條件物件
-    function putPk(v) {
-        let o = {}
-        putProp(o, pk, v)
-        return o
-    }
-
-    //castNot, 主鍵欄之$not(含Op.not): 運算子物件整體取反NOT(A∧B), 內層以否定語境改寫(內層之$not遞迴), 每個$not各自成一子式
-    function castNot(v, conds) {
-        if (v instanceof RegExp) {
-            conds.push(putPk({ $not: v }))
-            return
-        }
-        if (!isOpObj(v)) {
-            push(conds, cNin(normVals(v, true)))
-            return
-        }
-        let r = castCond(v, true)
-        let subs = [...r.conds]
-        if (Reflect.ownKeys(r.org).length > 0) {
-            subs.push(putPk(r.org))
-        }
-        if (subs.length === 0) {
-            subs.push({ [wi]: { $nin: [-1] } }) //內層無子式即恆真(如$nin:[]), 以恆真之序號條件代替{}, 令邏輯陣列非空且不產生literal
-        }
-        conds.push({ [Op.not]: { [Op.and]: subs } })
-    }
-
-    //castCond, 主鍵欄之條件, 回傳{conds:[序號條件或取反子式], org:{原欄條件}}
-    function castCond(c, neg) {
+    //castCond, 主鍵欄之條件, 回傳{conds:[序號條件], org:{原欄條件}}; path為該欄之路徑
+    function castCond(c, path) {
         let conds = []
         let org = {}
-        if (c instanceof RegExp) {
-            putProp(org, '$regex', c)
-            return { conds, org }
-        }
         if (!isOpObj(c)) {
-            push(conds, cIn(normVals(c, neg)))
+            push(conds, cIn(normVals(c, false, path)))
             return { conds, org }
         }
         for (let k of Reflect.ownKeys(c)) {
             let v = c[k]
-            let nm = nameOf(k)
-            if (nm === '$eq') {
-                push(conds, cIn(normVals([v], neg))) //單值: 陣列值屬無效值
+            if (k === '$eq') {
+                push(conds, cIn(normVals([v], false, path)))
             }
-            else if (nm === '$in') {
-                push(conds, cIn(normVals(v, neg)))
+            else if (k === '$in') {
+                push(conds, cIn(normVals(v, false, path)))
             }
-            else if (nm === '$ne') {
-                push(conds, cNin(normVals([v], true)))
+            else if (k === '$ne') {
+                push(conds, cNin(normVals([v], true, `${path}.$ne`)))
             }
-            else if (nm === '$nin') {
-                push(conds, cNin(normVals(v, true)))
+            else if (k === '$nin') {
+                push(conds, cNin(normVals(v, true, `${path}.$nin`)))
             }
-            else if (nm === '$not') {
-                castNot(v, conds)
-            }
-            else if (OPS_RANGE.indexOf(nm) >= 0) {
-                let r = rangeVal(v, neg)
+            else if (OPS_RANGE.indexOf(k) >= 0) {
+                let r = rangeVal(v)
                 if (r.no) {
                     push(conds, cIn([]))
                 }
@@ -481,17 +414,11 @@ function castPkFind(find, pk, tp, wi) {
                 putProp(org, k, v)
             }
         }
-        //org只剩視同未給之$options(undefined、null、'', 同reladb之R6)而已有主鍵子式者, 移除之:
-        //非主鍵之{f:{$eq:x,$options:undefined}}為合法, 主鍵之等值被抽為序號條件後若留下{$options:undefined}, cvFind會以無運算子拒收(run02外審sol)
-        let ks = Reflect.ownKeys(org)
-        if (conds.length > 0 &amp;&amp; ks.length === 1 &amp;&amp; ks[0] === '$options' &amp;&amp; (org.$options === undefined || org.$options === null || org.$options === '')) {
-            org = {}
-        }
         return { conds, org }
     }
 
-    //castObj, neg為是否位於否定語境(文件層$not、Op.not與$nor之內)
-    function castObj(o, neg) {
+    //castObj, inList為是否為邏輯陣列($and、$or)之元素, path為該物件之路徑(與cvOrmFind之路徑同形, 供錯誤訊息)
+    function castObj(o, inList, path) {
         if (!isPlainObj(o)) {
             return o
         }
@@ -500,46 +427,55 @@ function castPkFind(find, pk, tp, wi) {
         for (let k of Reflect.ownKeys(o)) {
             let v = o[k]
             if (k === pk) {
-                let { conds, org } = castCond(v, neg)
+                let { conds, org } = castCond(v, `${path}.${k}`)
                 ands.push(...conds)
                 if (Reflect.ownKeys(org).length > 0) {
                     putProp(rest, k, org)
                 }
             }
-            else if ((k === '$and' || k === '$or' || k === Op.and || k === Op.or) &amp;&amp; Array.isArray(v)) {
-                putProp(rest, k, v.map((x) => { //map保留陣列之洞, 交cvFind拒收
-                    return castObj(x, neg)
+            else if ((k === '$and' || k === '$or') &amp;&amp; Array.isArray(v)) {
+                putProp(rest, k, v.map((x, i) => { //map保留陣列之洞, 交cvFind拒收
+                    return castObj(x, true, `${path}.${k}[${i}]`)
                 }))
-            }
-            else if (k === '$nor' &amp;&amp; Array.isArray(v)) {
-                putProp(rest, k, v.map((x) => {
-                    return castObj(x, true)
-                }))
-            }
-            else if (k === Op.not &amp;&amp; isPlainObj(v)) {
-                putProp(rest, k, castObj(v, true))
-            }
-            else if (k === '$not' &amp;&amp; isPlainObj(v)) {
-                ands.push({ [Op.not]: castObj(v, true) })
             }
             else {
                 putProp(rest, k, v)
             }
         }
         if (ands.length === 0) {
+            //邏輯陣列之元素不得為空物件(白名單: 空條件reject), 原元素非空而其主鍵條件皆化簡掉者(如$ne僅含不可能存在之值, 必不相等即恆真), 以恆真之序號條件代替
+            if (inList &amp;&amp; Reflect.ownKeys(rest).length === 0 &amp;&amp; Reflect.ownKeys(o).length > 0) {
+                return { [wi]: { $nin: [-1] } }
+            }
             return rest
         }
-        if (Reflect.ownKeys(rest).length === 0) {
-            return { [Op.and]: ands } //其餘為空時不放{}(cvFind轉為literal之恆真)
+        //序號條件併入同一物件(欄位wi之運算子物件), 不增層: 增層會把合法之巢狀深度放大(每層含主鍵條件者放大一倍), 使其後cvFind內之再檢核拒收;
+        //同運算子重複(如$eq與$in並列、$ne與$nin並列)或rest已有同名鍵(不可能, wi不與欄位同名)者才另以字串鍵$and置放
+        let extra = []
+        if (Object.prototype.hasOwnProperty.call(rest, wi)) {
+            extra = ands
         }
-        return { [Op.and]: [rest, ...ands] }
+        else {
+            let m = {}
+            for (let c of ands) {
+                let op = Reflect.ownKeys(c[wi])[0]
+                if (Object.prototype.hasOwnProperty.call(m, op)) {
+                    extra.push(c)
+                }
+                else {
+                    putProp(m, op, c[wi][op])
+                }
+            }
+            putProp(rest, wi, m)
+        }
+        if (extra.length === 0) {
+            return rest
+        }
+        return { $and: [rest, ...extra] }
     }
 
-    //find, 非物件與陣列視為未給(系列現況保留; 呼叫端findAll已先處理), 非一般物件原樣返回交cvFind拒收
-    if (find === null || typeof find !== 'object' || Array.isArray(find)) {
-        return { find: {}, slots }
-    }
-    return { find: castObj(find, false), slots }
+    //find, 非一般物件原樣返回交cvFind拒收(不可能到達, normFind已拒)
+    return { find: castObj(find, false, 'find'), slots }
 }
 
 
@@ -593,7 +529,7 @@ export {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 21:06:51 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon Oct 19 2026 21:39:20 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

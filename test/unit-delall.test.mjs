@@ -83,13 +83,27 @@ if (isWindows()) {
             assert.strict.deepStrictEqual((await w.select()).map((v) => v.id), ['a'])
         })
 
-        it('刪除範圍與select(find)之結果一致: $regex', async function() {
-            let find = { name: { $regex: 'PeT', $options: '$i' } }
+        it('$regex(系列白名單外)整批reject且不刪除任何數據', async function() {
+            //spec: dspec〈一之三〉5.; 傳了白名單外之運算子一律整批reject, 不得視為無條件而全刪(1.0.36 為字面子字串比對而刪除peter與peterson)
+            await assert.strict.rejects(w.delAll({ name: { $regex: 'PeT', $options: '$i' } }), /unsupported operator \[\$regex\]/)
+            assert.strict.strictEqual((await w.select()).length, 4, '不得刪除任何數據')
+        })
+
+        it('刪除範圍與select(find)之結果一致: 字串等值不分大小寫(Jet)', async function() {
+            let find = { name: 'PETER' }
             let expect = await w.select(find)
-            assert.strict.strictEqual(expect.length, 2, 'peter與peterson')
+            assert.strict.strictEqual(expect.length, 1, '僅peter, 不含peterson')
             let res = await w.delAll(find)
-            assert.strict.deepStrictEqual(res, { n: 2, nDeleted: 2, ok: 1 })
-            assert.strict.deepStrictEqual((await w.select()).map((v) => v.id).sort(), ['b', 'c'])
+            assert.strict.deepStrictEqual(res, { n: 1, nDeleted: 1, ok: 1 })
+            assert.strict.deepStrictEqual((await w.select()).map((v) => v.id).sort(), ['b', 'c', 'd'])
+        })
+
+        it('傳了非條件物件(null、陣列、字串)整批reject且不刪除任何數據(不得視為無條件而全刪)', async function() {
+            //spec: dspec〈一之一〉2.
+            for (let bad of [null, [], 'a', 123, [{ id: 'a' }]]) {
+                await assert.strict.rejects(w.delAll(bad), /invalid find: condition must be a plain object/, JSON.stringify(bad))
+            }
+            assert.strict.strictEqual((await w.select()).length, 4, '不得刪除任何數據')
         })
 
         it('刪除範圍與select(find)之結果一致: 複合條件', async function() {

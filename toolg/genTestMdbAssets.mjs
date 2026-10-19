@@ -31,6 +31,11 @@ let sqlsFind = [
     'CREATE TABLE [tk] ([k] LONG CONSTRAINT [pk] PRIMARY KEY, [id] TEXT(50), [v] DOUBLE)', //整數主鍵k且另有非主鍵文字欄id
 ]
 
+//條件(find)系列白名單案例表測試用(wsemi/src/_cvOrmFindCases.mjs之columns: id name age g t flag d), 空表, 資料列由test/unit-find-wl-setup.mjs於測試時寫入, 對應model於test/assets/models/tw.js
+let sqlsWl = [
+    'CREATE TABLE [tw] ([id] TEXT(255) CONSTRAINT [pk] PRIMARY KEY, [name] TEXT(255), [age] LONG, [g] TEXT(50), [t] TEXT(255), [flag] YESNO, [d] DATETIME)',
+]
+
 async function gen(fn, password, sqls) {
 
     //fp
@@ -68,6 +73,7 @@ async function main() {
         ['worm_encryption_def.mdb', 'username:password', [sqlCreateTable]], //加密測試檔, 密碼組成比照WOrmMdb: `${username}:${password}`
         ['worm_pk_def.mdb', '', sqlsPk], //主鍵命中判定測試檔
         ['worm_find_def.mdb', '', sqlsFind], //條件(find)轉譯測試檔
+        ['worm_wl_def.mdb', '', sqlsWl], //條件(find)系列白名單案例表測試檔
     ]
 
     //fns, 未給則全部

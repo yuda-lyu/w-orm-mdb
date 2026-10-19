@@ -120,9 +120,9 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
         assert.strict.deepStrictEqual(pk.normPk(S255, 'other'), { kind: 'ok', v: S255 })
     })
 
-    it('castPkFind: 主鍵等值類條件改寫為序號條件並以Op.and包覆, 範圍與$regex留於原欄', function() {
-        //R-PK-05、R-FIND-03(原載併入呼叫端之$and, 2026-10-16改為Op.and包覆); idxOf為測試用之命中表
-        //(2026-10-16 run02 外審後: castPkFind 改為單趟走訪, 回傳 {find, slots}, 序號以 fillPkSlots 填入; 空集合以 -1 表示, 其餘為空時不放 {})
+    it('castPkFind: 主鍵等值類條件改寫為序號條件並併入同一物件(不增層), 範圍留於原欄', function() {
+        //R-PK-05、R-WL-03、R-FIND-03(第33項批2: 輸入為cvOrmFind之複本, 無陣列值/$not/$regex; 序號條件併入同一物件, 而非Symbol Op.and〔被reladb 1.1.10之cvFind reject〕或額外$and層〔使合法巢狀深度放大, 外審sol F02〕)
+        //idxOf為測試用之命中表; castPkFind單趟走訪回傳{find, slots}, 序號以fillPkSlots填入; 空集合以-1表示, 其餘為空時不放{}
         let io = (v) => {
             return v === 'k2' ? [0] : (v === 'a' ? [1] : [])
         }
@@ -131,19 +131,53 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
             pk.fillPkSlots(r.slots, io)
             return r.find
         }
-        assert.strict.deepStrictEqual(cpf({ id: 'k2' }), { [Op.and]: [{ W: { $in: [0] } }] })
-        assert.strict.deepStrictEqual(cpf({ id: ['k2', 'a', 'zz'] }), { [Op.and]: [{ W: { $in: [0, 1] } }] })
-        assert.strict.deepStrictEqual(cpf({ id: { $in: 'k2' } }), { [Op.and]: [{ W: { $in: [0] } }] }, '$in純量視為單元素陣列')
-        assert.strict.deepStrictEqual(cpf({ id: 'zz' }), { [Op.and]: [{ W: { $in: [-1] } }] }, '未命中以不存在之序號表示')
-        assert.strict.deepStrictEqual(cpf({ id: { $ne: 'zz' } }), { [Op.and]: [{ W: { $nin: [-1] } }] }, '$ne未命中之值為恆成立')
-        assert.strict.deepStrictEqual(cpf({ id: { $not: ['k2', 'a'] } }), { [Op.and]: [{ W: { $nin: [0, 1] } }] })
-        assert.strict.deepStrictEqual(cpf({ $not: { id: 'k2' } }), { [Op.and]: [{ [Op.not]: { [Op.and]: [{ W: { $in: [0] } }] } }] }, '頂層$not轉為Op.not(Q2)')
-        assert.strict.deepStrictEqual(cpf({ id: { $ne: 'k2' }, $and: [{ name: 'x' }] }), { [Op.and]: [{ $and: [{ name: 'x' }] }, { W: { $nin: [0] } }] }, '不併入呼叫端之$and')
-        assert.strict.deepStrictEqual(cpf({ id: { $regex: 'k', $gte: 5 } }), { id: { $regex: 'k', $gte: '5' } })
+        assert.strict.deepStrictEqual(cpf({ id: 'k2' }), { W: { $in: [0] } })
+        assert.strict.deepStrictEqual(cpf({ id: { $eq: 'k2' } }), { W: { $in: [0] } })
+        assert.strict.deepStrictEqual(cpf({ id: { $in: ['k2', 'a', 'zz'] } }), { W: { $in: [0, 1] } })
+        assert.strict.deepStrictEqual(cpf({ id: 'zz' }), { W: { $in: [-1] } }, '未命中以不存在之序號表示')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: 'zz' } }), { W: { $nin: [-1] } }, '$ne未命中之值為恆成立')
+        assert.strict.deepStrictEqual(cpf({ id: { $nin: ['k2', 'a'] } }), { W: { $nin: [0, 1] } })
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: 'k2' }, $and: [{ name: 'x' }] }), { $and: [{ name: 'x' }], W: { $nin: [0] } }, '序號條件併入同一物件, 不增層, 不併入呼叫端之$and')
+        assert.strict.deepStrictEqual(cpf({ id: { $gte: 5 } }), { id: { $gte: '5' } }, '範圍運算子以正規化值留於原欄')
+        assert.strict.deepStrictEqual(cpf({ $or: [{ id: 'k2' }, { name: 'x' }] }), { $or: [{ W: { $in: [0] } }, { name: 'x' }] }, '$or內之元素逐一改寫')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: 'k2', $in: ['a'] } }), { W: { $nin: [0], $in: [1] } }, '不同運算子併入同一運算子物件')
+        assert.strict.deepStrictEqual(cpf({ id: { $eq: 'k2', $in: ['a'] } }), { $and: [{ W: { $in: [0] } }, { W: { $in: [1] } }] }, '同運算子重複才另以字串鍵$and置放')
+        assert.strict.deepStrictEqual(cpf({ $and: [{ id: { $ne: S255 + 'y' } }, { name: 'x' }] }), { $and: [{ W: { $nin: [-1] } }, { name: 'x' }] }, '邏輯陣列之元素其主鍵條件皆化簡掉者以恆真之序號條件代替空物件(外審sol F01)')
+        assert.strict.deepStrictEqual(cpf({ $or: [{ id: { $nin: [S255 + 'y'] } }, { id: 'k2' }] }), { $or: [{ W: { $nin: [-1] } }, { W: { $in: [0] } }] })
+        //深度: 每層含主鍵條件者不增層(外審sol F02)
+        let deep = (n) => {
+            let f = { id: 'k2' }
+            for (let i = 0; i < n; i++) {
+                f = { id: { $ne: 'a' }, $and: [f] }
+            }
+            return f
+        }
+        let depthOf = (o) => {
+            if (o === null || typeof o !== 'object') {
+                return 0
+            }
+            let m = 0
+            for (let k of Reflect.ownKeys(o)) {
+                m = Math.max(m, depthOf(o[k]))
+            }
+            return m + (Array.isArray(o) ? 0 : 1)
+        }
+        assert.strict.strictEqual(depthOf(cpf(deep(16))), depthOf(deep(16)) + 1, '16層含主鍵之巢狀改寫後僅多運算子物件之一層(wi: {$in}), 不隨層數倍增')
+        let walk = (o, acc = []) => {
+            if (o !== null && typeof o === 'object') {
+                for (let k of Reflect.ownKeys(o)) {
+                    acc.push(k)
+                    walk(o[k], acc)
+                }
+            }
+            return acc
+        }
+        let ks = walk(cpf({ id: { $ne: 'k2', $in: ['a'] }, $or: [{ id: 'k2' }, { id: { $nin: ['a'] } }] }))
+        assert.strict.deepStrictEqual(ks.filter((k) => typeof k === 'symbol'), [], '輸出不得含Symbol鍵(白名單拒收)')
     })
 
-    it('castPkFind: Symbol鍵、length鍵與非一般物件原樣保留, 主鍵RegExp即$regex', function() {
-        //R-FIND-02/03: 不得於cvFind之前丟棄條件(1.0.35以lodash each走訪而使條件變{}, delAll刪光全表)
+    it('castPkFind: Symbol鍵、length鍵、近似鍵與非一般物件原樣保留(交cvFind拒收)', function() {
+        //R-FIND-02/03: 不得於cvFind之前丟棄條件(1.0.35以lodash each走訪而使條件變{}, delAll刪光全表); Symbol鍵與白名單外運算子不辨識亦不改寫, 由cvFind再拒
         let io = (v) => {
             return v === 'k2' ? [0] : []
         }
@@ -153,34 +187,37 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
             return r.find
         }
         assert.strict.deepStrictEqual(cpf({ length: 0 }), { length: 0 })
-        assert.strict.deepStrictEqual(cpf({ [Op.or]: [{ id: 'k2' }] }), { [Op.or]: [{ [Op.and]: [{ W: { $in: [0] } }] }] })
-        assert.strict.deepStrictEqual(cpf({ id: { [Op.in]: ['k2'] } }), { [Op.and]: [{ W: { $in: [0] } }] }, '主鍵欄之Op.in比照$in')
+        assert.strict.deepStrictEqual(cpf({ [Op.or]: [{ id: 'k2' }] }), { [Op.or]: [{ id: 'k2' }] }, 'Symbol鍵不辨識, 原樣交cvFind拒收')
+        assert.strict.deepStrictEqual(cpf({ id: { [Op.in]: ['k2'] } }), { id: { [Op.in]: ['k2'] } }, '主鍵欄之Op.in亦不比照$in, 原樣交cvFind拒收')
         let d = new Date()
         assert.strict.strictEqual(cpf(d), d, '非一般物件原樣返回, 交cvFind拒收')
-        assert.strict.deepStrictEqual(cpf({ id: /k/ }), { id: { $regex: /k/ } }, 'Q4')
         assert.strict.deepStrictEqual(cpf({ ID: 'k2' }), { ID: 'k2' }, '近似鍵不視為主鍵, 原樣交cvFind由嚴格鍵拒收')
         assert.strict.deepStrictEqual(cpf({ id: 'k2' }, 'str', null), { id: 'k2' }, 'pk為null(model無此屬性)時不辨識主鍵條件, 交cvFind以嚴格鍵拒收')
-        assert.strict.deepStrictEqual(cpf({ id: { $eq: 'k2', $options: undefined } }), { [Op.and]: [{ W: { $in: [0] } }] }, '視同未給之$options不留成無運算子之物件')
+        assert.strict.deepStrictEqual(cpf({ id: { $regex: 'k', $gte: 5 } }), { id: { $regex: 'k', $gte: '5' } }, '白名單外運算子不辨識, 留於原欄交cvFind拒收')
+        assert.strict.deepStrictEqual(cpf({ $not: { id: 'k2' } }), { $not: { id: 'k2' } }, '$not不再辨識(已移除), 原樣交cvFind拒收')
     })
 
     it('castPkFind: 單趟走訪, 每個條件值只讀一次', function() {
-        //R-FIND-02/03(run02外審opus、sol): 覆寫valueOf之包裝物件以內建valueOf讀內部值; 偽造toStringTag者非包裝物件, 屬無效值
-        let n = 0
-        let s = new String('k2') // eslint-disable-line no-new-wrappers
-        s.valueOf = () => {
-            n++
-            return n === 1 ? 'k2' : 'zz'
-        }
-        let r = pk.castPkFind({ id: { $ne: s } }, 'id', 'str', 'W')
+        //R-FIND-02/03(run02外審opus、sol; 第33項批2: 輸入已為cvOrmFind之複本, 此處以讀取計數之Proxy驗證castPkFind本身單趟)
+        let reads = 0
+        let o = new Proxy({ id: { $ne: 'k2' } }, {
+            get(t, k, r) {
+                if (k === 'id') {
+                    reads++
+                }
+                return Reflect.get(t, k, r)
+            },
+        })
+        let r = pk.castPkFind(o, 'id', 'str', 'W')
         assert.strict.deepStrictEqual(r.slots.map((x) => x.vals), [['k2']])
-        assert.strict.strictEqual(n, 0, '不呼叫物件自身之valueOf')
+        assert.strict.strictEqual(reads, 1, '主鍵欄之條件值只讀一次')
         let fake = { [Symbol.toStringTag]: 'String', valueOf: () => 'k2' }
         assert.strict.throws(() => pk.castPkFind({ id: { $nin: [fake] } }, 'id', 'str', 'W'), '偽造之包裝物件為無效值, 否定語境拋出')
-        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $eq: fake } }, 'id', 'str', 'W'), { find: { [Op.and]: [{ W: { $in: [-1] } }] }, slots: [] }, '肯定語境不命中(無佔位)')
+        assert.strict.deepStrictEqual(pk.castPkFind({ id: { $eq: fake } }, 'id', 'str', 'W'), { find: { W: { $in: [-1] } }, slots: [] }, '肯定語境不命中(無佔位)')
     })
 
     it('castPkFind: 非運算子物件為無效值, 肯定語境不命中、否定語境拋出', function() {
-        //修正初版把{}當成運算子物件而使主鍵條件消失, delAll({id:{}})因而刪光全表
+        //修正初版把{}當成運算子物件而使主鍵條件消失, delAll({id:{}})因而刪光全表(cvOrmFind已拒空運算子物件, 此為單獨呼叫castPkFind時之防線)
         let io = () => {
             return [0]
         }
@@ -189,12 +226,14 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
             pk.fillPkSlots(r.slots, io)
             return r.find
         }
-        assert.strict.deepStrictEqual(cpf({ id: {} }), { [Op.and]: [{ W: { $in: [-1] } }] })
-        assert.strict.deepStrictEqual(cpf({ id: undefined }), { [Op.and]: [{ W: { $in: [-1] } }] })
+        assert.strict.deepStrictEqual(cpf({ id: {} }), { W: { $in: [-1] } })
+        assert.strict.deepStrictEqual(cpf({ id: undefined }), { W: { $in: [-1] } })
+        assert.strict.deepStrictEqual(cpf({ id: null }), { W: { $in: [-1] } }, 'null為無效主鍵值, 肯定語境不命中')
         assert.strict.throws(() => cpf({ id: { $ne: undefined } }))
+        assert.strict.throws(() => cpf({ id: { $ne: null } }), /^Error: invalid find: invalid primary key value in negative condition at \[find\.id\.\$ne\]$/, 'null於否定語境拋出(LW2), 格式同cvOrmFind且不回顯值(外審opus F5)')
+        assert.strict.throws(() => cpf({ $or: [{ name: 'x' }, { $and: [{ id: { $nin: ['k2', ''] } }] }] }), /at \[find\.\$or\[1\]\.\$and\[0\]\.id\.\$nin\]$/, '錯誤路徑與原始find同形')
+        assert.strict.throws(() => cpf({ id: { $ne: true } }), '布林於否定語境拋出')
         assert.strict.throws(() => cpf({ id: { $nin: ['a', NaN] } }))
-        assert.strict.throws(() => cpf({ id: { $not: {} } }))
-        assert.strict.throws(() => cpf({ $not: { id: undefined } }))
         assert.strict.throws(() => cpf({ id: { $ne: '012' } }, 'int'), '型別不符於否定語境亦拋出')
         assert.strict.deepStrictEqual(cpf({ id: { $ne: S255 + 'y' } }), {}, '不可能存在之值於否定語境為必不相等')
     })
@@ -355,15 +394,16 @@ if (isWindows()) {
                 }
             })
 
-            it('非運算子物件作為主鍵條件值為無效值: select不命中、delAll不刪除(不得清空全表)', async function() {
+            it('非運算子物件(空運算子物件)作為主鍵條件值: select與delAll皆reject、不刪除(不得清空全表; 1.0.36 為無效值而不命中)', async function() {
+                //第33項批2: 空運算子物件在系列白名單外, 整批reject
                 let w = ws.users
                 await seed('users', SEED_U)
-                assert.strict.deepStrictEqual(await w.select({ id: {} }), [])
-                assert.strict.deepStrictEqual(await w.delAll({ id: {} }), { n: 0, nDeleted: 0, ok: 1 })
+                assert.strict.strictEqual(await getRt(w.select({ id: {} })), 'reject')
+                assert.strict.strictEqual(await getRt(w.delAll({ id: {} })), 'reject')
                 assert.strict.strictEqual((await all('users')).length, SEED_U.length, '不得刪除任何列')
                 let wi = ws.ipk
                 await seed('ipk', [{ id: 12, name: 'r12' }])
-                assert.strict.deepStrictEqual(await wi.delAll({ id: {} }), { n: 0, nDeleted: 0, ok: 1 })
+                assert.strict.strictEqual(await getRt(wi.delAll({ id: {} })), 'reject')
                 assert.strict.strictEqual((await all('ipk')).length, 1)
             })
 
@@ -503,7 +543,8 @@ if (isWindows()) {
                 for (let v of ['k\u00002', 's\uD800']) {
                     assert.strict.strictEqual(await w.selectByPk(v), null)
                     assert.strict.deepStrictEqual(await w.del([{ id: v }]), [{ n: 0, nDeleted: 0, ok: 1 }])
-                    assert.strict.deepStrictEqual(await w.select({ id: v }), [])
+                    assert.strict.strictEqual(await getRt(w.select({ id: v })), 'reject', '條件值含NUL或孤立代理: 白名單拒收(1.0.36 為不命中)')
+                    assert.strict.strictEqual(await getRt(w.delAll({ id: v })), 'reject')
                     assert.strict.strictEqual(await getRt(w.insert([{ id: 'ok-1' }, { id: v }])), 'reject')
                     assert.strict.deepStrictEqual(await ids('users'), ['k2'])
                 }
@@ -596,8 +637,9 @@ if (isWindows()) {
                 assert.strict.strictEqual(await w.selectByPk(Infinity), null)
                 let rd = await w.del([{ id: Infinity }])
                 assert.strict.strictEqual(rd[0].ok, 0, '無效主鍵為該筆失敗(:114)')
-                assert.strict.deepStrictEqual(await w.select({ id: Infinity }), [])
-                assert.strict.deepStrictEqual(await w.delAll({ id: -Infinity }), { n: 0, nDeleted: 0, ok: 1 })
+                assert.strict.strictEqual(await getRt(w.select({ id: Infinity })), 'reject', '條件值±Infinity: 白名單拒收(1.0.36 為不命中)')
+                assert.strict.strictEqual(await getRt(w.delAll({ id: -Infinity })), 'reject')
+                assert.strict.strictEqual((await all('users')).length, SEED_U.length, '不得刪除任何列')
                 assert.strict.deepStrictEqual(await w.insert([{ id: Infinity, name: 'inf' }]), { n: 1, nInserted: 1, ok: 1 })
                 let row = (await all('users')).find((r) => r.name === 'inf')
                 assert.strict.ok(row && row.id.length === 36, '依T6補值(:91)')
@@ -609,7 +651,7 @@ if (isWindows()) {
                 let w = ws.users
                 await seed('users', [...SEED_U, { id: '123', name: 'n123' }, { id: 'NaN', name: 'nanrow' }])
                 assert.strict.strictEqual((await w.selectByPk(new String('k2'))).id, 'k2')
-                assert.strict.strictEqual((await w.select({ id: new Number(123) })).length, 1)
+                assert.strict.strictEqual(await getRt(w.select({ id: new Number(123) })), 'reject', '條件值為包裝物件: 白名單拒收(1.0.36 拆包後命中; selectByPk與資料列仍拆包)')
                 assert.strict.strictEqual(await w.selectByPk(new Number(NaN)), null, '不得命中NaN字串之列')
                 assert.strict.strictEqual(await w.selectByPk(new String('')), null)
                 assert.strict.strictEqual((await w.del([{ id: new String('') }]))[0].ok, 0)
@@ -623,11 +665,11 @@ if (isWindows()) {
                 assert.strict.strictEqual((await wi.selectByPk(new Number(12))).id, 12)
             })
 
-            it('BigInt為無效: select/delAll不命中且不刪除', async function() {
+            it('BigInt為無效: select/delAll皆reject(1.0.36 為不命中)且不刪除', async function() {
                 let w = ws.users
                 await seed('users', [...SEED_U, { id: '123', name: 'n123' }])
-                assert.strict.deepStrictEqual(await w.select({ id: 123n }), [])
-                assert.strict.deepStrictEqual(await w.delAll({ id: 123n }), { n: 0, nDeleted: 0, ok: 1 })
+                assert.strict.strictEqual(await getRt(w.select({ id: 123n })), 'reject')
+                assert.strict.strictEqual(await getRt(w.delAll({ id: 123n })), 'reject')
                 assert.strict.ok((await ids('users')).includes('123'), '不得刪除123')
                 assert.strict.strictEqual(await w.selectByPk(123n), null)
                 assert.strict.strictEqual((await w.del([{ id: 123n }]))[0].ok, 0)
@@ -637,39 +679,53 @@ if (isWindows()) {
 
         describe('否定與等值運算子(R-PK-05)', function() {
 
-            it('$ne與$nin不刪除Jet視為同鍵之列, $eq與陣列值命中', async function() {
+            it('$ne與$nin不刪除Jet視為同鍵之列, $eq與$in命中', async function() {
                 let w = ws.users
                 await seed('users', [{ id: 'k2', name: 'a' }, { id: 'A1', name: 'b' }, { id: 'abc', name: 'c' }])
                 assert.strict.deepStrictEqual((await w.select({ id: { $eq: 'K2 ' } })).map((r) => r.id), ['k2'])
-                assert.strict.deepStrictEqual((await w.select({ id: ['K2 '] })).map((r) => r.id), ['k2'])
+                assert.strict.strictEqual(await getRt(w.select({ id: ['K2 '] })), 'reject', '陣列值已移除(1.0.36 即$in)')
+                assert.strict.deepStrictEqual((await w.select({ id: { $in: ['K2 '] } })).map((r) => r.id), ['k2'])
                 assert.strict.deepStrictEqual((await w.select({ id: { $nin: ['Ａ１', 'K2 '] } })).map((r) => r.id), ['abc'])
                 assert.strict.deepStrictEqual(await w.delAll({ id: { $ne: 'K2 ' } }), { n: 2, nDeleted: 2, ok: 1 })
                 assert.strict.deepStrictEqual(await ids('users'), ['k2'], 'k2不得被刪除')
             })
 
-            it('頂層$not與主鍵欄之$not依Jet等值排除, $in純量亦同', async function() {
+            it('主鍵欄$not與頂層$not已移除(reject); 白名單內之$ne依Jet等值排除, $in之值須為陣列', async function() {
                 //範圍運算子($gt等)依記憶體sqlite比較而為近似, 屬已知限制(CLAUDE_rulebook.md之L2), 不在此斷言
                 let w = ws.users
                 let SEED = [{ id: 'k2', name: 'a' }, { id: 'A1', name: 'b' }, { id: 'abc', name: 'c' }]
                 await seed('users', SEED)
-                assert.strict.deepStrictEqual((await w.select({ id: { $not: 'K2 ' } })).map((r) => r.id).sort(), ['A1', 'abc'].sort())
-                assert.strict.deepStrictEqual((await w.select({ id: { $in: 'K2 ' } })).map((r) => r.id), ['k2'])
-                assert.strict.deepStrictEqual(await w.delAll({ $not: { id: 'K2 ' } }), { n: 2, nDeleted: 2, ok: 1 })
-                assert.strict.deepStrictEqual(await ids('users'), ['k2'], '頂層$not不得刪除k2')
+                for (let find of [{ id: { $not: 'K2 ' } }, { $not: { id: 'K2 ' } }, { id: { $not: { $eq: 'K2 ' } } }]) {
+                    assert.strict.strictEqual(await getRt(w.select(find)), 'reject', JSON.stringify(find))
+                    assert.strict.strictEqual(await getRt(w.delAll(find)), 'reject', JSON.stringify(find))
+                }
+                assert.strict.deepStrictEqual((await ids('users')).sort(), ['A1', 'abc', 'k2'].sort(), 'reject不得刪除任何列')
+                assert.strict.strictEqual(await getRt(w.select({ id: { $in: 'K2 ' } })), 'reject', '$in純量已移除(1.0.36 視為單元素陣列)')
+                assert.strict.deepStrictEqual((await w.select({ id: { $ne: 'K2 ' } })).map((r) => r.id).sort(), ['A1', 'abc'].sort())
+                assert.strict.deepStrictEqual(await w.delAll({ id: { $ne: 'K2 ' } }), { n: 2, nDeleted: 2, ok: 1 })
+                assert.strict.deepStrictEqual(await ids('users'), ['k2'], '$ne不得刪除k2')
             })
 
             it('否定語境之無效主鍵值一律reject且不刪除任何列(不得因無效值推得全部命中而清空全表)', async function() {
                 let w = ws.users
                 let SEED = [{ id: 'k2', name: 'a' }, { id: 'A1', name: 'b' }]
                 await seed('users', SEED)
+                //白名單檢核先拒者(undefined、BigInt、NaN 等非白名單純量, 及已移除之 $not): 1.0.36 在此亦 reject 或不命中, 第33項批2 一律於形狀層 reject
                 for (let find of [{ id: { $ne: undefined } }, { id: { $ne: 123n } }, { id: { $nin: ['k2', undefined] } }, { $not: { id: undefined } }, { id: { $not: null } }]) {
                     assert.strict.strictEqual(await getRt(w.delAll(find)), 'reject', JSON.stringify(find, (k, v) => typeof v === 'bigint' ? `${v}n` : v))
                     assert.strict.strictEqual(await getRt(w.select(find)), 'reject')
                 }
+                //通過形狀檢核而為無效主鍵值(null、布林、Date、空字串)於否定語境: castPkFind 拋出(R-PK-03 4b; LW2)
+                for (let find of [{ id: { $ne: null } }, { id: { $ne: true } }, { id: { $ne: new Date(0) } }, { id: { $ne: '' } }, { id: { $nin: ['k2', ''] } }]) {
+                    assert.strict.strictEqual(await getRt(w.delAll(find)), 'reject', JSON.stringify(find))
+                    assert.strict.strictEqual(await getRt(w.select(find)), 'reject')
+                }
                 assert.strict.strictEqual((await all('users')).length, SEED.length, '不得刪除任何列')
-                //肯定語境之無效值為不命中
-                assert.strict.deepStrictEqual(await w.delAll({ id: undefined }), { n: 0, nDeleted: 0, ok: 1 })
-                assert.strict.deepStrictEqual(await w.delAll({ id: { $in: [undefined, NaN] } }), { n: 0, nDeleted: 0, ok: 1 })
+                //肯定語境之無效值為不命中(undefined 於形狀層 reject; null、空字串、布林、Date 通過形狀檢核而不命中)
+                assert.strict.strictEqual(await getRt(w.delAll({ id: undefined })), 'reject')
+                assert.strict.deepStrictEqual(await w.delAll({ id: null }), { n: 0, nDeleted: 0, ok: 1 })
+                assert.strict.deepStrictEqual(await w.delAll({ id: { $in: ['', 'zz'] } }), { n: 0, nDeleted: 0, ok: 1 })
+                assert.strict.deepStrictEqual(await w.delAll({ id: true }), { n: 0, nDeleted: 0, ok: 1 })
                 assert.strict.strictEqual((await all('users')).length, SEED.length)
             })
 
