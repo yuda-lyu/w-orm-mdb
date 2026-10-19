@@ -69,6 +69,7 @@ import isnum from 'wsemi/src/isnum.mjs'
 import isestr from 'wsemi/src/isestr.mjs'
 import arrHas from 'wsemi/src/arrHas.mjs'
 import pmQueue from 'wsemi/src/pmQueue.mjs'
+import cvOrmFind from 'wsemi/src/cvOrmFind.mjs'
 import _genModelsByTabs from 'w-orm-reladb/src/genModelsByTabs.mjs'
 import {
     getSelectAll,
@@ -80,7 +81,7 @@ import {
     getDeleteAll
 } from './getCmd.mjs'
 import { initSequelize, queryMemory } from './queryMemory.mjs'
-import { TPS_STR, getPkType, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys, isPlainObj } from './pk.mjs'
+import { TPS_STR, getPkType, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys } from './pk.mjs'
 
 
 //放置於全域宣告, 若使用useStable=true才可於當創建多實例時仍能全域控管
@@ -89,6 +90,14 @@ let pmq = pmQueue(1)
 
 //insert撞鍵核對時單一IN查詢所能容納之主鍵數量上限, 避免IN清單過長超出Jet之查詢文字長度限制
 const nPkPerIn = 200
+
+
+//條件(find)之$in/$nin長度上限(單一陣列), 亦為整個find內相異主鍵值之總數上限: 主鍵值需由Jet逐筆以=判定(約1.6ms/個), 2000筆約3.6秒(見CLAUDE_rulebook.md之R-WL-00)
+const MAX_IN = 2000
+
+
+//條件(find)之$and/$or長度上限: SQLite運算式樹深度上限為1000, 平鋪1000項即DB錯誤
+const MAX_LIST = 999
 
 
 /**
@@ -103,8 +112,9 @@ const nPkPerIn = 200
  * 數值類主鍵欄之標準數字字串轉為數字; 型別不符者selectByPk回null、insert/insertBulk/save於寫入前reject、del該筆ok為0
  * 註: 字串類主鍵超過255字元、含NUL或非良構UTF-16者不可能存在於資料表, 讀取類視為未命中且不送Jet
  * (Jet對超過255字元之字面值於SELECT/DELETE會截斷後比對, 送出將命中或刪除另一列)
- * 註: select與delAll之主鍵等值類條件($eq、$ne、$in、$nin、$not及隱含等值)改寫為由Jet判定之命中列, 不以JS仿製之等值鍵判定;
- * 主鍵之範圍運算子與$regex、非主鍵欄之條件依記憶體sqlite(字串欄為NOCASE); 否定語境之無效主鍵值reject; select回傳Jet原列, 內容與selectByPk相同
+ * 註: select與delAll之條件(find)僅支援系列白名單(欄位等值、$eq $ne $gt $gte $lt $lte $in $nin、文件層$and $or; 詳見select與delAll之說明), 白名單外一律整批reject;
+ * 主鍵等值類條件($eq、$ne、$in、$nin及隱含等值)改寫為由Jet判定之命中列, 不以JS仿製之等值鍵判定;
+ * 主鍵之範圍運算子與非主鍵欄之條件依記憶體sqlite(字串欄為NOCASE); $ne、$nin含無效主鍵值reject; select回傳Jet原列, 內容與selectByPk相同
  * 註: 主鍵欄須為文字或數值型, Jet之GUID型別與DATETIME型別之主鍵欄不支援
  * 註: insert與save之原子性倚賴資料表主鍵欄位具唯一約束(PRIMARY KEY)，資料表建立時須含之
  *
@@ -489,116 +499,20 @@ function WOrmMdb(opt = {}) {
 
 
     /**
-     * 查詢條件之快照, 每個值只讀一次
+     * 查詢條件之入口檢核, select與delAll共用
      *
-     * 註: castPkFind之兩趟與cvFind皆讀快照, 令讀值結果會變之getter或Proxy不致前後不一; 讀值拋錯者於呼叫端之try內拋出(reject並發error事件)
-     * 註: 一般物件與陣列逐層複製, 保留Symbol鍵、不可列舉之鍵(複本為可列舉)、__proto__自有鍵(以defineProperty建構)、陣列之洞與原型;
-     * 不用cloneDeep(會丟不可列舉之鍵)與lodash之each(具數值length之物件被當成陣列樣迭代);
-     * 非一般物件與純量原樣保留(交cvFind判定)
-     * 註: 同一物件於多處出現者共用同一份複本(否則共用之子物件逐層展開為指數成長); 循環參照與深度超過上限者拋錯:
-     * 上限取cvFind之巢狀上限(32)之兩倍再加2, 因cvFind每層至多對應快照之兩層(物件與其下之陣列), 超過者cvFind亦必拒收;
-     * 不可於超過上限時原樣返回, 否則其下之getter由castPkFind兩趟與cvFind各讀一次而前後不一(主鍵條件可因此消失而全刪)
-     *
-     * @ignore
-     * @param {*} v 輸入查詢條件
-     * @returns {*} 回傳快照
-     */
-    function snapFind(v) {
-        let done = new Map() //已完成者: 原物件→複本
-        let ing = new Set() //走訪中之祖先, 再遇即循環參照
-        let snap = (x, depth) => {
-            if (x !== null &amp;&amp; typeof x === 'object' &amp;&amp; !Array.isArray(x) &amp;&amp; !isPlainObj(x)) {
-                return snapBuiltin(x)
-            }
-            if (!Array.isArray(x) &amp;&amp; !isPlainObj(x)) {
-                return x
-            }
-            if (done.has(x)) {
-                return done.get(x)
-            }
-            if (ing.has(x)) {
-                throw new Error('invalid find: circular reference')
-            }
-            if (depth > 66) {
-                throw new Error('invalid find: nesting too deep')
-            }
-            ing.add(x)
-            let r
-            if (Array.isArray(x)) {
-                r = new Array(x.length)
-                for (let i = 0; i &lt; x.length; i++) {
-                    if (i in x) {
-                        r[i] = snap(x[i], depth + 1)
-                    }
-                }
-            }
-            else {
-                r = Object.create(Object.getPrototypeOf(x))
-                for (let k of Reflect.ownKeys(x)) {
-                    Object.defineProperty(r, k, { value: snap(x[k], depth + 1), enumerable: true, writable: true, configurable: true })
-                }
-            }
-            ing.delete(x)
-            done.set(x, r)
-            return r
-        }
-        return snap(v, 0)
-    }
-
-
-    /**
-     * 快照之內建型別值: Date與RegExp以內建方法讀其內部值後重建
-     *
-     * 註: 不經物件自身可被覆寫之屬性(getTime、source、flags等), 令其後cvFind之檢核與送出讀到同一個值;
-     * 呼叫端覆寫之getTime或source getter若每次讀值不同, cvFind先檢後讀而送出未檢核之值(run02外審opus E4、sol pk-moving-regexp);
-     * 非內建型別(含偽造原型者, 內建方法對其拋錯)與其他物件原樣保留(交cvFind判定)
-     *
-     * @ignore
-     * @param {Object} x 輸入非一般物件
-     * @returns {Object} 回傳重建之值或原物件
-     */
-    function snapBuiltin(x) {
-        try {
-            return new Date(Date.prototype.getTime.call(x))
-        }
-        catch (err) {}
-        try {
-            let g = (k) => {
-                let d = Object.getOwnPropertyDescriptor(RegExp.prototype, k)
-                return d &amp;&amp; d.get ? d.get.call(x) : false
-            }
-            let src = g('source') //非RegExp則拋錯
-            let flags = [['hasIndices', 'd'], ['global', 'g'], ['ignoreCase', 'i'], ['multiline', 'm'], ['dotAll', 's'], ['unicode', 'u'], ['unicodeSets', 'v'], ['sticky', 'y']]
-                .filter(([k]) => g(k) === true)
-                .map(([, f]) => f)
-                .join('')
-            return new RegExp(src, flags)
-        }
-        catch (err) {}
-        return x
-    }
-
-
-    /**
-     * 查詢條件之入口判定與快照, select與delAll共用
-     *
-     * 註: 非物件(undefined、null、字串、數值等純量)與陣列視為未給(系列現況保留), 不讀其內容:
-     * 令select與delAll一致(原先select先快照陣列而讀其元素, 讀值拋錯時select為reject而delAll全刪, run02外審sol)
-     * 註: 函數屬物件而非一般物件, 其自有鍵上之條件不得被丟棄而成{}, 拒收(w-orm-reladb之cvFind視函數為非物件而回{}, 已列建議)
-     * 註: 須於呼叫端之try內呼叫, 令Array.isArray對已撤銷之Proxy拋錯、快照讀值拋錯時經reject與error事件回報
+     * 註: 依系列條件白名單(wsemi之cvOrmFind, 見CLAUDE_rulebook.md之R-WL)檢核, 回傳全新之null原型深複本, 其後castPkFind與cvFind一律只讀複本(檢查之值即使用之值);
+     * 未給、undefined與{}回傳無自有鍵之物件(代表全部), 其餘非條件物件、白名單外之運算子與值、異常結構一律拋錯invalid find: 原因 at [路徑], 不視為{}
+     * 註: maxIn為2000, 因主鍵$in之每個元素需由Jet逐筆以=判定(約1.6ms/元素, 2000筆約3.6秒); maxList為999, 因SQLite運算式樹深度上限為1000;
+     * w-orm-reladb之cvFind內建之檢核不提供maxIn注入, 故2000之上限須由本呼叫強制
+     * 註: 須於select與delAll之try內第一步呼叫, 先於initAdodb(匯入model)、讀取與刪除, 令壞find不載入model、不開啟資料庫檔、不送SQL, 並經reject與error事件回報
      *
      * @ignore
      * @param {*} find 輸入查詢條件
-     * @returns {Object} 回傳查詢條件之快照, 非物件與陣列回傳{}
+     * @returns {Object} 回傳查詢條件之複本, 無自有鍵代表全部
      */
     function normFind(find) {
-        if (typeof find === 'function') {
-            throw new Error('invalid find: find must be a plain object')
-        }
-        if (find === null || typeof find !== 'object' || Array.isArray(find)) {
-            return {}
-        }
-        return snapFind(find)
+        return cvOrmFind(find, { maxIn: MAX_IN, maxList: MAX_LIST })
     }
 
 
@@ -684,20 +598,18 @@ function WOrmMdb(opt = {}) {
     /**
      * 由Jet取回全表數據後於記憶體內依條件過濾
      *
-     * 註: Access之SQL方言不支援$in、$nin、$regex等條件，故不將條件送Jet而由記憶體過濾
+     * 註: Access之SQL方言不支援$in、$nin等條件，故不將條件送Jet而由記憶體過濾
      * 註: 主鍵之等值類條件由castPkFind改寫為命中列之序號(以resolvePkIdx由Jet判定)，故命中判定與selectByPk、insert、save、del一致；
-     * 主鍵之範圍運算子與$regex仍於記憶體sqlite比對(近似)
+     * 主鍵之範圍運算子仍於記憶體sqlite比對(近似)
      * 註: 其餘條件原樣交w-orm-reladb之cvFind轉譯(於queryMemory內)，不支援之運算子與無法轉譯之值reject(見CLAUDE_rulebook.md之R-FIND)
+     * 註: find須為normFind回傳之複本(已依系列白名單檢核, 呼叫端不得傳入未經檢核之find)
      *
      * @ignore
      * @param {Object} si 輸入實例物件
-     * @param {Object} find 輸入查詢條件物件
+     * @param {Object} find 輸入查詢條件物件，須為normFind回傳之複本
      * @returns {Promise} 回傳Promise，resolve回傳數據陣列(Jet原列)
      */
     async function findAll(si, find) {
-
-        //find, 入口之形式判定與快照, 以下castPkFind與cvFind皆讀快照
-        find = normFind(find)
 
         //md
         let md = getMd(si)
@@ -710,16 +622,27 @@ function WOrmMdb(opt = {}) {
         //keys, 記憶體過濾表之原列序號欄名稱, 附加亂數令其不與使用者之欄位或條件同名
         let keys = genInnerKeys(attrs)
 
-        //findPk, 單趟走訪: 主鍵等值類條件改寫為序號佔位條件, 其餘條件原樣保留, 於queryMemory內交cvFind轉譯; 否定語境之無效主鍵值於此拋出
+        //findPk, 於複本上單趟走訪: 主鍵等值類條件改寫為序號佔位條件, 其餘條件原樣保留, 於queryMemory內交cvFind轉譯; $ne與$nin之無效主鍵值於此拋出
         //註: opt.pk非model之屬性時不辨識主鍵條件, 主鍵名之鍵交cvFind以嚴格鍵拒收(否則近似之主鍵名繞過嚴格鍵, run02外審opus)
-        let pkKey = Object.prototype.hasOwnProperty.call(attrs, opt.pk) ? opt.pk : null
+        //註: opt.pk亦須為Jet列實有之欄(connMDB.exe每列輸出全部欄位故取首列, 無列時無從得知; 與queryMemory之過濾表同法)且名稱完全相符; model與資料表欄名大小寫不符(model有id而資料表為ID)時,
+        //主鍵條件若仍改寫為序號條件, 因取不到存值而被化簡為[查無此主鍵]或[全部], 令select漏查而delAll拒收(外審sol F03); 不辨識者交cvFind以嚴格鍵拒收
+        let pkKey = Object.prototype.hasOwnProperty.call(attrs, opt.pk) &amp;&amp; (data.length === 0 || Object.prototype.hasOwnProperty.call(data[0] || {}, opt.pk)) ? opt.pk : null
         let { find: findPk, slots } = castPkFind(find, pkKey, pkType, keys.wi)
 
-        //idxOf, 由Jet判定各主鍵值之命中列, 填入序號佔位
+        //vals, 整個find內之主鍵值
         let vals = []
         for (let s of slots) {
             vals.push(...s.vals)
         }
+
+        //check, 相異主鍵值之總數上限: normFind只限制單一$in/$nin陣列(MAX_IN), 而每個kFast對不上之值需由Jet逐筆判定(約1.6ms),
+        //分散於$or/$and內之多個陣列可使總數遠超單一陣列上限(實測98000值阻塞同行程之全域佇列328秒; 外審opus F3), 故於送Jet前就總數把關
+        let nPk = new Set(vals.map((v) => `${typeof v}:${String(v)}`)).size
+        if (nPk > MAX_IN) {
+            throw new Error(`invalid find: too many primary key values (> ${MAX_IN}) at [find]`)
+        }
+
+        //idxOf, 由Jet判定各主鍵值之命中列, 填入序號佔位
         let idxOf = await resolvePkIdx(si, data, vals)
         fillPkSlots(slots, idxOf)
 
@@ -733,15 +656,26 @@ function WOrmMdb(opt = {}) {
     /**
      * 查詢數據
      *
+     * 使用須知:
+     * 1. find未給、為undefined或為{}時回傳全部數據。
+     * 2. 傳了值卻不是條件物件(null、陣列含[]與[{...}]、字串、數值、布林、函數、Date、RegExp、Map、Set、類別實例等)一律整批reject，不視為{}。
+     * 3. 條件僅支援系列白名單: 欄位等值{欄:純量}(多欄為AND)、欄位運算子$eq $ne $gt $gte $lt $lte(值為純量)與
+     *    $in $nin(值為純量陣列，各至多2000個元素)、文件層$and $or(值為條件物件之非空陣列，至多999項)。純量為字串、有限數字、布林、有效Date；
+     *    null僅可用於欄位等值、$eq、$ne。白名單外之運算子($not $nor $regex $options $exists $where $expr $like $ilike等)、
+     *    欄位層$and/$or、子查詢、函數值、Symbol鍵、undefined值、空的$nin/$and/$or、白名單外之欄名(須為model之屬性且符合^[\p{L}_][\p{L}\p{M}\p{N}_]*$)等
+     *    一律整批reject，訊息為invalid find: 原因 at [路徑]。
+     * 4. 值依欄位型別檢核，DATE欄之無時區字串依主機時區；主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-WL、R-FIND、R-PK)；
+     *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)；主鍵不可能為NULL，勿以{pk:{$ne:null}}表達全部(會reject)；主鍵之範圍運算子界限須為有效且型別相符之主鍵值，否則恆不命中。
+     * 5. 語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
+     *    排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。
+     *
      * 註: 恆回傳陣列，無符合數據回傳空陣列而不回傳null
-     * 註: find未給或為空物件時回傳全部數據
-     * 註: 條件之語法與規則同w-orm-reladb之cvFind(欄位層$eq、$ne、$gt、$gte、$lt、$lte、$in、$nin、$not、$regex、$options、$exists，文件層$and、$or、$nor，另保留文件層之$not)，
-     * 欄名須與model完全相符，值依欄位型別檢核，$regex為字面子字串，DATE欄之無時區字串依主機時區；不支援之運算子與無法轉譯之值reject；
-     * 主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-FIND、R-PK)
+     * 註: 條件之入口形狀檢核(白名單、純量型別、欄名文法、上限、異常結構)先於載入model、讀取與連線，未通過者不開啟資料庫檔、不送SQL，並以整批性錯誤reject(發出一次error事件，不發change事件)；
+     * 通過形狀檢核但欄位名不在model或資料表、值與欄位型別不符者，於載入model並讀取全表之後才由轉譯層reject
      * 註: 本函數不得有副作用，故不創建資料表
      *
      * @memberOf WOrmMdb
-     * @param {Object} [find={}] 輸入查詢條件物件
+     * @param {Object} [find={}] 輸入查詢條件物件(系列白名單，規則見上)，未給、undefined或{}回傳全部數據，非條件物件或白名單外運算子整批reject
      * @param {Object} [option={}] 輸入設定物件，預設為{}
      * @param {Object} [option.instance=null] 輸入實例instance物件，預設為null
      * @returns {Promise} 回傳Promise，resolve回傳數據陣列，reject回傳錯誤訊息
@@ -755,13 +689,20 @@ function WOrmMdb(opt = {}) {
         let isErr = false
         let res = null
 
-        //si
+        //si, inited為本次是否自行初始化(壞find不初始化, 故不得關閉他次呼叫所建之sequelize)
         let si = instance
-        if (instance === null) {
-            si = await initAdodb()
-        }
+        let inited = false
 
         try {
+
+            //check, 條件之入口檢核為第一步, 先於初始化(匯入model)與讀取, 其後只用複本(R-WL-01)
+            let fd = normFind(find)
+
+            //initAdodb
+            if (instance === null) {
+                inited = true
+                si = await initAdodb()
+            }
 
             //check, 連線或匯入models失敗影響本次操作之全部數據, 屬整批性錯誤
             if (si.err) {
@@ -769,7 +710,7 @@ function WOrmMdb(opt = {}) {
             }
 
             //findAll, 恆回傳陣列, 無符合數據為空陣列
-            res = await findAll(si, find)
+            res = await findAll(si, fd)
             if (!isarr(res)) {
                 res = []
             }
@@ -782,7 +723,7 @@ function WOrmMdb(opt = {}) {
         finally {
 
             //closeSequelize
-            if (instance === null) { //內部自動初始化得close
+            if (inited) { //內部自動初始化得close
                 await closeSequelize('select')
             }
 
@@ -1813,20 +1754,35 @@ function WOrmMdb(opt = {}) {
 
 
     /**
-     * 依條件刪除多筆數據，需與del分開，避免未傳數據導致直接刪除全表
+     * 依條件刪除多筆數據(破壞性操作，須審慎使用，非必要不用；刪除單筆請用del)，需與del分開，避免未傳數據導致直接刪除全表
      *
-     * 註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數
-     * 註: find未給或為空物件時刪除全部數據；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
-     * 註: 僅[未給、非物件、陣列、無任何自有鍵之一般物件]視為無條件；只有Symbol鍵(如Op.and)、不可列舉之鍵或具length鍵之條件皆照常過濾，
-     * 不合法之條件(含非一般物件)reject且不刪除任何數據；條件規則同select
+     * 使用須知:
+     * 1. 不給條件即刪除全部數據: find未給、為undefined或為{}時，刪除資料表內全部數據，不另行確認。給了條件才是部分刪除。
+     * 2. 傳了值卻不是條件物件(null、陣列含[]與[{...}]、字串、數值、布林、函數、Date、RegExp、Map、Set、類別實例等)
+     *    一律整批reject，不視為{}，不刪除任何數據。
+     * 3. 條件僅支援系列白名單: 欄位等值{欄:純量}(多欄為AND)、欄位運算子$eq $ne $gt $gte $lt $lte(值為純量)與
+     *    $in $nin(值為純量陣列，各至多2000個元素)、文件層$and $or(值為條件物件之非空陣列，至多999項)。純量為字串、有限數字、布林、有效Date；
+     *    null僅可用於欄位等值、$eq、$ne。白名單外之運算子($not $nor $regex $options $exists $where $expr $like $ilike等)、
+     *    欄位層$and/$or、子查詢、函數值、Symbol鍵、undefined值、空的$nin/$and/$or等一律整批reject，
+     *    訊息為invalid find: 原因 at [路徑]，且不刪除任何數據。
+     * 4. 與select共用同一檢核與同一條件，select(find)命中之數據即本函數刪除之數據；建議先以select(find)確認命中範圍再刪除；
+     *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)，主鍵不可能為NULL(勿以{pk:{$ne:null}}表達全部，會reject)。
+     * 5. 條件值若來自可能為undefined、null或空陣列之變數，呼叫端須先自行判斷；undefined值會reject而非被忽略，
+     *    空的$nin會reject，$in:[]則為恆假(刪除0筆)。
+     * 6. 語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
+     *    排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。
+     *
+     * 註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
+     * 註: 僅[未給、undefined、無任何自有鍵之條件物件]視為無條件；條件之入口形狀檢核先於載入model、讀取與刪除，未通過者不開啟資料庫檔、不送SQL，
+     * 以整批性錯誤reject(發出一次error事件，不發change事件)；欄位名或值型別不合者於讀取全表之後才由轉譯層reject，不刪除任何數據
      * 註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵逐筆以DELETE … WHERE 主鍵 =刪除，
-     * 令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin、$regex等運算子，
+     * 令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin等運算子，
      * 會出現[select查得到但delAll刪不到]或反之之不一致
      * 註: 不用IN清單刪除，因Jet對長字串之IN與=不等價(已實測255個é之主鍵IN不中而=命中)，用IN會使命中之列刪不到
      * 註: 逐筆之DELETE於單次exe往返內以交易包覆，令任一筆失敗時整體回滾而不留下部份刪除
      *
      * @memberOf WOrmMdb
-     * @param {Object} [find={}] 輸入刪除條件物件，不給予find則代表刪除全部數據
+     * @param {Object} [find={}] 輸入刪除條件物件(系列白名單，規則見上)，不給予find則代表刪除全部數據，非條件物件或白名單外運算子整批reject
      * @param {Object} [option={}] 輸入設定物件，預設為{}
      * @param {Object} [option.instance=null] 輸入實例instance物件，預設為null
      * @returns {Promise} 回傳Promise，resolve回傳刪除結果{n,nDeleted,ok}，reject回傳錯誤訊息
@@ -1840,13 +1796,20 @@ function WOrmMdb(opt = {}) {
         let isErr = false
         let res = null
 
-        //si
+        //si, inited為本次是否自行初始化(壞find不初始化, 故不得關閉他次呼叫所建之sequelize)
         let si = instance
-        if (instance === null) {
-            si = await initAdodb()
-        }
+        let inited = false
 
         try {
+
+            //check, 條件之入口檢核為第一步, 先於初始化(匯入model)、讀取與刪除, 與select共用normFind, 其後只用複本(R-WL-01)
+            let fd = normFind(find)
+
+            //initAdodb
+            if (instance === null) {
+                inited = true
+                si = await initAdodb()
+            }
 
             //check
             if (si.err) {
@@ -1859,13 +1822,9 @@ function WOrmMdb(opt = {}) {
             //nDel
             let nDel = 0
 
-            //find, 入口之形式判定與快照, 與select共用normFind; 於try內, 判定或讀值拋錯經reject與error事件回報
-            //註: 不cloneDeep(會丟不可列舉之鍵); 非物件與陣列為{}(系列現況保留)
-            find = normFind(find)
-
-            if (isPlainObj(find) &amp;&amp; Reflect.ownKeys(find).length === 0) {
+            if (Reflect.ownKeys(fd).length === 0) {
                 //無條件, 直接清空全表, 不需先取主鍵清單
-                //註: 僅一般物件且無任何自有鍵(含Symbol與不可列舉之鍵)者才屬無條件; 只有Op.and等Symbol鍵、具length鍵、非一般物件者皆經findAll由cvFind判定
+                //註: fd為cvOrmFind之複本, 無自有鍵者僅限未給、undefined與{}(R-WL-02), 其餘一律經findAll
 
                 let rr = await si.jet.execute(getDeleteAll(opt.cl))
                 nDel = isnum(rr.n) ? rr.n : 0
@@ -1875,7 +1834,7 @@ function WOrmMdb(opt = {}) {
                 //有條件, 以與select相同之過濾取得命中數據
 
                 //rs
-                let rs = await findAll(si, find)
+                let rs = await findAll(si, fd)
 
                 //pkvs, 命中數據之主鍵
                 let pkvs = []
@@ -1928,7 +1887,7 @@ function WOrmMdb(opt = {}) {
         finally {
 
             //closeSequelize
-            if (instance === null) { //內部自動初始化得close
+            if (inited) { //內部自動初始化得close
                 await closeSequelize('delAll')
             }
 
@@ -2049,7 +2008,7 @@ export default WOrmMdb
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 21:06:51 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon Oct 19 2026 21:39:20 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

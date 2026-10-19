@@ -84,8 +84,9 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
 數值類主鍵欄之標準數字字串轉為數字; 型別不符者selectByPk回null、insert/insertBulk/save於寫入前reject、del該筆ok為0
 註: 字串類主鍵超過255字元、含NUL或非良構UTF-16者不可能存在於資料表, 讀取類視為未命中且不送Jet
 (Jet對超過255字元之字面值於SELECT/DELETE會截斷後比對, 送出將命中或刪除另一列)
-註: select與delAll之主鍵等值類條件($eq、$ne、$in、$nin、$not及隱含等值)改寫為由Jet判定之命中列, 不以JS仿製之等值鍵判定;
-主鍵之範圍運算子與$regex、非主鍵欄之條件依記憶體sqlite(字串欄為NOCASE); 否定語境之無效主鍵值reject; select回傳Jet原列, 內容與selectByPk相同
+註: select與delAll之條件(find)僅支援系列白名單(欄位等值、$eq $ne $gt $gte $lt $lte $in $nin、文件層$and $or; 詳見select與delAll之說明), 白名單外一律整批reject;
+主鍵等值類條件($eq、$ne、$in、$nin及隱含等值)改寫為由Jet判定之命中列, 不以JS仿製之等值鍵判定;
+主鍵之範圍運算子與非主鍵欄之條件依記憶體sqlite(字串欄為NOCASE); $ne、$nin含無效主鍵值reject; select回傳Jet原列, 內容與selectByPk相同
 註: 主鍵欄須為文字或數值型, Jet之GUID型別與DATETIME型別之主鍵欄不支援
 註: insert與save之原子性倚賴資料表主鍵欄位具唯一約束(PRIMARY KEY)，資料表建立時須含之</p></li></ul></dd>
     
@@ -93,7 +94,7 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line79">line 79</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line89">line 89</a>
     </li></ul></dd>
     
 
@@ -762,7 +763,7 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line406">line 406</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line416">line 416</a>
     </li></ul></dd>
     
 
@@ -871,7 +872,7 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1911">line 1911</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1870">line 1870</a>
     </li></ul></dd>
     
 
@@ -988,7 +989,7 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1597">line 1597</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1538">line 1538</a>
     </li></ul></dd>
     
 
@@ -1269,13 +1270,29 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>依條件刪除多筆數據，需與del分開，避免未傳數據導致直接刪除全表</p>
-<p>註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數
-註: find未給或為空物件時刪除全部數據；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
-註: 僅[未給、非物件、陣列、無任何自有鍵之一般物件]視為無條件；只有Symbol鍵(如Op.and)、不可列舉之鍵或具length鍵之條件皆照常過濾，
-不合法之條件(含非一般物件)reject且不刪除任何數據；條件規則同select
+    <dd class="tag-description"><ul class="dummy"><li><p>依條件刪除多筆數據(破壞性操作，須審慎使用，非必要不用；刪除單筆請用del)，需與del分開，避免未傳數據導致直接刪除全表</p>
+<p>使用須知:</p>
+<ol>
+<li>不給條件即刪除全部數據: find未給、為undefined或為{}時，刪除資料表內全部數據，不另行確認。給了條件才是部分刪除。</li>
+<li>傳了值卻不是條件物件(null、陣列含[]與[{...}]、字串、數值、布林、函數、Date、RegExp、Map、Set、類別實例等)
+一律整批reject，不視為{}，不刪除任何數據。</li>
+<li>條件僅支援系列白名單: 欄位等值{欄:純量}(多欄為AND)、欄位運算子$eq $ne $gt $gte $lt $lte(值為純量)與
+$in $nin(值為純量陣列，各至多2000個元素)、文件層$and $or(值為條件物件之非空陣列，至多999項)。純量為字串、有限數字、布林、有效Date；
+null僅可用於欄位等值、$eq、$ne。白名單外之運算子($not $nor $regex $options $exists $where $expr $like $ilike等)、
+欄位層$and/$or、子查詢、函數值、Symbol鍵、undefined值、空的$nin/$and/$or等一律整批reject，
+訊息為invalid find: 原因 at [路徑]，且不刪除任何數據。</li>
+<li>與select共用同一檢核與同一條件，select(find)命中之數據即本函數刪除之數據；建議先以select(find)確認命中範圍再刪除；
+整個find內相異主鍵值總數亦至多2000(跨陣列合計)，主鍵不可能為NULL(勿以{pk:{$ne:null}}表達全部，會reject)。</li>
+<li>條件值若來自可能為undefined、null或空陣列之變數，呼叫端須先自行判斷；undefined值會reject而非被忽略，
+空的$nin會reject，$in:[]則為恆假(刪除0筆)。</li>
+<li>語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
+排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。</li>
+</ol>
+<p>註: n與nDeleted皆為實際刪除筆數，兩者恆相等，n不得取全表筆數；條件無命中時回{n:0,nDeleted:0,ok:1}，不視為錯誤
+註: 僅[未給、undefined、無任何自有鍵之條件物件]視為無條件；條件之入口形狀檢核先於載入model、讀取與刪除，未通過者不開啟資料庫檔、不送SQL，
+以整批性錯誤reject(發出一次error事件，不發change事件)；欄位名或值型別不合者於讀取全表之後才由轉譯層reject，不刪除任何數據
 註: 帶條件時先以與select相同之記憶體過濾取得命中數據之主鍵清單，再依主鍵逐筆以DELETE … WHERE 主鍵 =刪除，
-令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin、$regex等運算子，
+令刪除範圍與select(find)之結果完全一致；若逕將條件送Jet，因Access不支援$in、$nin等運算子，
 會出現[select查得到但delAll刪不到]或反之之不一致
 註: 不用IN清單刪除，因Jet對長字串之IN與=不等價(已實測255個é之主鍵IN不中而=命中)，用IN會使命中之列刪不到
 註: 逐筆之DELETE於單次exe往返內以交易包覆，令任一筆失敗時整體回滾而不留下部份刪除</p></li></ul></dd>
@@ -1284,7 +1301,7 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1787">line 1787</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1743">line 1743</a>
     </li></ul></dd>
     
 
@@ -1393,7 +1410,7 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
                 </td>
             
 
-            <td class="description last"><p>輸入刪除條件物件，不給予find則代表刪除全部數據</p></td>
+            <td class="description last"><p>輸入刪除條件物件(系列白名單，規則見上)，不給予find則代表刪除全部數據，非條件物件或白名單外運算子整批reject</p></td>
         </tr>
 
     
@@ -1572,7 +1589,7 @@ insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1942">line 1942</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1901">line 1901</a>
     </li></ul></dd>
     
 
@@ -1879,7 +1896,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line371">line 371</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line381">line 381</a>
     </li></ul></dd>
     
 
@@ -1998,7 +2015,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line952">line 952</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line893">line 893</a>
     </li></ul></dd>
     
 
@@ -2335,7 +2352,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據</p><
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1131">line 1131</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1072">line 1072</a>
     </li></ul></dd>
     
 
@@ -2639,7 +2656,7 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1261">line 1261</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1202">line 1202</a>
     </li></ul></dd>
     
 
@@ -2961,18 +2978,30 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
     
     <dt class="tag-description">Description:</dt>
     <dd class="tag-description"><ul class="dummy"><li><p>查詢數據</p>
+<p>使用須知:</p>
+<ol>
+<li>find未給、為undefined或為{}時回傳全部數據。</li>
+<li>傳了值卻不是條件物件(null、陣列含[]與[{...}]、字串、數值、布林、函數、Date、RegExp、Map、Set、類別實例等)一律整批reject，不視為{}。</li>
+<li>條件僅支援系列白名單: 欄位等值{欄:純量}(多欄為AND)、欄位運算子$eq $ne $gt $gte $lt $lte(值為純量)與
+$in $nin(值為純量陣列，各至多2000個元素)、文件層$and $or(值為條件物件之非空陣列，至多999項)。純量為字串、有限數字、布林、有效Date；
+null僅可用於欄位等值、$eq、$ne。白名單外之運算子($not $nor $regex $options $exists $where $expr $like $ilike等)、
+欄位層$and/$or、子查詢、函數值、Symbol鍵、undefined值、空的$nin/$and/$or、白名單外之欄名(須為model之屬性且符合^[\p{L}<em>][\p{L}\p{M}\p{N}</em>]*$)等
+一律整批reject，訊息為invalid find: 原因 at [路徑]。</li>
+<li>值依欄位型別檢核，DATE欄之無時區字串依主機時區；主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-WL、R-FIND、R-PK)；
+整個find內相異主鍵值總數亦至多2000(跨陣列合計)；主鍵不可能為NULL，勿以{pk:{$ne:null}}表達全部(會reject)；主鍵之範圍運算子界限須為有效且型別相符之主鍵值，否則恆不命中。</li>
+<li>語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
+排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。</li>
+</ol>
 <p>註: 恆回傳陣列，無符合數據回傳空陣列而不回傳null
-註: find未給或為空物件時回傳全部數據
-註: 條件之語法與規則同w-orm-reladb之cvFind(欄位層$eq、$ne、$gt、$gte、$lt、$lte、$in、$nin、$not、$regex、$options、$exists，文件層$and、$or、$nor，另保留文件層之$not)，
-欄名須與model完全相符，值依欄位型別檢核，$regex為字面子字串，DATE欄之無時區字串依主機時區；不支援之運算子與無法轉譯之值reject；
-主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-FIND、R-PK)
+註: 條件之入口形狀檢核(白名單、純量型別、欄名文法、上限、異常結構)先於載入model、讀取與連線，未通過者不開啟資料庫檔、不送SQL，並以整批性錯誤reject(發出一次error事件，不發change事件)；
+通過形狀檢核但欄位名不在model或資料表、值與欄位型別不符者，於載入model並讀取全表之後才由轉譯層reject
 註: 本函數不得有副作用，故不創建資料表</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line702">line 702</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line636">line 636</a>
     </li></ul></dd>
     
 
@@ -3081,7 +3110,7 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
                 </td>
             
 
-            <td class="description last"><p>輸入查詢條件物件</p></td>
+            <td class="description last"><p>輸入查詢條件物件(系列白名單，規則見上)，未給、undefined或{}回傳全部數據，非條件物件或白名單外運算子整批reject</p></td>
         </tr>
 
     
@@ -3265,7 +3294,7 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line769">line 769</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line710">line 710</a>
     </li></ul></dd>
     
 
@@ -3551,7 +3580,7 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 16 2026 21:06:51 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon Oct 19 2026 21:39:20 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
