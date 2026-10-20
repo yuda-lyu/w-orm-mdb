@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.closeSequelize">closeSequelize</a></li><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -147,11 +147,15 @@
 序號集合以佔位陣列置於條件內並列於回傳之slots(各含正規化後之主鍵值vals與佔位陣列is), 呼叫端以Jet判定命中列後以fillPkSlots就地填入,
 故命中判定與selectByPk、del等一致, 不經任何近似鍵
 註: 主鍵欄只認鍵與pk完全相符者(與reladb之cvFind之嚴格鍵一致), 大小寫或尾端空白不同之近似鍵原樣交cvFind拒收
-註: 範圍運算子($gt、$gte、$lt、$lte)以正規化值留於原欄比對(記憶體sqlite之語意, 為近似); 其餘運算子正常不可能到達(cvOrmFind已拒), 若到達則原樣留於原欄, 由cvFind再拒
-註: 肯定語境($eq、$in、隱含等值、範圍運算子)之無效、型別不符、不可能存在之值不命中(範圍運算子亦同, 不留null給cvFind);
-否定語境($ne、$nin)之無效或型別不符之值(如null、布林、Date)一律拋出:
-依[無效值不命中]推得之否定為[全部命中], 用於delAll即清空全表, 而此類值多為呼叫端之錯誤(如變數為null);
+註: 範圍運算子($gt、$gte、$lt、$lte)留於原欄依記憶體sqlite比較(近似): 界限為有效主鍵值(ok)時以正規化值比較, 其餘(無效、型別不符、不可能存在)原樣留於原欄交cvFind依欄型比較或拒收
+(整數主鍵之k &gt; 2.5應命中3、4、5, id &lt; 300個z應為全部; cvFind欄型檢核不接受者如整數主鍵給'abc'、布林、Date則reject), 不改寫為恆假(LW6);
+其餘運算子正常不可能到達(cvOrmFind已拒), 若到達則原樣留於原欄, 由cvFind再拒
+註: 等值類肯定語境($eq、$in、隱含等值)之無效、型別不符、不可能存在之值不命中(對等值而言不可能等於主鍵欄之值即不命中, 本就正確, 不留null給cvFind);
+否定語境($ne、$nin)之無效或型別不符之值(如布林、Date、空字串)一律拋出:
+依[無效值不命中]推得之否定為[全部命中], 用於delAll即清空全表, 而此類值多為呼叫端之錯誤;
 不可能存在之值於否定語境依其語意為必不相等
+註: $ne:null不是無效值而是[非NULL]: 原樣留於原欄交cvFind轉為IS NOT NULL(與非主鍵欄、reladb相同, 令dspec之可攜寫法於主鍵欄亦可用; LW2);
+呼叫端若以變數為值, 變數為null時delAll({pk:{$ne:變數}})即刪除全部非NULL主鍵之列(JSDoc已載); {pk:null}、$eq:null維持肯定語境無效值不命中
 註: 非運算子物件(如{})視為主鍵值而非條件, 屬無效值, 不得因其無運算子而使主鍵條件消失(cvOrmFind已拒空運算子物件, 此為單獨呼叫本函數時之防線)
 註: 主鍵所衍生之序號條件併入同一物件(欄位wi之運算子物件{$in,$nin}), 不增巢狀層(增層會把合法深度放大而於其後cvFind內之再檢核被拒); 同運算子重複者才另以字串鍵{$and:[其餘, ...]}置放;
 邏輯陣列之元素若其主鍵條件皆化簡掉(如$ne僅含不可能存在之值)則以恆真之序號條件{wi:{$nin:[-1]}}代替空物件(白名單拒空條件); 不得用sequelize之Symbol Op(cvOrmFind拒Symbol鍵, reladb 1.1.10之cvFind對其reject)
@@ -164,7 +168,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line273">line 273</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line277">line 277</a>
     </li></ul></dd>
     
 
@@ -395,7 +399,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line29">line 29</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line39">line 39</a>
     </li></ul></dd>
     
 
@@ -550,13 +554,13 @@
     <dd class="tag-description"><ul class="dummy"><li><p>轉為Jet之值常值</p>
 <p>註: 字串以單引號包覆，內部單引號以連續兩個單引號跳脫(Jet之標準跳脫方式)
 註: 不可用N'...'前綴，該為SQL Server語法，Jet不支援
-註: 日期物件以#...#表示，字串則維持引號由Jet自行隱式轉換</p></li></ul></dd>
+註: 日期物件以#...#表示(本地分量，秒以下捨去；本地年須在100–9999，否則拋出，見dateRange.mjs)，字串則維持引號由Jet自行隱式轉換</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line45">line 45</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line55">line 55</a>
     </li></ul></dd>
     
 
@@ -715,7 +719,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line443">line 443</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line444">line 444</a>
     </li></ul></dd>
     
 
@@ -1032,7 +1036,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line240">line 240</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line254">line 254</a>
     </li></ul></dd>
     
 
@@ -1190,7 +1194,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line229">line 229</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line243">line 243</a>
     </li></ul></dd>
     
 
@@ -1400,7 +1404,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line165">line 165</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line179">line 179</a>
     </li></ul></dd>
     
 
@@ -1788,7 +1792,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line110">line 110</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line124">line 124</a>
     </li></ul></dd>
     
 
@@ -1946,7 +1950,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line123">line 123</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line137">line 137</a>
     </li></ul></dd>
     
 
@@ -2157,7 +2161,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line139">line 139</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line153">line 153</a>
     </li></ul></dd>
     
 
@@ -2364,7 +2368,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line199">line 199</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line213">line 213</a>
     </li></ul></dd>
     
 
@@ -3026,6 +3030,323 @@
     <dd>
         
 <span class="param-type">Promise</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="inJetDate"><span class="type-signature"></span>inJetDate<span class="signature">(d)</span><span class="type-signature"> &rarr; {Boolean}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>判定Date物件是否為有效時間且本地年份在Jet可存放之範圍</p>
+<p>註: 以本地年份判定而非UTC年份, 因Jet存放的是本地時間分量(對真Jet 7時區 × 23瞬間共161格: 本地年規則誤判0格, UTC年100–9999規則誤判25格, UTC年1–9999規則誤判64格)</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="dateRange.mjs.html">dateRange.mjs</a>, <a href="dateRange.mjs.html#line54">line 54</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>d</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Date</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入Date物件</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳是否可安全寫入</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Boolean</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="inJetYear"><span class="type-signature"></span>inJetYear<span class="signature">(y)</span><span class="type-signature"> &rarr; {Boolean}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>判定年份是否在Jet可存放之範圍</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="dateRange.mjs.html">dateRange.mjs</a>, <a href="dateRange.mjs.html#line41">line 41</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>y</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Number</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入年份</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳是否在範圍內</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Boolean</span>
 
 
 
@@ -3810,6 +4131,219 @@ Symbol鍵與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪�
 
     
 
+    <h4 class="name" id="normDates"><span class="type-signature"></span>normDates<span class="signature">(data, cols, dateCols)</span><span class="type-signature"> &rarr; {Object|null}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>寫入前整批檢核各筆數據之日期值並正規化, 回傳第一個不可寫入者之位置</p>
+<p>註: Date物件於所有欄位皆檢(Jet對寫入非DATE欄之Date亦改年), 通過者就地換成一般Date(令檢查之值即使用之值, 子類別與覆寫之方法被剝除);
+字串與非Date物件(以String(v)取字串)僅於DATE類欄處理(見normStr); 數值、布林、null、undefined不處理(現況行為不變)
+註: 就地改寫data之各列(呼叫端傳入的是cloneDeep後之複本); 只處理cols內之欄位(不在model之鍵不會被寫入)
+註: 回傳之位置為索引最小者, 同筆多欄依cols之順序; 任一不可寫入即整批拒收, 故呼叫端應於任何寫入之前呼叫</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="dateRange.mjs.html">dateRange.mjs</a>, <a href="dateRange.mjs.html#line154">line 154</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>data</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入數據陣列</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>cols</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入資料表欄位名陣列(依model定義順序)</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>dateCols</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Set</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入DATE、DATEONLY型別之欄位名集合</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳{k,col}或null</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
     <h4 class="name" id="normPk"><span class="type-signature"></span>normPk<span class="signature">(v, tp)</span><span class="type-signature"> &rarr; {Object}</span></h4>
 
     
@@ -4024,7 +4558,7 @@ reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line104">line 104</a>
+        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line105">line 105</a>
     </li></ul></dd>
     
 
@@ -4321,7 +4855,7 @@ reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue Oct 20 2026 05:00:55 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue Oct 20 2026 12:50:51 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
