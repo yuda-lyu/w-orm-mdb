@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -168,7 +168,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line277">line 277</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line286">line 286</a>
     </li></ul></dd>
     
 
@@ -382,6 +382,169 @@
 
     
 
+    <h4 class="name" id="chkPkWf"><span class="type-signature"></span>chkPkWf<span class="signature">(v)</span><span class="type-signature"> &rarr; {String|null}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>主鍵值若為字串, 回傳其不良構之原因(含NUL: SQL文字於NUL被截斷; 含孤立代理: 經exe之UTF-8轉換被換為U+FFFD而改鍵), 合格或非字串回傳null</p>
+<p>註: 判定單一擁有者為wsemi之chkOrmStr(第66項, 見CLAUDE_rulebook.md之R-WF), 預設一併檢NUL(主鍵與find同標準); 先拆包裝物件, 與normPk一致
+註: 回傳原因為固定詞彙(不回顯值), 供呼叫端組成invalid id: 原因 at [data[索引].主鍵欄]</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line96">line 96</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>v</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">*</span>
+
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"><p>輸入主鍵值</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>回傳原因字串或null</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">String</span>
+|
+
+<span class="param-type">null</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
     <h4 class="name" id="escId"><span class="type-signature"></span>escId<span class="signature">(s)</span><span class="type-signature"> &rarr; {String}</span></h4>
 
     
@@ -560,7 +723,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line55">line 55</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line63">line 63</a>
     </li></ul></dd>
     
 
@@ -719,7 +882,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line444">line 444</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line453">line 453</a>
     </li></ul></dd>
     
 
@@ -878,7 +1041,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line191">line 191</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line200">line 200</a>
     </li></ul></dd>
     
 
@@ -1036,7 +1199,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line254">line 254</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line271">line 271</a>
     </li></ul></dd>
     
 
@@ -1194,7 +1357,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line243">line 243</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line260">line 260</a>
     </li></ul></dd>
     
 
@@ -1404,7 +1567,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line179">line 179</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line196">line 196</a>
     </li></ul></dd>
     
 
@@ -1610,7 +1773,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line46">line 46</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line47">line 47</a>
     </li></ul></dd>
     
 
@@ -1792,7 +1955,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line124">line 124</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line141">line 141</a>
     </li></ul></dd>
     
 
@@ -1950,7 +2113,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line137">line 137</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line154">line 154</a>
     </li></ul></dd>
     
 
@@ -2161,7 +2324,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line153">line 153</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line170">line 170</a>
     </li></ul></dd>
     
 
@@ -2368,7 +2531,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line213">line 213</a>
+        <a href="getCmd.mjs.html">getCmd.mjs</a>, <a href="getCmd.mjs.html#line230">line 230</a>
     </li></ul></dd>
     
 
@@ -3540,7 +3703,7 @@ Symbol鍵與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line211">line 211</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line220">line 220</a>
     </li></ul></dd>
     
 
@@ -3986,7 +4149,7 @@ Symbol鍵與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line178">line 178</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line187">line 187</a>
     </li></ul></dd>
     
 
@@ -4359,13 +4522,15 @@ Symbol鍵與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪�
 註: 字串類主鍵欄之有限數字以String(v)處置, 與w-serv-orm一致; 數值類主鍵欄僅轉換標準數字字串(String(Number(s))===s),
 其餘字串因Jet之INSERT轉型會改變鍵(如'012'存為12)而視為型別不符; 整數類主鍵欄之非整數因Jet會四捨六入五成雙而視為型別不符
 註: ±Infinity、NaN、空字串、布林、物件、陣列、Date、BigInt、null、undefined為無效
-註: 超過255字元(不計尾端半形空白)之字串於字串類與其他型別(含model未定義主鍵欄而無從得知型別者)皆為不可能存在</p></li></ul></dd>
+註: 超過255字元(不計尾端半形空白)之字串於字串類與其他型別(含model未定義主鍵欄而無從得知型別者)皆為不可能存在
+註: 含NUL或孤立代理之字串(不良構, chkPkWf)亦為不可能存在, 且kind為'cannot'時附why(固定原因詞彙); 其kind不用'invalid',
+以免autoGenPk為true時被當成[未給主鍵]而以自動產生之UUID取代(寫入成功卻非呼叫端所給之主鍵), 呼叫端須以why區辨良構性與長度上限(後者無why)</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line122">line 122</a>
+        <a href="pk.mjs.html">pk.mjs</a>, <a href="pk.mjs.html#line130">line 130</a>
     </li></ul></dd>
     
 
@@ -4504,7 +4669,7 @@ Symbol鍵與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪�
 
         
 <div class="param-desc">
-    <p>回傳{kind,v}</p>
+    <p>回傳{kind,v}, kind為'cannot'時可能附why</p>
 </div>
 
 
@@ -4855,7 +5020,7 @@ reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue Oct 20 2026 12:50:51 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 21 2026 04:36:58 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

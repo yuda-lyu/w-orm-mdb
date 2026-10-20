@@ -74,6 +74,56 @@ Unchanged: a `find` that is a function, a `Date` or a class instance rejects, `$
 
 `select(null)` and `delAll(null)` style calls must become `select({})` / `delAll({})` (or no argument).
 
+### Well-formed strings
+
+`w-orm-mdb` and the Jet engine exchange text through UTF-8 (the `connMDB.exe` bridge), which turns a **lone surrogate** (a UTF-16 half of a pair; `str.isWellFormed()` is `false`) into U+FFFD. Written that way, two different keys became one key (an overwrite, or a `del` that hits another row), a value read back differently from the value written, and a table name could point at another table. The series wide rule (shared with the other `w-orm-*` packages, decided by `chkOrmStr` / `chkOrmData` of `wsemi`) is therefore to **reject such strings instead of storing something else**. U+FFFD itself, emoji and other paired surrogates are well formed and work as before.
+
+| Where | Rule |
+|---|---|
+| Primary key (the key of `selectByPk` / the pk column of `insert`, `insertBulk`, `save`, `del`) | a string must contain **no NUL and no lone surrogate** |
+| Data written by `insert`, `insertBulk`, `save` | key names and string values, at any depth (nested objects, array elements, `Map`, `Set` …, also keys that are not columns of the model) must contain **no lone surrogate**; a NUL inside a value is not part of this check |
+| `opt.db`, `opt.cl`, `opt.url`, `opt.storage`, `opt.pk` | no lone surrogate; the constructor throws `invalid opt.<name>: string contains lone surrogate` |
+
+What happens with a string that fails (it never depends on `opt.autoGenPk`: a lone surrogate id is never replaced by a generated id):
+
+| Function | Result |
+|---|---|
+| `insert`, `insertBulk` | rejects as a whole **before** the model is loaded and before anything is written, `error` event once, no `change`; the lowest index wins |
+| `save` | that item is `{ n: 1, nInserted: 0, nModified: 0, ok: 0, err }`, the other items are processed as usual; also with `autoInsert: false` |
+| `del` | that item is `{ n: 0, nDeleted: 0, ok: 0, err }` (it used to be a silent `ok: 1`), the other items are processed as usual |
+| `selectByPk` | `null` (without loading the model or asking Jet) |
+| `select`, `delAll` | `invalid find: …` as before |
+
+Messages use a fixed vocabulary and **never echo the value**: `invalid id: string contains lone surrogate at [data[1].id]` (`string contains NUL` for a NUL in a key), `invalid data: string contains lone surrogate at [data[1].meta.tags[1]]` (a bad key name is shown as `<invalid key>`), `invalid opt.cl: string contains lone surrogate`. The path starts with the batch index and follows `opt.pk` for the key column. The primary key of every row becomes read-only once it has been checked and normalized, so user code that runs while the statements are built (a custom `toString` …) cannot change the key of another row of the same batch (the call fails as a whole instead). The checks run on a copy that is taken when `insert`, `insertBulk`, `save` or `del` is called, and only that copy is written (changing your object, or a prototype it shares, right after the call does not change what is written; the `find` of `select` / `delAll` is copied when the call is executed, as before). A row that is not a plain object (a class instance, `Object.create(proto)`, a subclass of `Array`, a `Map` or `Set`, an object with a custom `Symbol.toStringTag` …; a no-data input such as an empty object or an object with only unrelated getters stays "no data", as before) is flattened into a plain object holding every enumerable property (own and inherited) and every accessor of its prototype chain (class getters included), each read exactly once (inherited values and getter results are deep-copied; own values were copied by the outer copy), while the contents of a container row (the entries of a `Map`, the elements of a `Set`) are still checked from the copied original, so a getter with side effects or one that answers differently the second time, or a prototype or array shared with your object that you change after the call, cannot make the checked value differ from the written one (a getter that throws is only rethrown if the column is really read, as before); nested class instances keep their prototype and a `Map` keeps its key objects (shared references, not covered). The constructor options are read once as well (every enumerable option and every option name the package reads, enumerable or not; an options value that is not an object throws `TypeError`). As a last line of defence every string that reaches the SQL text is checked once more (`invalid data: string contains lone surrogate`, without a path), which also covers values produced by `toString`, and so is every table or column identifier (`invalid identifier: string contains lone surrogate`). A `String` wrapper object is checked through its string value and, like any value, written as the plain string (a wrapper as primary key is unwrapped first).
+
+**Existing data is not migrated.** Before this release a lone surrogate in a value was stored as U+FFFD (the original cannot be recovered), and such a key could not be written at all. To find rows that may have been affected:
+
+```js
+let rows = await wo.select()
+let suspects = rows.filter((r) => Object.values(r).some((v) => typeof v === 'string' && v.includes('�')))
+```
+
+U+FFFD is a legal character, so review the result by hand. Be careful with `del`: Jet compares text without regard to letter case, trailing spaces, width, kana and **supplementary plane characters**, so `'a'`, `'a😀'` and `'a�'` are the same key to Jet (`selectByPk('a😀')` returns the row `'a'`, and `del` removes it). This is how the Jet collation works (like the letter case rule, and like `mssql` of `w-orm-reladb`); the package does not change it. If you need exact comparisons, keep such strings out of key columns, or clean up through another column (`delAll({ name: … })`) after checking with `select`.
+
+### Breaking changes: well-formed strings
+
+The "before" column is what the previous release (1.0.39) did, measured with the new test suite run against it.
+
+| Case | before (1.0.39) | now |
+|---|---|---|
+| a lone surrogate in a value (any column, also nested in an array that Jet turns into text) written by `insert`, `insertBulk`, `save` | stored as U+FFFD (`'a\uD800'` read back as `'a�'`) | `insert` / `insertBulk` reject as a whole, nothing written; `save`: that item `ok: 0` |
+| a lone surrogate in a key name of the written object (even a key that is not a column) | ignored | rejects the same way |
+| `del` with a primary key containing NUL or a lone surrogate | `{ n: 0, nDeleted: 0, ok: 1 }` | `{ n: 0, nDeleted: 0, ok: 0, err: 'invalid id: … at [data[0].id]' }` |
+| `save` with such a primary key and `autoInsert: false` | `{ n: 0, …, ok: 1 }` | `ok: 0` with `err` |
+| `save` with such a primary key and `autoInsert: true` | `ok: 0`, the message echoed the key | `ok: 0`, fixed message (no echo) |
+| `insert` / `insertBulk` with such a primary key | rejected, the message echoed the key (`invalid data[0].id[…]`) | rejected: `invalid id: … at [data[0].id]` |
+| messages for a primary key that is too long (> 255 characters), does not fit the column type, or is missing (`del`), and the `save` retry message | the key value was part of the message | no value in the message (`invalid data[1].id, can not be stored: exceeds 255 characters`, `invalid data[0].id, type mismatch with pk column […] in model […]`, `can not save data[0].id, id exceeds 255 characters`, `invalid data[0].id`) |
+| constructor with a lone surrogate in `opt.db`, `opt.cl`, `opt.url`, `opt.storage`, `opt.pk` | accepted (a lone surrogate table name or path pointed at another table or file) | throws `invalid opt.<name>: string contains lone surrogate`; a `String` wrapper object in these options throws `invalid opt.<name>: not a string` |
+| `insert`, `insertBulk`, `save`, `del` with `useStable: true` (the default) | the data was copied when the queue got to the call | the data is copied when the function is called; a row that is a class instance or inherits properties is flattened then (enumerable own and inherited properties and prototype accessors are kept, each read once; a non enumerable plain data property on the prototype is no longer read) |
+| the options object passed to the constructor | the defaults were written back into your object and every option was read again on each use; a non object (`null`, a string …) threw a `TypeError` by accident | your object is read once and left untouched; changing it afterwards has no effect on the instance; a non object still throws `TypeError: invalid opt: not an object` |
+
+Unchanged: a primary key longer than 255 characters (`del` answers `ok: 1`, `n: 0`; `selectByPk` `null`), NUL inside a value (Jet's own error), `U+FFFD` and paired surrogates anywhere.
+
 #### Example by js settings 
 > **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
 ```alias
@@ -318,12 +368,12 @@ test().catch((err) => console.log('err:', err))
 // select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
 // selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
-// error del invalid id[undefined]
+// error del invalid data[2].id
 // change del
 // del then [
 //   { n: 1, nDeleted: 1, ok: 1 },        //主鍵命中並刪除
 //   { n: 0, nDeleted: 0, ok: 1 },        //主鍵未命中, 屬正常結果
-//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid id[undefined]' } //未帶有效主鍵, 屬該筆失敗
+//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid data[2].id' } //未帶有效主鍵, 屬該筆失敗
 // ]
 // change delAll
 // delAll by find then { n: 1, nDeleted: 1, ok: 1 }
@@ -573,12 +623,12 @@ test().catch((err) => console.log('err:', err))
 // select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
 // selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
-// error del invalid id[undefined]
+// error del invalid data[2].id
 // change del
 // del then [
 //   { n: 1, nDeleted: 1, ok: 1 },        //主鍵命中並刪除
 //   { n: 0, nDeleted: 0, ok: 1 },        //主鍵未命中, 屬正常結果
-//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid id[undefined]' } //未帶有效主鍵, 屬該筆失敗
+//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid data[2].id' } //未帶有效主鍵, 屬該筆失敗
 // ]
 // change delAll
 // delAll by find then { n: 1, nDeleted: 1, ok: 1 }

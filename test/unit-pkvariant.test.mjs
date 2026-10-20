@@ -580,9 +580,10 @@ if (isWindows()) {
             it('含NUL與孤立代理', async function() {
                 let w = ws.users
                 await seed('users', [{ id: 'k2', name: 'k2row' }])
-                for (let v of ['k\u00002', 's\uD800']) {
+                for (let [v, why] of [['k\u00002', 'string contains NUL'], ['s\uD800', 'string contains lone surrogate']]) {
                     assert.strict.strictEqual(await w.selectByPk(v), null)
-                    assert.strict.deepStrictEqual(await w.del([{ id: v }]), [{ n: 0, nDeleted: 0, ok: 1 }])
+                    //第66項(D5): del對不良構主鍵由靜默(ok為1)改為該筆ok為0並附固定詞彙之err(不回顯值)
+                    assert.strict.deepStrictEqual(await w.del([{ id: v }]), [{ n: 0, nDeleted: 0, ok: 0, err: `invalid id: ${why} at [data[0].id]` }])
                     assert.strict.strictEqual(await getRt(w.select({ id: v })), 'reject', '條件值含NUL或孤立代理: 白名單拒收(1.0.36 為不命中)')
                     assert.strict.strictEqual(await getRt(w.delAll({ id: v })), 'reject')
                     assert.strict.strictEqual(await getRt(w.insert([{ id: 'ok-1' }, { id: v }])), 'reject')

@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -70,6 +70,8 @@ import isestr from 'wsemi/src/isestr.mjs'
 import arrHas from 'wsemi/src/arrHas.mjs'
 import pmQueue from 'wsemi/src/pmQueue.mjs'
 import cvOrmFind from 'wsemi/src/cvOrmFind.mjs'
+import chkOrmStr from 'wsemi/src/chkOrmStr.mjs'
+import chkOrmData from 'wsemi/src/chkOrmData.mjs'
 import _genModelsByTabs from 'w-orm-reladb/src/genModelsByTabs.mjs'
 import {
     getSelectAll,
@@ -82,7 +84,7 @@ import {
 } from './getCmd.mjs'
 import { initSequelize, queryMemory } from './queryMemory.mjs'
 import { YEAR_MIN, YEAR_MAX, normDates } from './dateRange.mjs'
-import { TPS_STR, getPkType, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys } from './pk.mjs'
+import { TPS_STR, getPkType, chkPkWf, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys } from './pk.mjs'
 
 
 //放置於全域宣告, 若使用useStable=true才可於當創建多實例時仍能全域控管
@@ -95,6 +97,10 @@ const nPkPerIn = 200
 
 //條件(find)之$in/$nin長度上限(單一陣列), 亦為整個find內相異主鍵值之總數上限: 主鍵值需由Jet逐筆以=判定(約1.6ms/個), 2000筆約3.6秒(見CLAUDE_rulebook.md之R-WL-00)
 const MAX_IN = 2000
+
+
+//攤平列上附帶複製後原物件(內建容器與自訂標籤之物件)之Symbol鍵, 供chkWf走訪其內容(見flatRow)
+const KEY_CONT = Symbol('worm-mdb-container')
 
 
 //條件(find)之$and/$or長度上限: SQLite運算式樹深度上限為1000, 平鋪1000項即DB錯誤
@@ -127,8 +133,20 @@ const MAX_LIST = 999
  * 令select取出之列可原樣save/insert；含Z或偏移之ISO 8601字串轉為Date(瞬間無歧義)後依本地分量寫入；純日期yyyy-MM-dd驗曆法後原樣交Jet；
  * 字串包裝物件、陣列等非Date物件以String(v)取字串(同寫出時之序列化)判定；其餘字串、數值、布林交Jet判定(現況行為不變)；change事件之data帶正規化值
  * 註: 字串之預檢依model欄型(DATE/DATEONLY)判定，model須把Jet之DATETIME欄宣告為DATE或DATEONLY(宣告為TIME或STRING者字串不預檢)；
- * 資料列須為一般物件(自有資料屬性)，原型鏈上帶getter、Function或Error列、覆寫valueOf/constructor/Symbol.toStringTag之Date子類別不在保證範圍(已知限制LD5、LD6)
+ * 資料列之Function或Error列、覆寫valueOf/constructor/Symbol.toStringTag之Date子類別不在保證範圍(已知限制LD5、LD6)；原型鏈上帶getter之列(類別實例等)自第66項起於呼叫當下攤平為純資料(見字串良構檢核之說明), 不再有「兩次讀值可能不同」之問題
  * 註: 負偏移時區主機含9999年末日哨兵列時之日期範圍條件見已知限制LF8(select之使用須知6.)
+ * 註: 字串良構檢核(第66項，見CLAUDE_rulebook.md之R-WF)：本套件與Jet之間經UTF-8交換資料，孤立代理碼元(String.prototype.isWellFormed()為false)會被改寫為U+FFFD，
+ * 使不同主鍵寫成同一鍵、寫入值與讀回值不同，故一律拒收。(1)主鍵(字串)不得含NUL或孤立代理；(2)寫入資料(insert、insertBulk、save)之鍵名與字串值
+ * (含巢狀物件、陣列元素、Map與Set等；model外之鍵亦檢)不得含孤立代理，值之NUL不拒；(3)opt.db、opt.cl、opt.url、opt.storage、opt.pk不得含孤立代理，建構時throw invalid opt.名稱: string contains lone surrogate。
+ * 處置與無效主鍵同形：insert與insertBulk於寫入前整批reject(先發一次error事件，不發change，不寫任何一筆，以索引最小者為準)；
+ * save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1，save的autoInsert為false時原亦靜默)；selectByPk回null；select與delAll之find依既有invalid find。
+ * 訊息為固定詞彙且不回顯值：invalid id: string contains lone surrogate at [data[索引].主鍵欄]、invalid data: string contains lone surrogate at [路徑]（主鍵含NUL時原因為string contains NUL）。
+ * 檢核先於初始化(匯入model)與任何讀取、寫入、刪除，作用於呼叫當下之複本且只使用該複本(insert、insertBulk、save、del於呼叫時複製數據並把非純物件之列攤平為只含自有資料屬性之純物件，
+ * 可列舉屬性[自有與繼承]與原型鏈上之存取器各讀一次並深複製其值；建構時opt亦只讀一次並複製，不再寫回預設值)，不隨opt.autoGenPk改變；
+ * 另於字串進入SQL文字之出口(escVal、escId)再檢一次作最後防線；String包裝物件以其字串值檢核並寫成一般字串(Jet只存文字)，列內巢狀之類別實例與Map之物件鍵為共用參照(已知限制)。
+ * 既有資料不遷移：修正前經本套件寫入之孤立代理已被改寫為U+FFFD且無從還原，檢出法見README。
+ * 註: Jet之字串等值由其排序規則決定(不分大小寫、忽略尾端半形空白、全半形、假名與增補平面字元等)，良構字串亦可能相等：'a'、'a'+emoji、'a'+U+FFFD為同一主鍵
+ * (selectByPk('a'+emoji)命中'a'，del可刪到'a')，與大小寫同屬設計，套件不改變(要精確比對須由資料庫端另處理)
  *
  * @class
  * @param {Object} [opt={}] 輸入設定物件，預設{}
@@ -148,6 +166,29 @@ const MAX_LIST = 999
 function WOrmMdb(opt = {}) {
     let ss
     let u
+
+
+    //opt於建構開始時讀一次並複製為內部設定, 其後預設、檢核、解析與所有操作只使用此複本(第66項, 檢查之值即使用之值):
+    //呼叫端其後改動原opt, 或存取器每次回傳不同值, 皆不影響本實例; 預設值亦不再寫回呼叫端之opt
+    //取全部可列舉屬性(自有與繼承)與本套件讀取之選項名稱(無條件讀取, 不以in判定: 保留修改前一般屬性存取讀得到之行為, 如類別之getter、defineProperty定義之不可列舉選項、僅有get陷阱之Proxy),
+    //每個名稱只讀一次, 以defineProperty定義(名稱為__proto__時不改動原型); 非物件之opt與修改前同為錯誤
+    if (opt === null || typeof opt !== 'object') {
+        throw new TypeError('invalid opt: not an object')
+    }
+    {
+        let names = new Set()
+        for (let k in opt) {
+            names.add(k)
+        }
+        for (let k of ['url', 'db', 'cl', 'fdModels', 'modelType', 'logging', 'pk', 'autoGenPk', 'useStable', 'storage', 'useEncryption']) {
+            names.add(k)
+        }
+        let o = {}
+        for (let k of names) {
+            Object.defineProperty(o, k, { value: opt[k], writable: true, enumerable: true, configurable: true })
+        }
+        opt = o
+    }
 
 
     //default
@@ -179,6 +220,18 @@ function WOrmMdb(opt = {}) {
     if (!isestr(opt.storage)) {
         opt.storage = './worm.mdb'
     }
+
+
+    //儲存位址名稱(opt.db、opt.cl、opt.url、opt.storage)與主鍵欄名(opt.pk)含孤立代理碼元者建構時即拋出(第66項, 見CLAUDE_rulebook.md之R-WF):
+    //資料表名、欄位名與檔案路徑經UTF-8轉換後孤立代理碼元被改寫為U+FFFD, 不同名稱會指向同一個資料表、欄位或同一個mdb檔(opt.pk亦會進入錯誤訊息之路徑);
+    //須先於opt.url之解析(其錯誤訊息會回顯opt.url); 訊息為固定詞彙且不回顯值, 此處不檢NUL(不屬本規則)
+    for (let k of ['db', 'cl', 'url', 'storage', 'pk']) {
+        let why = chkOrmStr(opt[k], { nul: false })
+        if (why !== null) {
+            throw new Error(`invalid opt.${k}: ${why}`)
+        }
+    }
+
     opt.storage = path.resolve(opt.storage)
     if (!isbol(opt.useEncryption)) {
         opt.useEncryption = false
@@ -345,16 +398,81 @@ function WOrmMdb(opt = {}) {
 
 
     /**
-     * 取主鍵值之顯示字串, 供錯誤訊息使用, 過長者截斷
+     * 寫入或刪除前逐筆檢核主鍵與資料之良構(第66項, 見CLAUDE_rulebook.md之R-WF)
+     *
+     * 註: 主鍵字串含NUL或孤立代理、資料之鍵名與字串值(含巢狀與陣列元素)含孤立代理者不合格; 值之NUL不拒; 判定單一擁有者為wsemi之chkOrmStr與chkOrmData
+     * 註: 同一筆主鍵先於資料, 逐筆結果各自保留: insert與insertBulk取索引最小者整批reject, save與del該筆ok為0且其餘筆照常
+     * 註: 訊息為固定詞彙且不回顯值: invalid id: 原因 at [data[索引].主鍵欄]、invalid data: 原因 at [路徑]
+     * 註: 檢查之值即使用之值: 輸入須為呼叫當下之快照(見snap與flatRow: 各列已攤平為只含自有資料屬性之純物件, 主鍵與各欄位值皆已讀過一次，
+     * 其後不再有存取器或原型鏈上之讀取, 呼叫端其後改動原物件、原型或存取器之副作用皆不影響本函數所檢與其後所寫);
+     * 巢狀值內若仍有存取器(巢狀之類別實例)則於走訪時被呼叫, 其輸出若成為字串寫入SQL文字, 由getCmd.mjs之escVal最後防線把關, 令任何路徑皆不可能產出含孤立代理之常值
+     * 註: 須先於初始化(匯入model)、讀取與寫入; 檢核與讀取過程拋錯(存取器或Proxy陷阱拋出)原樣拋出, 由呼叫端以整批性錯誤處理
      *
      * @ignore
+     * @param {Array} rows 輸入數據陣列(呼叫當下之快照)
+     * @param {Boolean} withData 輸入是否一併檢核資料(insert、insertBulk、save為true, del為false)
+     * @returns {Array} 回傳與rows等長之陣列, 合格者為null, 不合格者為訊息字串
      */
-    function showPk(v) {
-        let s = String(v)
-        if (s.length > 40) {
-            s = `${s.slice(0, 40)}...(${s.length})`
+    function chkWf(rows, withData) {
+
+        return map(rows, (v, k) => {
+
+            //pk, 先於資料
+            let pkv = get(v, opt.pk)
+            let why = chkPkWf(pkv)
+            if (why !== null) {
+                return `invalid id: ${why} at [data[${k}].${opt.pk}]`
+            }
+
+            //data
+            if (withData) {
+                let r = chkOrmData(v, { root: `data[${k}]` })
+                if (r === null &amp;&amp; v !== null &amp;&amp; typeof v === 'object' &amp;&amp; v[KEY_CONT] !== undefined) {
+                    r = chkOrmData(v[KEY_CONT], { root: `data[${k}]` })
+                }
+                if (r !== null) {
+                    return `invalid data: ${r.reason} at [${r.path}]`
+                }
+            }
+
+            return null
+        })
+    }
+
+
+    /**
+     * 取逐筆檢核結果中索引最小之不合格訊息, 供insert與insertBulk整批reject使用
+     *
+     * @ignore
+     * @param {Array} msgs 輸入chkWf之回傳
+     * @returns {String|null} 回傳訊息字串, 全數合格為null
+     */
+    function firstWf(msgs) {
+        let m = msgs.find((v) => {
+            return v !== null
+        })
+        return m === undefined ? null : m
+    }
+
+
+    /**
+     * 把單筆數據之主鍵定為唯讀(第66項, 見CLAUDE_rulebook.md之R-WF-04)
+     *
+     * 註: 檢核與正規化後主鍵即為其後預讀、更新、刪除與撞鍵核對所用之值; 寫入語句產生過程會呼叫使用者程式碼(自訂toString等),
+     * 其副作用若改動同批另一列之主鍵, 後續讀取會得到不同鍵而更新或刪除他列; 定為唯讀後此類賦值於嚴格模式下拋錯(整批性錯誤, 產生寫入語句之階段尚未寫入任何一筆)
+     *
+     * @ignore
+     * @param {*} v 輸入單筆數據
+     * @returns {*} 回傳輸入
+     */
+    function lockPk(v) {
+        if (v !== null &amp;&amp; typeof v === 'object') {
+            try {
+                Object.defineProperty(v, opt.pk, { writable: false, configurable: false })
+            }
+            catch (err) {}
         }
-        return s
+        return v
     }
 
 
@@ -368,8 +486,9 @@ function WOrmMdb(opt = {}) {
      * 而非任由資料庫回報型別錯誤; 本套件之model定義於手上得知主鍵型別，故不適用T6之[套件無從得知主鍵型別]例外
      * 註: 有效主鍵依主鍵欄型別正規化後就地寫回數據(見pk.mjs之normPk)，令寫入值與其後各函數之比對值一致;
      * 型別不符者為呼叫端未履行契約，比照T6以整批性錯誤拋出(比照w-orm-postgresql之處置);
-     * 不可能存在者(字串類主鍵超過255字元、含NUL或非良構UTF-16)於insert與insertBulk亦整批拋出，
+     * 不可能存在者(字串類主鍵超過255字元)於insert與insertBulk亦整批拋出，
      * 於save則回傳cannot為true，由save將該筆定為ok為0(autoInsert為false則n為0)而不送Jet
+     * 註: 含NUL或孤立代理之主鍵已由chkWf先行檢出(insert、insertBulk整批reject，save該筆ok為0)，不會到達本函數；錯誤訊息不回顯主鍵值
      *
      * @ignore
      * @param {Object} md 輸入資料表model物件
@@ -387,20 +506,20 @@ function WOrmMdb(opt = {}) {
         //check, 有效者寫回正規化值
         if (r.kind === 'ok') {
             v[opt.pk] = r.v
-            return { v, cannot: false }
+            return { v: lockPk(v), cannot: false }
         }
 
         //check, 型別不符
         if (r.kind === 'mismatch') {
-            throw new Error(`invalid data[${k}].${opt.pk}[${showPk(pkv)}], type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`)
+            throw new Error(`invalid data[${k}].${opt.pk}, type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`)
         }
 
         //check, 不可能存在
         if (r.kind === 'cannot') {
             if (mode === 'save') {
-                return { v, cannot: true }
+                return { v: lockPk(v), cannot: true }
             }
-            throw new Error(`invalid data[${k}].${opt.pk}[${showPk(pkv)}], can not be stored: exceeds 255 characters or contains NUL or unpaired surrogate`)
+            throw new Error(`invalid data[${k}].${opt.pk}, can not be stored: exceeds 255 characters`)
         }
 
         //check, autoGenPk為false時主鍵須由呼叫端自備
@@ -423,7 +542,7 @@ function WOrmMdb(opt = {}) {
         //genIDSeq, 為UUIDv7格式而具單調遞增性, 主鍵接近順序遞增可減少索引頁面分裂
         v[opt.pk] = genIDSeq()
 
-        return { v, cannot: false }
+        return { v: lockPk(v), cannot: false }
     }
 
 
@@ -777,7 +896,8 @@ function WOrmMdb(opt = {}) {
      * 由主鍵查詢單筆數據，因由Jet依主鍵取值且僅回傳單筆，不需如select提取全部數據再過濾，故數據量大時效能較佳
      *
      * 註: 主鍵欄位取自opt.pk，預設為id，支援由呼叫端指定
-     * 註: 主鍵未命中、主鍵值無效(未給、型別不符)或不可能存在(字串類主鍵超過255字元、含NUL或非良構UTF-16)皆回傳null而不reject，
+     * 註: 主鍵未命中、主鍵值無效(未給、型別不符)或不可能存在(字串類主鍵超過255字元、含NUL或孤立代理)皆回傳null而不reject，
+     * 含NUL或孤立代理者先於初始化即回傳null(不載入model、不送Jet，亦不命中U+FFFD之鄰近列)，
      * [命中]以Jet之判定為準，與insert、save、del一致
      * 註: Jet之字串等值不分大小寫、忽略尾端半形空白與全半形寬度等，故主鍵之命中判定亦同(見類別註解)
      * 註: 本函數不得有副作用，故不創建資料表
@@ -790,9 +910,10 @@ function WOrmMdb(opt = {}) {
      */
     async function selectByPk(pk, option = {}) {
 
-        //check, 與型別無關之無效值(未給、空字串、NaN、±Infinity、非字串非數字)視為查無數據, 不需初始化,
-        //亦不送查詢以免無效值被轉為null而誤中其他數據
-        if (normPk(pk, 'other').kind === 'invalid') {
+        //check, 與型別無關之無效值(未給、空字串、NaN、±Infinity、非字串非數字)與不良構字串(含NUL或孤立代理, 帶why)視為查無數據, 不需初始化,
+        //亦不送查詢以免無效值被轉為null而誤中其他數據, 或孤立代理經UTF-8轉換被改寫為U+FFFD而命中他筆
+        let r0 = normPk(pk, 'other')
+        if (r0.kind === 'invalid' || r0.why !== undefined) {
             return null
         }
 
@@ -957,6 +1078,8 @@ function WOrmMdb(opt = {}) {
      * 註: 同批含重複主鍵時僅首筆計入nInserted，其餘視為已存在；重複之判定以Jet為準(含大小寫、尾端空白、全半形等變體)
      * 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
      * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
+     * 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理、資料之鍵名與字串值含孤立代理者，於初始化(匯入model)之前即整批reject，不寫任何一筆，
+     * 訊息為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at [路徑](不回顯值)，不隨opt.autoGenPk改變(孤立代理主鍵不會被自動產生之主鍵取代)
      * 註: 撞鍵者之核對以Jet為準：先以快速鍵對應，對不上者逐筆以=語句查詢，仍不存在即撞及其他唯一索引而整批reject
      * 註: 全部插入語句於單次呼叫exe內循序送出且不因單筆衝突而中止，故一次往返即可取得精確之nInserted
      * 註: option.returnList為true時改回傳與輸入等長且保序之逐筆陣列[{n,nInserted,ok}]，
@@ -991,8 +1114,25 @@ function WOrmMdb(opt = {}) {
         //instance
         let instance = get(option, 'instance', null)
 
-        //cloneDeep
-        data = cloneDeep(data)
+        //data為呼叫當下之快照(見snap), 其後檢核與寫入皆只使用此份
+        if (!isarr(data)) {
+            data = [data]
+        }
+
+        //chkWf, 主鍵(含NUL或孤立代理)與資料(孤立代理)之良構預檢, 須先於初始化(匯入model)與任何寫入, 任一筆不合格即整批reject, 以索引最小者為準
+        let msg = null
+        try {
+            msg = firstWf(chkWf(data, true))
+        }
+        catch (err) {
+            emitError('insert', data, err)
+            return Promise.reject(err)
+        }
+        if (msg !== null) {
+            let err = new Error(msg)
+            emitError('insert', data, err)
+            return Promise.reject(err)
+        }
 
         //isErr, res
         let isErr = false
@@ -1014,11 +1154,6 @@ function WOrmMdb(opt = {}) {
             //md, cols
             let md = getMd(si)
             let cols = getCols(md)
-
-            //check
-            if (!isarr(data)) {
-                data = [data]
-            }
 
             //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false、主鍵型別不符或不可能存在而拋錯時同批之有效筆數亦不會被寫入
             data = map(data, (v, k) => {
@@ -1144,6 +1279,8 @@ function WOrmMdb(opt = {}) {
      * 註: 不提供逐筆結果，故不出現ok為0與err；需要逐筆處置者改用insert
      * 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
      * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
+     * 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理、資料之鍵名與字串值含孤立代理者，於初始化(匯入model)之前即整批reject，不寫任何一筆，
+     * 訊息為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at [路徑](不回顯值)，不隨opt.autoGenPk改變
      * 註: [全有全無]以Jet之交易(OleDbTransaction)包覆全部插入語句達成，任一筆失敗即回滾，
      * 故reject之後資料庫狀態與呼叫前相同，無須補償動作；同批含重複主鍵者亦於交易內被偵測為衝突
      *
@@ -1167,8 +1304,25 @@ function WOrmMdb(opt = {}) {
         //instance
         let instance = get(option, 'instance', null)
 
-        //cloneDeep
-        data = cloneDeep(data)
+        //data為呼叫當下之快照(見snap), 其後檢核與寫入皆只使用此份
+        if (!isarr(data)) {
+            data = [data]
+        }
+
+        //chkWf, 主鍵(含NUL或孤立代理)與資料(孤立代理)之良構預檢, 須先於初始化(匯入model)與任何寫入, 任一筆不合格即整批reject, 以索引最小者為準
+        let msg = null
+        try {
+            msg = firstWf(chkWf(data, true))
+        }
+        catch (err) {
+            emitError('insertBulk', data, err)
+            return Promise.reject(err)
+        }
+        if (msg !== null) {
+            let err = new Error(msg)
+            emitError('insertBulk', data, err)
+            return Promise.reject(err)
+        }
 
         //isErr, res
         let isErr = false
@@ -1190,11 +1344,6 @@ function WOrmMdb(opt = {}) {
             //md, cols
             let md = getMd(si)
             let cols = getCols(md)
-
-            //check
-            if (!isarr(data)) {
-                data = [data]
-            }
 
             //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false、主鍵型別不符或不可能存在而拋錯時同批皆不會被寫入
             data = map(data, (v, k) => {
@@ -1275,8 +1424,11 @@ function WOrmMdb(opt = {}) {
      * 註: 本筆失敗不中斷整批，該筆以ok為0並附err回報
      * 註: opt.autoGenPk為true(預設)時未帶有效主鍵者自動產生，為false時未帶有效主鍵即reject且同批皆不寫入
      * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符者於任何寫入之前整批reject(比照w-orm-postgresql)；
-     * 不可能存在之主鍵(字串類主鍵超過255字元、含NUL或非良構UTF-16)視為不存在且不送Jet，
+     * 不可能存在之主鍵(字串類主鍵超過255字元)視為不存在且不送Jet，
      * autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
+     * 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理、資料之鍵名與字串值含孤立代理者，該筆ok為0並附err(autoInsert為false者亦然，原為靜默n為0)，
+     * 同批其餘筆照常處理，不連線亦不進入其後之主鍵正規化與日期預檢；err為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at [路徑](不回顯值)，
+     * 該類檢核先於初始化(匯入model)，故全數不合格時不載入model、不開啟資料庫檔
      * 註: 各回合之預讀與寫入皆整批送出，故N筆數據於無衝突時僅需2次呼叫exe而非2N次
      *
      * @memberOf WOrmMdb
@@ -1292,9 +1444,6 @@ function WOrmMdb(opt = {}) {
         if (!iseobj(data) &amp;&amp; !isearr(data)) {
             return []
         }
-
-        //cloneDeep
-        data = cloneDeep(data)
 
         //instance
         let instance = get(option, 'instance', null)
@@ -1312,259 +1461,294 @@ function WOrmMdb(opt = {}) {
         //inserteds, 供結果定案後發出insert事件用
         let inserteds = []
 
+        //data為呼叫當下之快照(見snap), 其後檢核與寫入皆只使用此份
+        if (!isarr(data)) {
+            data = [data]
+        }
+
+        //chkWf, 主鍵(含NUL或孤立代理)與資料(孤立代理)之良構預檢, 須先於初始化(匯入model)、讀取與寫入;
+        //不合格者(含autoInsert為false者)該筆ok為0並附err, 不中斷同批其餘筆, 亦不進入其後之procPk、chkDates與寫入
+        let msgs = null
+        try {
+            msgs = chkWf(data, true)
+        }
+        catch (err) {
+            emitError('save', data, err)
+            return Promise.reject(err)
+        }
+
+        //rests, 逐筆結果, 未定案者為null
+        let rests = map(msgs, (m) => {
+            if (m === null) {
+                return null
+            }
+            return {
+                n: 1,
+                nInserted: 0,
+                nModified: 0,
+                ok: 0,
+                err: m,
+            }
+        })
+
+        //nPend, 預檢後尚待處理之筆數, 為0則無需初始化與連線
+        let nPend = size(rests.filter((v) => {
+            return v === null
+        }))
+
         //si
         let si = instance
-        if (instance === null) {
+        if (instance === null &amp;&amp; nPend > 0) {
             si = await initAdodb()
         }
 
         try {
 
-            //check
-            if (si.err) {
-                throw si.err
-            }
+            //check, 全數於預檢即已定案
+            if (nPend > 0) {
 
-            //md, cols
-            let md = getMd(si)
-            let cols = getCols(md)
-
-            //check
-            if (!isarr(data)) {
-                data = [data]
-            }
-
-            //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false或主鍵型別不符而拋錯時同批之有效筆數亦不會被寫入
-            let cannots = []
-            data = map(data, (v, k) => {
-                let r = procPk(md, v, k, 'save')
-                if (r.cannot) {
-                    cannots.push(k)
+                //check
+                if (si.err) {
+                    throw si.err
                 }
-                return r.v
-            })
 
-            //chkDates, 日期值之整批預檢與正規化, 含autoInsert為false與不會寫入者, 越界即整批reject而不降為該筆ok為0(R-DATE-02)
-            chkDates(md, cols, data)
+                //md, cols
+                let md = getMd(si)
+                let cols = getCols(md)
 
-            //rests, 逐筆結果, 未定案者為null
-            let rests = map(data, () => {
-                return null
-            })
-
-            //check, 不可能存在之主鍵視為不存在且不送Jet: autoInsert為true時因無法寫入而該筆失敗, 為false時為未命中
-            each(cannots, (k) => {
-                if (autoInsert) {
-                    rests[k] = {
-                        n: 1,
-                        nInserted: 0,
-                        nModified: 0,
-                        ok: 0,
-                        err: `can not save data by ${opt.pk}[${showPk(get(data, `${k}.${opt.pk}`))}], ${opt.pk} exceeds 255 characters or contains NUL or unpaired surrogate`,
+                //procPk, 須於任何寫入之前一次完成, 令autoGenPk為false或主鍵型別不符而拋錯時同批之有效筆數亦不會被寫入; 預檢不合格者略過
+                let cannots = []
+                data = map(data, (v, k) => {
+                    if (rests[k] !== null) {
+                        return v
                     }
-                }
-                else {
-                    rests[k] = {
-                        n: 0,
-                        nInserted: 0,
-                        nModified: 0,
-                        ok: 1,
+                    let r = procPk(md, v, k, 'save')
+                    if (r.cannot) {
+                        cannots.push(k)
                     }
-                }
-            })
-
-            //pends, 待處理之索引
-            let pends = []
-            each(rests, (v, k) => {
-                if (v === null) {
-                    pends.push(k)
-                }
-            })
-
-            for (let iTry = 0; iTry &lt; nTry &amp;&amp; size(pends) > 0; iTry++) {
-
-                //預讀, 供判斷內容是否相同之快速路徑, 其結果不用於決定寫入內容
-                let cmdsRead = map(pends, (i) => {
-                    return {
-                        type: 'query',
-                        sql: getSelectByPk(opt.cl, opt.pk, get(data, `${i}.${opt.pk}`)),
-                        stopOnError: false,
-                    }
+                    return r.v
                 })
-                let rRead = await si.jet.run(cmdsRead)
 
-                //check, 連線開啟重試耗盡影響本次操作之全部數據, 屬整批性錯誤而非逐筆失敗(T4)
-                if (rRead.openFailed === true) {
-                    throw new Error(rRead.error)
-                }
+                //chkDates, 日期值之整批預檢與正規化, 含autoInsert為false與不會寫入者, 越界即整批reject而不降為該筆ok為0(R-DATE-02); 預檢不合格者以null占位(索引不變)略過
+                chkDates(md, cols, map(data, (v, k) => {
+                    return rests[k] === null ? v : null
+                }))
 
-                //writes, 由預讀結果選擇發出哪一條語句
-                let writes = []
-                each(pends, (i, j) => {
-                    let v = data[i]
-                    let rr = get(rRead, `results.${j}`, null)
-
-                    //check, 預讀失敗視為本筆失敗, 不中斷整批
-                    if (!rr || !rr.ok) {
-                        rests[i] = {
+                //check, 不可能存在之主鍵視為不存在且不送Jet: autoInsert為true時因無法寫入而該筆失敗, 為false時為未命中
+                each(cannots, (k) => {
+                    if (autoInsert) {
+                        rests[k] = {
                             n: 1,
                             nInserted: 0,
                             nModified: 0,
                             ok: 0,
-                            err: getErrMsg(get(rr, 'error', 'can not read data')),
+                            err: `can not save data[${k}].${opt.pk}, ${opt.pk} exceeds 255 characters`,
                         }
-                        return
                     }
-
-                    //_v, 現值
-                    let _v = get(rr, 'rows.0', null)
-
-                    if (iseobj(_v)) {
-                        //主鍵存在
-
-                        //_vt, vt, 以待寫入物件之非主鍵欄位淺層覆蓋現值後與現值比對
-                        let _vt = omit(_v, opt.pk)
-                        let vt = {
-                            ..._vt,
-                            ...pick(omit(v, opt.pk), cols),
-                        }
-
-                        //check, 內容相同者不寫入
-                        if (isEqual(vt, _vt)) {
-                            rests[i] = {
-                                n: 1,
-                                nInserted: 0,
-                                nModified: 0,
-                                ok: 1,
-                            }
-                            return
-                        }
-
-                        //sql, 單一UPDATE語句由WHERE主鍵原子完成查找與更新
-                        let sql = getUpdate(opt.cl, cols, v, opt.pk, get(v, opt.pk))
-                        if (sql === null) {
-                            //無可更新之欄位, 等同未寫入
-                            rests[i] = {
-                                n: 1,
-                                nInserted: 0,
-                                nModified: 0,
-                                ok: 1,
-                            }
-                            return
-                        }
-
-                        writes.push({ i, kind: 'update', sql })
-                        return
-                    }
-
-                    //主鍵不存在且未開啟autoInsert則不寫入以免無中生有
-                    if (!autoInsert) {
-                        rests[i] = {
+                    else {
+                        rests[k] = {
                             n: 0,
                             nInserted: 0,
                             nModified: 0,
                             ok: 1,
                         }
-                        return
                     }
-
-                    //sql, 單一INSERT語句由主鍵之唯一約束原子完成檢查與寫入
-                    writes.push({
-                        i,
-                        kind: 'insert',
-                        sql: getInsert(opt.cl, cols, v),
-                    })
                 })
 
-                //run, 各寫入彼此獨立故不中止
-                if (size(writes) > 0) {
-                    let rWrite = await si.jet.run(map(writes, (w) => {
-                        return {
-                            type: 'execute',
-                            sql: w.sql,
-                            stopOnError: false,
-                        }
-                    }))
-
-                    //check, 連線開啟重試耗盡影響本次操作之全部數據, 屬整批性錯誤而非逐筆失敗(T4)
-                    if (rWrite.openFailed === true) {
-                        throw new Error(rWrite.error)
-                    }
-
-                    each(writes, (w, j) => {
-                        let rr = get(rWrite, `results.${j}`, null)
-
-                        //check
-                        if (!rr) {
-                            rests[w.i] = {
-                                n: 1,
-                                nInserted: 0,
-                                nModified: 0,
-                                ok: 0,
-                                err: 'can not get result of writing',
-                            }
-                            return
-                        }
-
-                        if (rr.ok) {
-                            if (w.kind === 'update') {
-                                if (get(rr, 'n', 0) > 0) {
-                                    rests[w.i] = {
-                                        n: 1,
-                                        nInserted: 0,
-                                        nModified: 1,
-                                        ok: 1,
-                                    }
-                                    return
-                                }
-                                //該列已被他方刪除, 留待重試改走插入
-                                return
-                            }
-                            rests[w.i] = {
-                                n: 1,
-                                nInserted: 1,
-                                nModified: 0,
-                                ok: 1,
-                            }
-                            inserteds.push(w.i)
-                            return
-                        }
-
-                        //check, 他方已插入同一主鍵, 留待重試改走更新
-                        if (w.kind === 'insert' &amp;&amp; rr.errorCode === CODE_DUP_KEY) {
-                            return
-                        }
-
-                        //其餘錯誤視為本筆失敗, 不中斷整批, 由呼叫端以ok與err判讀
-                        rests[w.i] = {
-                            n: 1,
-                            nInserted: 0,
-                            nModified: 0,
-                            ok: 0,
-                            err: getErrMsg(rr.error),
-                        }
-                    })
-                }
-
-                //pends, 取仍未定案者
-                pends = []
+                //pends, 待處理之索引
+                let pends = []
                 each(rests, (v, k) => {
                     if (v === null) {
                         pends.push(k)
                     }
                 })
-            }
 
-            //check, 重試耗盡仍未定案
-            each(pends, (i) => {
-                rests[i] = {
-                    n: 1,
-                    nInserted: 0,
-                    nModified: 0,
-                    ok: 0,
-                    err: `can not save data by ${opt.pk}[${get(data, `${i}.${opt.pk}`)}] in ${nTry} tries`,
+                for (let iTry = 0; iTry &lt; nTry &amp;&amp; size(pends) > 0; iTry++) {
+
+                    //預讀, 供判斷內容是否相同之快速路徑, 其結果不用於決定寫入內容
+                    let cmdsRead = map(pends, (i) => {
+                        return {
+                            type: 'query',
+                            sql: getSelectByPk(opt.cl, opt.pk, get(data, `${i}.${opt.pk}`)),
+                            stopOnError: false,
+                        }
+                    })
+                    let rRead = await si.jet.run(cmdsRead)
+
+                    //check, 連線開啟重試耗盡影響本次操作之全部數據, 屬整批性錯誤而非逐筆失敗(T4)
+                    if (rRead.openFailed === true) {
+                        throw new Error(rRead.error)
+                    }
+
+                    //writes, 由預讀結果選擇發出哪一條語句
+                    let writes = []
+                    each(pends, (i, j) => {
+                        let v = data[i]
+                        let rr = get(rRead, `results.${j}`, null)
+
+                        //check, 預讀失敗視為本筆失敗, 不中斷整批
+                        if (!rr || !rr.ok) {
+                            rests[i] = {
+                                n: 1,
+                                nInserted: 0,
+                                nModified: 0,
+                                ok: 0,
+                                err: getErrMsg(get(rr, 'error', 'can not read data')),
+                            }
+                            return
+                        }
+
+                        //_v, 現值
+                        let _v = get(rr, 'rows.0', null)
+
+                        if (iseobj(_v)) {
+                            //主鍵存在
+
+                            //_vt, vt, 以待寫入物件之非主鍵欄位淺層覆蓋現值後與現值比對
+                            let _vt = omit(_v, opt.pk)
+                            let vt = {
+                                ..._vt,
+                                ...pick(omit(v, opt.pk), cols),
+                            }
+
+                            //check, 內容相同者不寫入
+                            if (isEqual(vt, _vt)) {
+                                rests[i] = {
+                                    n: 1,
+                                    nInserted: 0,
+                                    nModified: 0,
+                                    ok: 1,
+                                }
+                                return
+                            }
+
+                            //sql, 單一UPDATE語句由WHERE主鍵原子完成查找與更新
+                            let sql = getUpdate(opt.cl, cols, v, opt.pk, get(v, opt.pk))
+                            if (sql === null) {
+                                //無可更新之欄位, 等同未寫入
+                                rests[i] = {
+                                    n: 1,
+                                    nInserted: 0,
+                                    nModified: 0,
+                                    ok: 1,
+                                }
+                                return
+                            }
+
+                            writes.push({ i, kind: 'update', sql })
+                            return
+                        }
+
+                        //主鍵不存在且未開啟autoInsert則不寫入以免無中生有
+                        if (!autoInsert) {
+                            rests[i] = {
+                                n: 0,
+                                nInserted: 0,
+                                nModified: 0,
+                                ok: 1,
+                            }
+                            return
+                        }
+
+                        //sql, 單一INSERT語句由主鍵之唯一約束原子完成檢查與寫入
+                        writes.push({
+                            i,
+                            kind: 'insert',
+                            sql: getInsert(opt.cl, cols, v),
+                        })
+                    })
+
+                    //run, 各寫入彼此獨立故不中止
+                    if (size(writes) > 0) {
+                        let rWrite = await si.jet.run(map(writes, (w) => {
+                            return {
+                                type: 'execute',
+                                sql: w.sql,
+                                stopOnError: false,
+                            }
+                        }))
+
+                        //check, 連線開啟重試耗盡影響本次操作之全部數據, 屬整批性錯誤而非逐筆失敗(T4)
+                        if (rWrite.openFailed === true) {
+                            throw new Error(rWrite.error)
+                        }
+
+                        each(writes, (w, j) => {
+                            let rr = get(rWrite, `results.${j}`, null)
+
+                            //check
+                            if (!rr) {
+                                rests[w.i] = {
+                                    n: 1,
+                                    nInserted: 0,
+                                    nModified: 0,
+                                    ok: 0,
+                                    err: 'can not get result of writing',
+                                }
+                                return
+                            }
+
+                            if (rr.ok) {
+                                if (w.kind === 'update') {
+                                    if (get(rr, 'n', 0) > 0) {
+                                        rests[w.i] = {
+                                            n: 1,
+                                            nInserted: 0,
+                                            nModified: 1,
+                                            ok: 1,
+                                        }
+                                        return
+                                    }
+                                    //該列已被他方刪除, 留待重試改走插入
+                                    return
+                                }
+                                rests[w.i] = {
+                                    n: 1,
+                                    nInserted: 1,
+                                    nModified: 0,
+                                    ok: 1,
+                                }
+                                inserteds.push(w.i)
+                                return
+                            }
+
+                            //check, 他方已插入同一主鍵, 留待重試改走更新
+                            if (w.kind === 'insert' &amp;&amp; rr.errorCode === CODE_DUP_KEY) {
+                                return
+                            }
+
+                            //其餘錯誤視為本筆失敗, 不中斷整批, 由呼叫端以ok與err判讀
+                            rests[w.i] = {
+                                n: 1,
+                                nInserted: 0,
+                                nModified: 0,
+                                ok: 0,
+                                err: getErrMsg(rr.error),
+                            }
+                        })
+                    }
+
+                    //pends, 取仍未定案者
+                    pends = []
+                    each(rests, (v, k) => {
+                        if (v === null) {
+                            pends.push(k)
+                        }
+                    })
                 }
-            })
+
+                //check, 重試耗盡仍未定案
+                each(pends, (i) => {
+                    rests[i] = {
+                        n: 1,
+                        nInserted: 0,
+                        nModified: 0,
+                        ok: 0,
+                        err: `can not save data[${i}].${opt.pk} in ${nTry} tries`,
+                    }
+                })
+
+            }
 
             //res
             res = rests
@@ -1577,7 +1761,7 @@ function WOrmMdb(opt = {}) {
         finally {
 
             //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
-            if (instance === null) { //內部自動初始化得close
+            if (instance === null &amp;&amp; si !== null) { //內部自動初始化得close
                 await si.close()
             }
 
@@ -1614,8 +1798,9 @@ function WOrmMdb(opt = {}) {
      * 註: 未帶有效主鍵者為該筆之輸入問題，回ok為0與err且不送查詢條件(以免無效值被轉為null而誤中其他數據)，
      * 不中斷其餘筆數，以此與[主鍵未命中]之ok為1區辨
      * 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符者該筆ok為0並附err；
-     * 不可能存在之主鍵(字串類主鍵超過255字元、含NUL或非良構UTF-16)視為未命中且不送Jet，
-     * 因Jet對超過255字元之字面值會截斷後比對，送出將刪除另一列
+     * 超過255字元之字串類主鍵視為未命中且不送Jet(ok為1、n為0)，因Jet對超過255字元之字面值會截斷後比對，送出將刪除另一列
+     * 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理者該筆ok為0並附err(invalid id: 原因 at [data[索引].主鍵欄]，不回顯值；原為靜默回ok為1)，
+     * 同批其餘筆照常處理，且先於初始化(匯入model)，故全數不合格時不載入model、不開啟資料庫檔、不送Jet；刪除不檢資料欄位
      * 註: 本函數不受opt.autoGenPk影響，於任一設定下皆不補值
      * 註: 由DELETE語句自身之影響列數判定命中，不另行查詢以免多一次往返且與刪除間存在競態
      *
@@ -1632,9 +1817,6 @@ function WOrmMdb(opt = {}) {
             return []
         }
 
-        //cloneDeep
-        data = cloneDeep(data)
-
         //instance
         let instance = get(option, 'instance', null)
 
@@ -1642,121 +1824,155 @@ function WOrmMdb(opt = {}) {
         let isErr = false
         let res = null
 
+        //data為呼叫當下之快照(見snap), 其後檢核與刪除皆只使用此份
+        if (!isarr(data)) {
+            data = [data]
+        }
+
+        //chkWf, 主鍵(含NUL或孤立代理)之良構預檢, 須先於初始化(匯入model)、讀取與刪除; 不合格者該筆ok為0並附err, 不中斷同批其餘筆, 亦不送Jet
+        let msgs = null
+        try {
+            msgs = chkWf(data, false)
+        }
+        catch (err) {
+            emitError('del', data, err)
+            return Promise.reject(err)
+        }
+
+        //rests, 逐筆結果, 未定案者為null
+        let rests = map(msgs, (m) => {
+            if (m === null) {
+                return null
+            }
+            return {
+                n: 0,
+                nDeleted: 0,
+                ok: 0,
+                err: m,
+            }
+        })
+
+        //nPend, 預檢後尚待處理之筆數, 為0則無需初始化與連線
+        let nPend = size(rests.filter((v) => {
+            return v === null
+        }))
+
         //si
         let si = instance
-        if (instance === null) {
+        if (instance === null &amp;&amp; nPend > 0) {
             si = await initAdodb()
         }
 
         try {
 
-            //check
-            if (si.err) {
-                throw si.err
-            }
+            //check, 全數於預檢即已定案
+            if (nPend > 0) {
 
-            //check, 確認model存在, 令資料表設定有誤時為整批性錯誤
-            let md = getMd(si)
-            let pkType = getMdPkType(md)
-
-            //check
-            if (!isarr(data)) {
-                data = [data]
-            }
-
-            //rests
-            let rests = map(data, () => {
-                return null
-            })
-
-            //dels, 具有效主鍵者方送出刪除
-            let dels = []
-            each(data, (v, k) => {
-
-                //pkv, r
-                let pkv = get(v, opt.pk)
-                let r = normPk(pkv, pkType)
-
-                //check, 未帶有效主鍵者不補值亦不送查詢, 直接視為該筆無法處理
-                if (r.kind === 'invalid') {
-                    rests[k] = {
-                        n: 0,
-                        nDeleted: 0,
-                        ok: 0,
-                        err: `invalid ${opt.pk}[${showPk(pkv)}]`,
-                    }
-                    return
+                //check
+                if (si.err) {
+                    throw si.err
                 }
 
-                //check, 型別不符者為該筆無法處理
-                if (r.kind === 'mismatch') {
-                    rests[k] = {
-                        n: 0,
-                        nDeleted: 0,
-                        ok: 0,
-                        err: `invalid ${opt.pk}[${showPk(pkv)}], type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`,
+                //check, 確認model存在, 令資料表設定有誤時為整批性錯誤
+                let md = getMd(si)
+                let pkType = getMdPkType(md)
+
+                //dels, 具有效主鍵者方送出刪除
+                let dels = []
+                each(data, (v, k) => {
+
+                    //check, 預檢不合格者已定案
+                    if (rests[k] !== null) {
+                        return
                     }
-                    return
-                }
 
-                //check, 不可能存在者為未命中且不送Jet(送出時Jet會截斷超長字面值而刪除另一列)
-                if (r.kind === 'cannot') {
-                    rests[k] = {
-                        n: 0,
-                        nDeleted: 0,
-                        ok: 1,
+                    //pkv, r
+                    let pkv = get(v, opt.pk)
+                    let r = normPk(pkv, pkType)
+
+                    //check, 未帶有效主鍵者不補值亦不送查詢, 直接視為該筆無法處理
+                    if (r.kind === 'invalid') {
+                        rests[k] = {
+                            n: 0,
+                            nDeleted: 0,
+                            ok: 0,
+                            err: `invalid data[${k}].${opt.pk}`,
+                        }
+                        return
                     }
-                    return
-                }
 
-                //寫回正規化值, 令事件之數據與實際送出者一致
-                v[opt.pk] = r.v
-
-                dels.push({
-                    k,
-                    sql: getDeleteByPk(opt.cl, opt.pk, r.v),
-                })
-            })
-
-            //run, 各刪除彼此獨立故不中止
-            if (size(dels) > 0) {
-                let r = await si.jet.run(map(dels, (v) => {
-                    return {
-                        type: 'execute',
-                        sql: v.sql,
-                        stopOnError: false,
+                    //check, 型別不符者為該筆無法處理
+                    if (r.kind === 'mismatch') {
+                        rests[k] = {
+                            n: 0,
+                            nDeleted: 0,
+                            ok: 0,
+                            err: `invalid data[${k}].${opt.pk}, type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`,
+                        }
+                        return
                     }
-                }))
 
-                //check, 連線開啟重試耗盡影響本次操作之全部數據, 屬整批性錯誤而非逐筆失敗(T4)
-                if (r.openFailed === true) {
-                    throw new Error(r.error)
-                }
-
-                each(dels, (v, j) => {
-                    let rr = get(r, `results.${j}`, null)
-
-                    if (rr &amp;&amp; rr.ok) {
-
-                        //nDel, n與nDeleted皆為主鍵命中筆數, 未命中為0且屬正常結果
-                        let nDel = isnum(rr.n) ? rr.n : 0
-
-                        rests[v.k] = {
-                            n: nDel,
-                            nDeleted: nDel,
+                    //check, 不可能存在者為未命中且不送Jet(送出時Jet會截斷超長字面值而刪除另一列)
+                    if (r.kind === 'cannot') {
+                        rests[k] = {
+                            n: 0,
+                            nDeleted: 0,
                             ok: 1,
                         }
                         return
                     }
 
-                    //rest, 本筆失敗不中斷整批
-                    rests[v.k] = {
-                        n: 1,
-                        nDeleted: 0,
-                        ok: 0,
-                        err: getErrMsg(get(rr, 'error', 'can not delete data')),
-                    }
+                    //寫回正規化值, 令事件之數據與實際送出者一致, 並定為唯讀
+                    v[opt.pk] = r.v
+                    lockPk(v)
+
+                    dels.push({
+                        k,
+                        sql: getDeleteByPk(opt.cl, opt.pk, r.v),
+                    })
                 })
+
+                //run, 各刪除彼此獨立故不中止
+                if (size(dels) > 0) {
+                    let r = await si.jet.run(map(dels, (v) => {
+                        return {
+                            type: 'execute',
+                            sql: v.sql,
+                            stopOnError: false,
+                        }
+                    }))
+
+                    //check, 連線開啟重試耗盡影響本次操作之全部數據, 屬整批性錯誤而非逐筆失敗(T4)
+                    if (r.openFailed === true) {
+                        throw new Error(r.error)
+                    }
+
+                    each(dels, (v, j) => {
+                        let rr = get(r, `results.${j}`, null)
+
+                        if (rr &amp;&amp; rr.ok) {
+
+                            //nDel, n與nDeleted皆為主鍵命中筆數, 未命中為0且屬正常結果
+                            let nDel = isnum(rr.n) ? rr.n : 0
+
+                            rests[v.k] = {
+                                n: nDel,
+                                nDeleted: nDel,
+                                ok: 1,
+                            }
+                            return
+                        }
+
+                        //rest, 本筆失敗不中斷整批
+                        rests[v.k] = {
+                            n: 1,
+                            nDeleted: 0,
+                            ok: 0,
+                            err: getErrMsg(get(rr, 'error', 'can not delete data')),
+                        }
+                    })
+                }
+
             }
 
             //res
@@ -1770,7 +1986,7 @@ function WOrmMdb(opt = {}) {
         finally {
 
             //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
-            if (instance === null) { //內部自動初始化得close
+            if (instance === null &amp;&amp; si !== null) { //內部自動初始化得close
                 await si.close()
             }
 
@@ -1994,6 +2210,118 @@ function WOrmMdb(opt = {}) {
     }
 
 
+    /**
+     * 把一列攤平為只含自有資料屬性之純物件(第66項, 見CLAUDE_rulebook.md之R-WF-04)
+     *
+     * 註: 非物件原樣返回; 原型為Object.prototype或null之一般物件、原型為Array.prototype之陣列(cloneDeep後自有存取器已成資料屬性)已是純資料, 原樣返回;
+     * 其餘(類別實例、Object.create(proto)、Array之子類別、Map與Set等內建容器及其子類別、自訂Symbol.toStringTag之物件等)取:
+     * 全部可列舉屬性(自有與繼承, for in)、原型鏈上(不含Object.prototype與Array.prototype)之存取器屬性(含不可列舉之類別getter, 現況即會被取值寫入),
+     * 每個名稱只讀一次(存取器只呼叫一次, 之後的檢核、預讀、更新與事件皆讀此固定值; 主鍵欄與其他欄位同, 第一次回undefined者亦固定為undefined), 方法與其他原型上之資料屬性不取
+     * 註: 值之取得: 自有資料屬性已由外層cloneDeep複製, 直接採用(不重複複製, 亦不改變其對Error、函式、Promise等不可複製值之處置);
+     * 繼承而來或存取器回傳之值以{x:值}包一層再cloneDeep取出(與外層cloneDeep對巢狀值之語意相同: 不可複製之值原樣保留)
+     * 註: 取值拋錯者(如與model無關之getter拋錯)不立即失敗, 改定義為會重新拋出同一錯誤之不可列舉存取器: 僅在該欄位真被讀取(model之欄位)時才拋出, 與修改前相同;
+     * 但鍵名本身不良構者改定義為可列舉之undefined資料屬性, 令chkOrmData仍檢出該鍵名
+     * 註: 內建容器(Map、Set等)與自訂標籤之物件(Object.prototype.toString之標籤不是Object)另把複製後之原物件以Symbol鍵(KEY_CONT, 不可列舉)附在攤平列上,
+     * 令chkWf仍以chkOrmData走訪其內容(Map之項目、Set之元素等); 寫入只用攤平後之列
+     * 註: 令呼叫端其後改動原型或繼承值、存取器每次回傳不同值或其副作用改動同列其他欄位(含主鍵), 皆不影響檢核與寫入之值
+     * 註: 以defineProperty定義, 避免名稱為__proto__時改動原型
+     *
+     * @ignore
+     * @param {*} v 輸入一列數據(已cloneDeep)
+     * @returns {*} 回傳攤平後之列
+     */
+    function flatRow(v) {
+        if (v === null || typeof v !== 'object') {
+            return v
+        }
+        let proto = Object.getPrototypeOf(v)
+        if (isarr(v)) {
+            if (proto === Array.prototype) {
+                return v
+            }
+        }
+        else if (proto === Object.prototype || proto === null) {
+            return v
+        }
+        let names = new Set()
+        for (let k in v) {
+            names.add(k)
+        }
+        for (let p = proto; p !== null &amp;&amp; p !== Object.prototype &amp;&amp; p !== Array.prototype; p = Object.getPrototypeOf(p)) {
+            for (let k of Object.getOwnPropertyNames(p)) {
+                let d = Object.getOwnPropertyDescriptor(p, k)
+                if (k !== 'constructor' &amp;&amp; d !== undefined &amp;&amp; typeof d.get === 'function') {
+                    names.add(k)
+                }
+            }
+        }
+        let o = {}
+        for (let k of names) {
+            let x
+            try {
+                let d = Object.getOwnPropertyDescriptor(v, k)
+                if (d !== undefined &amp;&amp; 'value' in d) {
+                    x = d.value
+                }
+                else {
+                    x = cloneDeep({ x: v[k] }).x
+                }
+            }
+            catch (err) {
+                if (chkOrmStr(k, { nul: false }) !== null) {
+                    Object.defineProperty(o, k, { value: undefined, writable: true, enumerable: true, configurable: true })
+                }
+                else {
+                    Object.defineProperty(o, k, {
+                        get() {
+                            throw err
+                        },
+                        enumerable: false,
+                        configurable: true,
+                    })
+                }
+                continue
+            }
+            Object.defineProperty(o, k, { value: x, writable: true, enumerable: true, configurable: true })
+        }
+        if (!isarr(v) &amp;&amp; Object.prototype.toString.call(v) !== '[object Object]') {
+            Object.defineProperty(o, KEY_CONT, { value: v, writable: false, enumerable: false, configurable: false })
+        }
+        return o
+    }
+
+
+    //snap, 數據於呼叫當下即同步複製並攤平各列(第66項, 見CLAUDE_rulebook.md之R-WF): useStable時各函數經佇列延後執行(pmQueue於執行前delay),
+    //若於函數內才複製, 呼叫端於呼叫後立即改動原數據(如重用同一陣列、改動共用之原型)會影響實際檢核與寫入之值; insert、insertBulk、save、del只使用此複本,
+    //檢核與寫入皆作用於同一份複本; 複製或攤平拋錯(如存取器拋錯)與函數內之其他錯誤同為rejected promise(不發error事件, 同複製前之行為)
+    //外層批次以索引迴圈建成普通陣列: 不採用輸入陣列(或其子類別)自帶之map/Symbol.species, 以免批次被改變型別或靜默變成零筆; 洞視同undefined(同修改前lodash map之走訪)
+    //既有之[無資料]判定(非物件、空物件、空陣列)須以cloneDeep後之原輸入為準而先於攤平: 攤平會把只有無關getter之物件變成非空, 使原本不處理之輸入多出一列
+    let snap = (fn) => {
+        return function(data, ...rest) {
+            let d
+            try {
+                d = cloneDeep(data)
+                if (iseobj(d) || isearr(d)) {
+                    if (isarr(d)) {
+                        let a = []
+                        for (let i = 0; i &lt; d.length; i++) {
+                            a[i] = flatRow(d[i])
+                        }
+                        d = a
+                    }
+                    else {
+                        d = flatRow(d)
+                    }
+                }
+            }
+            catch (err) {
+                return Promise.reject(err)
+            }
+            return fn(d, ...rest)
+        }
+    }
+
+
     //bind
     ee.createStorage = createStorage
     ee.genModelsByTabs = genModelsByTabs
@@ -2007,18 +2335,18 @@ function WOrmMdb(opt = {}) {
         ee.selectByPk = function() {
             return pmq(selectByPk, ...arguments)
         }
-        ee.insert = function() {
-            return pmq(insert, ...arguments)
-        }
-        ee.insertBulk = function() {
-            return pmq(insertBulk, ...arguments)
-        }
-        ee.save = function() {
-            return pmq(save, ...arguments)
-        }
-        ee.del = function() {
-            return pmq(del, ...arguments)
-        }
+        ee.insert = snap((...args) => {
+            return pmq(insert, ...args)
+        })
+        ee.insertBulk = snap((...args) => {
+            return pmq(insertBulk, ...args)
+        })
+        ee.save = snap((...args) => {
+            return pmq(save, ...args)
+        })
+        ee.del = snap((...args) => {
+            return pmq(del, ...args)
+        })
         ee.delAll = function() {
             return pmq(delAll, ...arguments)
         }
@@ -2026,10 +2354,10 @@ function WOrmMdb(opt = {}) {
     else {
         ee.select = select
         ee.selectByPk = selectByPk
-        ee.insert = insert
-        ee.insertBulk = insertBulk
-        ee.save = save
-        ee.del = del
+        ee.insert = snap(insert)
+        ee.insertBulk = snap(insertBulk)
+        ee.save = snap(save)
+        ee.del = snap(del)
         ee.delAll = delAll
     }
 
@@ -2052,7 +2380,7 @@ export default WOrmMdb
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue Oct 20 2026 12:50:51 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 21 2026 04:36:58 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

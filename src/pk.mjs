@@ -1,4 +1,5 @@
 import get from 'lodash-es/get.js'
+import chkOrmStr from 'wsemi/src/chkOrmStr.mjs'
 
 
 //主鍵之型別判定、正規化與等值判定之輔助
@@ -84,15 +85,20 @@ function unwrap(v) {
 
 
 /**
- * 字串是否無法如實存放於Jet: 含NUL(SQL文字於NUL被截斷)或非良構UTF-16(孤立代理被換為U+FFFD)
+ * 主鍵值若為字串, 回傳其不良構之原因(含NUL: SQL文字於NUL被截斷; 含孤立代理: 經exe之UTF-8轉換被換為U+FFFD而改鍵), 合格或非字串回傳null
  *
- * @ignore
+ * 註: 判定單一擁有者為wsemi之chkOrmStr(第66項, 見CLAUDE_rulebook.md之R-WF), 預設一併檢NUL(主鍵與find同標準); 先拆包裝物件, 與normPk一致
+ * 註: 回傳原因為固定詞彙(不回顯值), 供呼叫端組成invalid id: 原因 at [data[索引].主鍵欄]
+ *
+ * @param {*} v 輸入主鍵值
+ * @returns {String|null} 回傳原因字串或null
  */
-function isUnstorable(s) {
-    if (s.indexOf('\u0000') >= 0) {
-        return true
+function chkPkWf(v) {
+    v = unwrap(v)
+    if (typeof v !== 'string') {
+        return null
     }
-    return /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?:^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(s)
+    return chkOrmStr(v)
 }
 
 
@@ -114,10 +120,12 @@ function isOverLen(s) {
  * 其餘字串因Jet之INSERT轉型會改變鍵(如'012'存為12)而視為型別不符; 整數類主鍵欄之非整數因Jet會四捨六入五成雙而視為型別不符
  * 註: ±Infinity、NaN、空字串、布林、物件、陣列、Date、BigInt、null、undefined為無效
  * 註: 超過255字元(不計尾端半形空白)之字串於字串類與其他型別(含model未定義主鍵欄而無從得知型別者)皆為不可能存在
+ * 註: 含NUL或孤立代理之字串(不良構, chkPkWf)亦為不可能存在, 且kind為'cannot'時附why(固定原因詞彙); 其kind不用'invalid',
+ * 以免autoGenPk為true時被當成[未給主鍵]而以自動產生之UUID取代(寫入成功卻非呼叫端所給之主鍵), 呼叫端須以why區辨良構性與長度上限(後者無why)
  *
  * @param {*} v 輸入主鍵值
  * @param {String} tp 輸入主鍵欄型別類別, 取自getPkType
- * @returns {Object} 回傳{kind,v}
+ * @returns {Object} 回傳{kind,v}, kind為'cannot'時可能附why
  */
 function normPk(v, tp) {
 
@@ -129,8 +137,9 @@ function normPk(v, tp) {
         if (v === '') {
             return { kind: 'invalid' }
         }
-        if (isUnstorable(v)) {
-            return { kind: 'cannot' }
+        let why = chkOrmStr(v)
+        if (why !== null) {
+            return { kind: 'cannot', why }
         }
         if (tp === 'int' || tp === 'flt') {
             let n = Number(v)
@@ -462,6 +471,7 @@ export {
     LEN_TEXT_MAX,
     KEY_WI,
     getPkType,
+    chkPkWf,
     normPk,
     kFast,
     genInnerKeys,

@@ -239,12 +239,12 @@ test().catch((err) => console.log('err:', err))
 // select by $and, $gt, $lt [ { id: 'id-rosemary', name: 'rosemary(modify)', value: 123.456 } ]
 // select by $or, $gte, $lte [ { id: '{random id}', name: 'kettle', value: 456 } ]
 // selectNocase [ { id: 'id-peter', name: 'peter(modify)', value: 123 } ]
-// error del invalid id[undefined]
+// error del invalid data[2].id
 // change del
 // del then [
 //   { n: 1, nDeleted: 1, ok: 1 },        //主鍵命中並刪除
 //   { n: 0, nDeleted: 0, ok: 1 },        //主鍵未命中, 屬正常結果
-//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid id[undefined]' } //未帶有效主鍵, 屬該筆失敗
+//   { n: 0, nDeleted: 0, ok: 0, err: 'invalid data[2].id' } //未帶有效主鍵, 屬該筆失敗
 // ]
 // change delAll
 // delAll by find then { n: 1, nDeleted: 1, ok: 1 }

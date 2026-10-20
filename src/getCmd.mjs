@@ -3,7 +3,7 @@ import get from 'lodash-es/get.js'
 import isDate from 'lodash-es/isDate.js'
 import isarr from 'wsemi/src/isarr.mjs'
 import isbol from 'wsemi/src/isbol.mjs'
-import isstr from 'wsemi/src/isstr.mjs'
+import chkOrmStr from 'wsemi/src/chkOrmStr.mjs'
 import { YEAR_MIN, YEAR_MAX, inJetDate } from './dateRange.mjs'
 
 
@@ -38,6 +38,14 @@ const getSeconds = Date.prototype.getSeconds
  */
 function escId(s) {
     let t = String(s).replace(/[[\]]/g, '')
+
+    //孤立代理, 識別字(資料表名、欄位名)經exe之UTF-8轉換會被改寫為U+FFFD而指向另一個資料表或欄位, 為建構時opt.cl等檢核之最後一道防線(同escVal);
+    //不檢NUL; 固定詞彙不回顯值
+    let why = chkOrmStr(t, { nul: false })
+    if (why !== null) {
+        throw new Error(`invalid identifier: ${why}`)
+    }
+
     return `[${t}]`
 }
 
@@ -85,8 +93,17 @@ function escVal(v) {
         return `#${s}#`
     }
 
-    //string與其餘型別
-    let s = isstr(v) ? v : String(v)
+    //string與其餘型別, 字串包裝物件亦以String(v)取為原始字串(後續檢核與跳脫皆作用於同一個原始字串)
+    let s = typeof v === 'string' ? v : String(v)
+
+    //孤立代理, 經exe之UTF-8轉換會被改寫為U+FFFD而使寫入值與讀回值不同(或定位到他筆), 為寫入前整批預檢(WOrmMdb.mjs之chkWf)的最後一道防線:
+    //此處為字串值進入SQL文字之唯一出口(識別字另見escId), 故不論值來自欄位值、型別轉換(String(v))、自訂toString或存取器之後續讀取, 皆不可能產出含孤立代理之常值;
+    //不檢NUL(值之NUL不屬共用檢核, NUL於Jet由SQL文字截斷而報錯, 現況行為不變)
+    let why = chkOrmStr(s, { nul: false })
+    if (why !== null) {
+        throw new Error(`invalid data: ${why}`)
+    }
+
     return `'${s.replace(/'/g, `''`)}'`
 }
 

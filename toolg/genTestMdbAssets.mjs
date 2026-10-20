@@ -36,6 +36,12 @@ let sqlsWl = [
     'CREATE TABLE [tw] ([id] TEXT(255) CONSTRAINT [pk] PRIMARY KEY, [name] TEXT(255), [age] LONG, [g] TEXT(50), [t] TEXT(255), [flag] YESNO, [d] DATETIME)',
 ]
 
+//字串良構檢核案例表測試用(wsemi/src/_cvOrmStrCases.mjs之夾具: 字串主鍵id與字串欄name; name為MEMO以容納案例表之1000碼元長字串), 對應model於test/assets/models/twf.js、twfk.js
+let sqlsWf = [
+    'CREATE TABLE [twf] ([id] TEXT(255) CONSTRAINT [pk] PRIMARY KEY, [name] MEMO)',
+    'CREATE TABLE [twfk] ([key] TEXT(255) CONSTRAINT [pk] PRIMARY KEY, [name] MEMO)', //主鍵欄名非id, 驗檢核與訊息路徑跟隨opt.pk
+]
+
 async function gen(fn, password, sqls) {
 
     //fp
@@ -74,6 +80,7 @@ async function main() {
         ['worm_pk_def.mdb', '', sqlsPk], //主鍵命中判定測試檔
         ['worm_find_def.mdb', '', sqlsFind], //條件(find)轉譯測試檔
         ['worm_wl_def.mdb', '', sqlsWl], //條件(find)系列白名單案例表測試檔
+        ['worm_wf_def.mdb', '', sqlsWf], //字串良構檢核案例表測試檔
     ]
 
     //fns, 未給則全部
