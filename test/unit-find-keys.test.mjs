@@ -155,7 +155,9 @@ const CASES = [
     { key: 'PK5', find: () => ({ id: { $ne: undefined } }), exp: 'REJECT' }, //否定語境無效值reject
     { key: 'PK6', find: () => ({ id: undefined }), exp: 'REJECT', rej: /undefined is not allowed/ }, //undefined值reject(1.0.36 肯定語境無效值不命中而無命中; 審計方案 §5.1)
     { key: 'PK7', find: () => ({ id: { $gt: undefined } }), exp: 'REJECT', rej: /undefined is not allowed/ }, //1.0.36 為無命中
-    { key: 'PK8', find: () => ({ id: { $ne: null } }), exp: 'REJECT', rej: /invalid find: invalid primary key value in negative condition at \[find\.id\.\$ne\]/ }, //null在白名單內, 但主鍵null為無效值, 否定語境reject(LW2)
+    { key: 'PK8', find: () => ({ id: { $ne: null } }), exp: ALL }, //LW2已解(第79項 run02, D8 選項B): $ne:null交cvFind(IS NOT NULL), 與非主鍵欄、reladb相同; 1.0.38 為reject
+    { key: 'PK8c', find: () => ({ $and: [{ id: { $ne: null } }, { id: { $ne: 'A ' } }] }), exp: but('a') }, //可攜寫法(排除NULL)套到主鍵欄: 同時仍由Jet判定'A '與a同鍵
+    { key: 'PK8d', find: () => ({ id: { $nin: [null] } }), exp: 'REJECT', rej: /null is not allowed/ }, //$nin含null仍被白名單拒收(R-WL-06 3)
     { key: 'PK8b', find: () => ({ id: null }), exp: '' }, //肯定語境之null主鍵值不命中(Q5)
     { key: 'PK9', find: () => ({ id: 123 }), exp: '' }, //字串主鍵之數字轉'123'(R-PK-02), 無此列
 

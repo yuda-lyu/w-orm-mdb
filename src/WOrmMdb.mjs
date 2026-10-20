@@ -34,6 +34,7 @@ import {
     getDeleteAll
 } from './getCmd.mjs'
 import { initSequelize, queryMemory } from './queryMemory.mjs'
+import { YEAR_MIN, YEAR_MAX, normDates } from './dateRange.mjs'
 import { TPS_STR, getPkType, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys } from './pk.mjs'
 
 
@@ -70,6 +71,17 @@ const MAX_LIST = 999
  * 主鍵之範圍運算子與非主鍵欄之條件依記憶體sqlite(字串欄為NOCASE); $ne、$nin含無效主鍵值reject; select回傳Jet原列, 內容與selectByPk相同
  * 註: 主鍵欄須為文字或數值型, Jet之GUID型別與DATETIME型別之主鍵欄不支援
  * 註: insert與save之原子性倚賴資料表主鍵欄位具唯一約束(PRIMARY KEY)，資料表建立時須含之
+ * 註: Jet DATETIME以本地時間分量存放，可存放範圍為本地年100–9999；寫入(insert、insertBulk、save)之Date(任何欄位，含Invalid Date)
+ * 本地年小於100或大於9999、或DATE/DATEONLY欄之字串含零填充之小年份(獨立數字串達3位以上而值小於100，如0050-06-15、06/15/0050、June 15, 0050、050-06-15)者，
+ * 整批reject且資料庫不變(發出一次error事件，不發change事件；save亦然，含autoInsert為false與不會寫入之列，不降為逐筆ok為0)，
+ * 訊息為invalid data: date is not a valid time in years 100-9999 at [data[索引].欄位名]，不回顯值(曆法不存在者如2026-02-30T00:00:00亦同訊息)。
+ * 原因: Jet對年0–99依兩位數年規則靜默改年(0050→1950)而不報錯。既有被改年之資料不遷移。兩位數年(如6/15/50)為Jet文件化之寫法，不在此限
+ * 註: DATE/DATEONLY欄收到select回傳形式之無時區字串(yyyy-MM-ddTHH:mm:ss或空格分隔，可含小數秒)時驗曆法後正規化為牆上時間yyyy-MM-dd HH:mm:ss再寫入(小數秒捨去，Jet無法經文字寫入；不經Date，故夏令跳過之時刻往返不變)，
+ * 令select取出之列可原樣save/insert；含Z或偏移之ISO 8601字串轉為Date(瞬間無歧義)後依本地分量寫入；純日期yyyy-MM-dd驗曆法後原樣交Jet；
+ * 字串包裝物件、陣列等非Date物件以String(v)取字串(同寫出時之序列化)判定；其餘字串、數值、布林交Jet判定(現況行為不變)；change事件之data帶正規化值
+ * 註: 字串之預檢依model欄型(DATE/DATEONLY)判定，model須把Jet之DATETIME欄宣告為DATE或DATEONLY(宣告為TIME或STRING者字串不預檢)；
+ * 資料列須為一般物件(自有資料屬性)，原型鏈上帶getter、Function或Error列、覆寫valueOf/constructor/Symbol.toStringTag之Date子類別不在保證範圍(已知限制LD5、LD6)
+ * 註: 負偏移時區主機含9999年末日哨兵列時之日期範圍條件見已知限制LF8(select之使用須知6.)
  *
  * @class
  * @param {Object} [opt={}] 輸入設定物件，預設{}
@@ -89,7 +101,6 @@ const MAX_LIST = 999
 function WOrmMdb(opt = {}) {
     let ss
     let u
-    let sequelize = null
 
 
     //default
@@ -374,9 +385,11 @@ function WOrmMdb(opt = {}) {
      *
      * 註: connMDB.exe為one-shot程序，每次呼叫各自開啟與關閉連線，故實例本身不持有資料庫連線；
      * sequelize僅用於匯入models以取得欄位定義，不承載任何數據
+     * 註: 每個實例自帶其sequelize(區域變數)，close只關閉自己的且可重複呼叫(第二次起為空操作)，
+     * 故useStable為false之並行呼叫、重複init皆各自釋放，不會被後建者覆寫而漏關或被誤關；close之後不再使用該實例
      *
      * @memberOf WOrmMdb
-     * @returns {Promise} 回傳Promise，resolve回傳實例物件，reject回傳錯誤訊息
+     * @returns {Promise} 回傳Promise，resolve回傳實例物件{mds,jet,err,close}，reject回傳錯誤訊息
      */
     async function initAdodb() {
         let err = null
@@ -386,6 +399,7 @@ function WOrmMdb(opt = {}) {
         let jet = jetOpen({ path: opt.storage, password: getDbPassword() })
 
         //initSequelize, 匯入失敗屬影響本次操作全部數據之整批性錯誤
+        let sequelize = null
         let mds = null
         await initSequelize(opt)
             .then((r) => {
@@ -396,30 +410,47 @@ function WOrmMdb(opt = {}) {
                 err = getErrMsg(e)
             })
 
+        //closed, 本實例是否已關閉
+        let closed = false
+
         return {
             mds,
             jet,
             err,
-            close: () => {
-                return closeSequelize('external')
+            close: async() => {
+                if (closed) {
+                    return
+                }
+                closed = true
+                if (sequelize !== null) {
+                    await sequelize.close()
+                }
             },
         }
     }
 
 
     /**
-     * 關閉sequelize
+     * 寫入前整批檢核各筆數據之日期值並正規化(見dateRange.mjs與CLAUDE_rulebook.md之R-DATE)
      *
-     * @memberOf WOrmMdb
-     * @returns {Promise} 回傳Promise，resolve代表關閉成功，reject回傳錯誤訊息
+     * 註: 須於procPk之後、任何寫入之前對全部筆數一次完成，令任一筆越界或無效時同批皆不寫入、資料庫不變(含save之autoInsert為false與不會寫入者)；
+     * 訊息為invalid data: date is not a valid time in years 100-9999 at [data[索引].欄位名]，不回顯值，經既有catch發error事件後reject
+     * 註: 就地改寫data(呼叫端傳入的是cloneDeep後之複本): Date換成一般Date，DATE/DATEONLY欄之無時區日期時間字串與含Z或偏移之ISO字串正規化後再寫入
+     *
+     * @ignore
+     * @param {Object} md 輸入model物件
+     * @param {Array} cols 輸入資料表欄位名陣列
+     * @param {Array} data 輸入數據陣列
      */
-    async function closeSequelize(from) {
-        if (sequelize !== null) {
-            await sequelize.close()
-            //console.log(from, 'sequelize.close()')
+    function chkDates(md, cols, data) {
+        let dateCols = new Set(cols.filter((c) => {
+            let k = get(md, ['rawAttributes', c, 'type', 'key'], '')
+            return k === 'DATE' || k === 'DATEONLY'
+        }))
+        let r = normDates(data, cols, dateCols)
+        if (r !== null) {
+            throw new Error(`invalid data: date is not a valid time in years ${YEAR_MIN}-${YEAR_MAX} at [data[${r.k}].${r.col}]`)
         }
-        sequelize = null
-        //console.log(from, 'sequelize = null')
     }
 
 
@@ -618,9 +649,12 @@ function WOrmMdb(opt = {}) {
      *    欄位層$and/$or、子查詢、函數值、Symbol鍵、undefined值、空的$nin/$and/$or、白名單外之欄名(須為model之屬性且符合^[\p{L}_][\p{L}\p{M}\p{N}_]*$)等
      *    一律整批reject，訊息為invalid find: 原因 at [路徑]。
      * 4. 值依欄位型別檢核，DATE欄之無時區字串依主機時區；主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-WL、R-FIND、R-PK)；
-     *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)；主鍵不可能為NULL，勿以{pk:{$ne:null}}表達全部(會reject)；主鍵之範圍運算子界限須為有效且型別相符之主鍵值，否則恆不命中。
+     *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)；主鍵之$ne:null與其他欄位相同，意為[非NULL](主鍵不會是NULL，故命中全部列)，可攜寫法亦可用於主鍵欄；
+     *    主鍵之範圍運算子($gt $gte $lt $lte)與其他欄位相同依欄位型別比較: 界限為整數主鍵之2.5、或超過255字元之字串亦正確比較，與欄位型別不符者(如整數主鍵給'abc'、布林)reject。
      * 5. 語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
      *    排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。
+     * 6. DATE欄之日期條件依主機時區解析；負偏移時區(如America/Los_Angeles)之主機，Jet內本地時間9999年末幾小時之列(如9999-12-31 23:59:59之[永不過期]哨兵)
+     *    於範圍條件會得到錯誤結果(記憶體sqlite以UTC文字比較)，delAll以日期範圍條件刪除時尤須留意(已知限制LF8，待reladb支援後處理)；正偏移時區與UTC不受影響。
      *
      * 註: 恆回傳陣列，無符合數據回傳空陣列而不回傳null
      * 註: 條件之入口形狀檢核(白名單、純量型別、欄名文法、上限、異常結構)先於載入model、讀取與連線，未通過者不開啟資料庫檔、不送SQL，並以整批性錯誤reject(發出一次error事件，不發change事件)；
@@ -675,9 +709,9 @@ function WOrmMdb(opt = {}) {
         }
         finally {
 
-            //closeSequelize
-            if (inited) { //內部自動初始化得close
-                await closeSequelize('select')
+            //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
+            if (inited && si !== null) { //內部自動初始化得close(si為null代表初始化未完成, 無從關閉)
+                await si.close()
             }
 
         }
@@ -764,9 +798,9 @@ function WOrmMdb(opt = {}) {
         }
         finally {
 
-            //closeSequelize
+            //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
             if (instance === null) { //內部自動初始化得close
-                await closeSequelize('selectByPk')
+                await si.close()
             }
 
         }
@@ -944,6 +978,9 @@ function WOrmMdb(opt = {}) {
                 return procPk(md, v, k, 'insert').v
             })
 
+            //chkDates, 日期值之整批預檢與正規化, 同樣須於任何寫入之前一次完成(R-DATE-02)
+            chkDates(md, cols, data)
+
             //nAll, n之基準為輸入筆數
             let nAll = size(data)
 
@@ -1028,9 +1065,9 @@ function WOrmMdb(opt = {}) {
         }
         finally {
 
-            //closeSequelize
+            //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
             if (instance === null) { //內部自動初始化得close
-                await closeSequelize('insert')
+                await si.close()
             }
 
         }
@@ -1117,6 +1154,9 @@ function WOrmMdb(opt = {}) {
                 return procPk(md, v, k, 'insertBulk').v
             })
 
+            //chkDates, 日期值之整批預檢與正規化, 同樣須於任何寫入之前一次完成(R-DATE-02)
+            chkDates(md, cols, data)
+
             //nAll, n之基準為輸入筆數
             let nAll = size(data)
 
@@ -1150,9 +1190,9 @@ function WOrmMdb(opt = {}) {
         }
         finally {
 
-            //closeSequelize
+            //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
             if (instance === null) { //內部自動初始化得close
-                await closeSequelize('insertBulk')
+                await si.close()
             }
 
         }
@@ -1256,6 +1296,9 @@ function WOrmMdb(opt = {}) {
                 }
                 return r.v
             })
+
+            //chkDates, 日期值之整批預檢與正規化, 含autoInsert為false與不會寫入者, 越界即整批reject而不降為該筆ok為0(R-DATE-02)
+            chkDates(md, cols, data)
 
             //rests, 逐筆結果, 未定案者為null
             let rests = map(data, () => {
@@ -1486,9 +1529,9 @@ function WOrmMdb(opt = {}) {
         }
         finally {
 
-            //closeSequelize
+            //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
             if (instance === null) { //內部自動初始化得close
-                await closeSequelize('save')
+                await si.close()
             }
 
         }
@@ -1679,9 +1722,9 @@ function WOrmMdb(opt = {}) {
         }
         finally {
 
-            //closeSequelize
+            //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
             if (instance === null) { //內部自動初始化得close
-                await closeSequelize('del')
+                await si.close()
             }
 
         }
@@ -1719,9 +1762,10 @@ function WOrmMdb(opt = {}) {
      *    欄位層$and/$or、子查詢、函數值、Symbol鍵、undefined值、空的$nin/$and/$or等一律整批reject，
      *    訊息為invalid find: 原因 at [路徑]，且不刪除任何數據。
      * 4. 與select共用同一檢核與同一條件，select(find)命中之數據即本函數刪除之數據；建議先以select(find)確認命中範圍再刪除；
-     *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)，主鍵不可能為NULL(勿以{pk:{$ne:null}}表達全部，會reject)。
+     *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)；主鍵之$ne:null與其他欄位相同，意為[非NULL]，命中全部列；主鍵之範圍運算子依欄位型別比較(見select)。
      * 5. 條件值若來自可能為undefined、null或空陣列之變數，呼叫端須先自行判斷；undefined值會reject而非被忽略，
-     *    空的$nin會reject，$in:[]則為恆假(刪除0筆)。
+     *    空的$nin會reject，$in:[]則為恆假(刪除0筆)；注意delAll({pk:{$ne:變數}})於變數為null時等同全刪(非NULL主鍵之列全部命中，與非主鍵欄相同)。
+     *    負偏移時區主機以DATE範圍條件刪除時，9999年末日之哨兵列可能被誤刪(已知限制LF8，見select)。
      * 6. 語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
      *    排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。
      *
@@ -1839,9 +1883,9 @@ function WOrmMdb(opt = {}) {
         }
         finally {
 
-            //closeSequelize
-            if (inited) { //內部自動初始化得close
-                await closeSequelize('delAll')
+            //close, 關閉本次自行建立之實例(各實例自帶sequelize, 見R-LIFE)
+            if (inited && si !== null) { //內部自動初始化得close(si為null代表初始化未完成, 無從關閉)
+                await si.close()
             }
 
         }

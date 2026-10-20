@@ -1,0 +1,198 @@
+import isDate from 'lodash-es/isDate.js'
+
+
+//寫入Jet之日期範圍與字串正規化之單一擁有者(規則見CLAUDE_rulebook.md之R-DATE)
+//
+//事實(Jet 4.0實測): DATETIME以本地時間分量存放(無時區), 範圍為本地年100–9999;
+//年0–99依兩位數年規則靜默改為1950–2049年代而不報錯(補零無效; 年1–12另被讀成月-日-年), 年>=10000報語法錯;
+//字串與常值皆不收小數秒, 且不收T與Z
+
+
+//本地年份範圍
+const YEAR_MIN = 100
+const YEAR_MAX = 9999
+
+
+//以Date.prototype之方法取值, 不讀物件自帶或子類別覆寫之方法, 令檢查之值即使用之值(getCmd.mjs之escVal同)
+const getTime = Date.prototype.getTime
+const getFullYear = Date.prototype.getFullYear
+
+
+//無時區日期時間(select回傳之形式yyyy-MM-ddTHH:mm:ss與其空格分隔形式): 可含小數秒
+const reNoTz = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?$/
+
+//純日期yyyy-MM-dd
+const reDateOnly = /^(\d{4})-(\d{2})-(\d{2})$/
+
+//含Z或偏移之ISO 8601: T或空格分隔, 秒必有, 小數秒任意位, 偏移為Z或±hh:mm或±hhmm
+const reTz = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:?\d{2})$/
+
+//其他寫法之年份在前(yyyy-M-d、yyyy/M/d)與在後(M/d/yyyy)而位數達5位以上者(年>=10000, Jet報錯); 兩位數年(如6/15/50)為Jet文件化之寫法, 不在此列
+const reYearFirst = /^\s*(\d{5,})[-/]\d{1,2}[-/]\d{1,2}(?!\d)/
+const reYearLast = /^\s*\d{1,2}[-/]\d{1,2}[-/](\d{5,})(?!\d)/
+
+
+/**
+ * 判定年份是否在Jet可存放之範圍
+ *
+ * @param {Number} y 輸入年份
+ * @returns {Boolean} 回傳是否在範圍內
+ */
+function inJetYear(y) {
+    return Number.isInteger(y) && y >= YEAR_MIN && y <= YEAR_MAX
+}
+
+
+/**
+ * 判定Date物件是否為有效時間且本地年份在Jet可存放之範圍
+ *
+ * 註: 以本地年份判定而非UTC年份, 因Jet存放的是本地時間分量(對真Jet 7時區 × 23瞬間共161格: 本地年規則誤判0格, UTC年100–9999規則誤判25格, UTC年1–9999規則誤判64格)
+ *
+ * @param {Date} d 輸入Date物件
+ * @returns {Boolean} 回傳是否可安全寫入
+ */
+function inJetDate(d) {
+    if (!Number.isFinite(getTime.call(d))) {
+        return false
+    }
+    return inJetYear(getFullYear.call(d))
+}
+
+
+/**
+ * 判定年月日時分秒是否為曆法上存在之時間
+ *
+ * 註: 不用Date建構再回驗, 因V8對02-30、24:00:00等不報無效而進位, 且Date.UTC會把0–99年映射為1900+
+ *
+ * @ignore
+ */
+function chkFields(y, mo, d, h, mi, s) {
+    if (mo < 1 || mo > 12 || d < 1 || h < 0 || h > 23 || mi < 0 || mi > 59 || s < 0 || s > 59) {
+        return false
+    }
+    let leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
+    let nd = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mo - 1]
+    return d <= nd
+}
+
+
+/**
+ * 判定字串值於DATE欄之處置
+ *
+ * 註: 回傳null代表不處理(交Jet, 現況行為); 回傳{bad:true}代表整批拒收; 回傳{v}代表以v取代原值寫入
+ * 註: 無時區日期時間不經Date而正規化為牆上時間字串yyyy-MM-dd HH:mm:ss(小數秒捨去, Jet無法經文字寫入), 令夏令跳過之時刻往返後仍逐字相同;
+ * 含Z或偏移者瞬間無歧義, 轉為Date再依本地年判定; 純日期yyyy-MM-dd驗曆法與年後原樣交Jet
+ * 註: 其餘寫法(如0050年6月15日、June 15, 0050、0050-06、全形數字)不逐一列舉文法, 改掃獨立數字串(先NFKC令全形數字轉半形):
+ * 任一達3位以上而值小於100者(零填充之年份如0050、050)Jet會依兩位數年規則改年或當成時間, 一律拒收; 兩位數年(如6/15/50)為Jet文件化之寫法, 不在此列
+ *
+ * @ignore
+ */
+function normStr(s) {
+
+    //無時區日期時間
+    let m = s.match(reNoTz)
+    if (m !== null) {
+        let y = Number(m[1])
+        if (!inJetYear(y) || !chkFields(y, Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6]))) {
+            return { bad: true }
+        }
+        return { v: `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6]}` }
+    }
+
+    //純日期
+    m = s.match(reDateOnly)
+    if (m !== null) {
+        let y = Number(m[1])
+        if (!inJetYear(y) || !chkFields(y, Number(m[2]), Number(m[3]), 0, 0, 0)) {
+            return { bad: true }
+        }
+        return null
+    }
+
+    //含Z或偏移之ISO 8601
+    m = s.match(reTz)
+    if (m !== null) {
+        if (!chkFields(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6]))) {
+            return { bad: true }
+        }
+        //偏移補冒號為±hh:mm; 偏移不合法(如+24:00、+08:60)時V8回Invalid Date, 由inJetDate拒收
+        let off = m[8] === 'Z' ? 'Z' : `${m[8].slice(0, 3)}:${m[8].slice(-2)}`
+        let ms = `${m[7] || ''}000`.slice(0, 3)
+        let t = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${ms}${off}`)
+        if (!inJetDate(t)) {
+            return { bad: true }
+        }
+        return { v: t }
+    }
+
+    //其他寫法: 零填充之小年份(3位以上而值小於100)與5位以上之年份拒收(原靜默改年或Jet報錯), 其餘交Jet
+    let tokens = s.normalize('NFKC').match(/\d+/g)
+    if (tokens !== null && tokens.some((t) => t.length >= 3 && Number(t) < YEAR_MIN)) {
+        return { bad: true }
+    }
+    if (reYearFirst.test(s) || reYearLast.test(s)) {
+        return { bad: true }
+    }
+
+    return null
+}
+
+
+/**
+ * 寫入前整批檢核各筆數據之日期值並正規化, 回傳第一個不可寫入者之位置
+ *
+ * 註: Date物件於所有欄位皆檢(Jet對寫入非DATE欄之Date亦改年), 通過者就地換成一般Date(令檢查之值即使用之值, 子類別與覆寫之方法被剝除);
+ * 字串與非Date物件(以String(v)取字串)僅於DATE類欄處理(見normStr); 數值、布林、null、undefined不處理(現況行為不變)
+ * 註: 就地改寫data之各列(呼叫端傳入的是cloneDeep後之複本); 只處理cols內之欄位(不在model之鍵不會被寫入)
+ * 註: 回傳之位置為索引最小者, 同筆多欄依cols之順序; 任一不可寫入即整批拒收, 故呼叫端應於任何寫入之前呼叫
+ *
+ * @param {Array} data 輸入數據陣列
+ * @param {Array} cols 輸入資料表欄位名陣列(依model定義順序)
+ * @param {Set} dateCols 輸入DATE、DATEONLY型別之欄位名集合
+ * @returns {Object|null} 回傳{k,col}或null
+ */
+function normDates(data, cols, dateCols) {
+    for (let k = 0; k < data.length; k++) {
+        let v = data[k]
+        if (v === null || typeof v !== 'object') {
+            continue
+        }
+        for (let col of cols) {
+            let x = v[col]
+            if (x === undefined || x === null) {
+                continue
+            }
+            if (isDate(x)) {
+                if (!inJetDate(x)) {
+                    return { k, col }
+                }
+                v[col] = new Date(getTime.call(x))
+            }
+            else if (dateCols.has(col) && (typeof x === 'string' || typeof x === 'object')) {
+                //字串包裝物件、陣列、自訂toString之物件: escVal以String(v)當字串寫出, 故此處取同一字串判定並以原始字串取代, 令檢查之值即使用之值
+                let s = x
+                if (typeof x === 'object') {
+                    try {
+                        s = String(x)
+                    }
+                    catch (err) {
+                        return { k, col }
+                    }
+                    v[col] = s
+                }
+                let r = normStr(s)
+                if (r === null) {
+                    continue
+                }
+                if (r.bad === true) {
+                    return { k, col }
+                }
+                v[col] = r.v
+            }
+        }
+    }
+    return null
+}
+
+
+export { YEAR_MIN, YEAR_MAX, inJetYear, inJetDate, normDates }

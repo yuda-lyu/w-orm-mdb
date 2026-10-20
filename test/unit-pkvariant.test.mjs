@@ -230,7 +230,11 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
         assert.strict.deepStrictEqual(cpf({ id: undefined }), { W: { $in: [-1] } })
         assert.strict.deepStrictEqual(cpf({ id: null }), { W: { $in: [-1] } }, 'null為無效主鍵值, 肯定語境不命中')
         assert.strict.throws(() => cpf({ id: { $ne: undefined } }))
-        assert.strict.throws(() => cpf({ id: { $ne: null } }), /^Error: invalid find: invalid primary key value in negative condition at \[find\.id\.\$ne\]$/, 'null於否定語境拋出(LW2), 格式同cvOrmFind且不回顯值(外審opus F5)')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: null } }), { id: { $ne: null } }, '$ne:null不是無效值(LW2已解, D8選項B): 原樣留於原欄交cvFind(IS NOT NULL), 不產生序號條件')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: null, $nin: ['k2'] } }), { id: { $ne: null }, W: { $nin: [0] } }, '$ne:null與$nin並列: $ne:null留原欄, $nin照常改寫')
+        assert.strict.deepStrictEqual(cpf({ id: { $ne: null }, name: 'x' }), { id: { $ne: null }, name: 'x' }, '$ne:null不使其餘條件消失')
+        assert.strict.deepStrictEqual(cpf({ $or: [{ id: { $ne: null } }, { name: 'x' }] }), { $or: [{ id: { $ne: null } }, { name: 'x' }] })
+        assert.strict.throws(() => cpf({ id: { $ne: 'k2', $nin: [null] } }), /at \[find\.id\.\$nin\]$/, '$nin內之null仍屬無效值(cvOrmFind已拒收, 此為單獨呼叫castPkFind時之防線)')
         assert.strict.throws(() => cpf({ $or: [{ name: 'x' }, { $and: [{ id: { $nin: ['k2', ''] } }] }] }), /at \[find\.\$or\[1\]\.\$and\[0\]\.id\.\$nin\]$/, '錯誤路徑與原始find同形')
         assert.strict.throws(() => cpf({ id: { $ne: true } }), '布林於否定語境拋出')
         assert.strict.throws(() => cpf({ id: { $nin: ['a', NaN] } }))
@@ -510,6 +514,42 @@ if (isWindows()) {
                 }
             })
 
+            it('浮點主鍵: 範圍界限與$ne:null之select命中集合等於delAll實刪集合(LW6、LW2; 外審opus補格)', async function() {
+                let w = ws.dpk
+                let base = [1, 1.5, 2, 2.5, 3]
+                let rows = base.map((v) => ({ id: v, name: `n${v}` }))
+                let cases = [
+                    [{ id: { $gt: 1.5 } }, [2, 2.5, 3]],
+                    [{ id: { $gt: '1.5' } }, [2, 2.5, 3]],
+                    [{ id: { $gt: '1.50' } }, [2, 2.5, 3]], //非標準寫法之界限(normPk為mismatch)原樣交cvFind依欄型比較
+                    [{ id: { $lt: '1e1' } }, null],
+                    [{ id: { $gt: 'abc' } }, null],
+                    [{ id: { $gt: true } }, null],
+                    [{ id: { $ne: null } }, base],
+                    [{ $and: [{ id: { $ne: null } }, { id: { $ne: 2 } }] }, [1, 1.5, 2.5, 3]],
+                    [{ $or: [{ id: { $gt: '2.50' } }, { id: 1 }] }, [1, 3]],
+                    [{ id: { $ne: null, $lte: '2.0' } }, [1, 1.5, 2]],
+                ]
+                for (let [f, exp] of cases) {
+                    let lb = JSON.stringify(f)
+                    await seed('dpk', rows)
+                    let sel = await getRt(w.select(f))
+                    if (exp === null) {
+                        assert.strict.strictEqual(sel, 'reject', `${lb}: select須reject`)
+                        assert.strict.strictEqual(await getRt(w.delAll(f)), 'reject', `${lb}: delAll須同樣reject`)
+                        assert.strict.strictEqual((await all('dpk')).length, base.length, `${lb}: reject不得刪除任何列`)
+                        continue
+                    }
+                    let ss = (await w.select(f)).map((r) => r.id).sort((a, b) => a - b)
+                    assert.strict.deepStrictEqual(ss, exp, `${lb}: select命中集合`)
+                    let rd = await w.delAll(f)
+                    let left = await ids('dpk')
+                    let deleted = base.filter((v) => !left.includes(v))
+                    assert.strict.deepStrictEqual(deleted, exp, `${lb}: delAll實刪集合須等於select命中集合`)
+                    assert.strict.strictEqual(rd.nDeleted, exp.length)
+                }
+            })
+
         })
 
         describe('不可能存在之主鍵(R-PK-02、03)', function() {
@@ -715,8 +755,8 @@ if (isWindows()) {
                     assert.strict.strictEqual(await getRt(w.delAll(find)), 'reject', JSON.stringify(find, (k, v) => typeof v === 'bigint' ? `${v}n` : v))
                     assert.strict.strictEqual(await getRt(w.select(find)), 'reject')
                 }
-                //通過形狀檢核而為無效主鍵值(null、布林、Date、空字串)於否定語境: castPkFind 拋出(R-PK-03 4b; LW2)
-                for (let find of [{ id: { $ne: null } }, { id: { $ne: true } }, { id: { $ne: new Date(0) } }, { id: { $ne: '' } }, { id: { $nin: ['k2', ''] } }]) {
+                //通過形狀檢核而為無效主鍵值(布林、Date、空字串)於否定語境: castPkFind 拋出(R-PK-03 4b; $ne:null 不在此列, 見下一案)
+                for (let find of [{ id: { $ne: true } }, { id: { $ne: new Date(0) } }, { id: { $ne: '' } }, { id: { $nin: ['k2', ''] } }]) {
                     assert.strict.strictEqual(await getRt(w.delAll(find)), 'reject', JSON.stringify(find))
                     assert.strict.strictEqual(await getRt(w.select(find)), 'reject')
                 }
@@ -727,6 +767,17 @@ if (isWindows()) {
                 assert.strict.deepStrictEqual(await w.delAll({ id: { $in: ['', 'zz'] } }), { n: 0, nDeleted: 0, ok: 1 })
                 assert.strict.deepStrictEqual(await w.delAll({ id: true }), { n: 0, nDeleted: 0, ok: 1 })
                 assert.strict.strictEqual((await all('users')).length, SEED.length)
+            })
+
+            it('主鍵$ne:null交cvFind(IS NOT NULL), 與可攜寫法併用時仍由Jet判定同鍵(LW2已解, D8選項B)', async function() {
+                let w = ws.users
+                await seed('users', [{ id: 'k2', name: 'a' }, { id: 'A1', name: 'b' }])
+                assert.strict.deepStrictEqual((await w.select({ id: { $ne: null } })).map((r) => r.id).sort(), ['A1', 'k2'])
+                assert.strict.deepStrictEqual((await w.select({ $and: [{ id: { $ne: null } }, { id: { $ne: 'K2 ' } }] })).map((r) => r.id), ['A1'], 'K2 與k2於Jet為同鍵')
+                assert.strict.deepStrictEqual(await w.delAll({ $and: [{ id: { $ne: null } }, { id: { $ne: 'K2 ' } }] }), { n: 1, nDeleted: 1, ok: 1 })
+                assert.strict.deepStrictEqual(await ids('users'), ['k2'])
+                assert.strict.deepStrictEqual(await w.delAll({ id: { $ne: null } }), { n: 1, nDeleted: 1, ok: 1 }, '等同全刪: 變數為null時delAll({pk:{$ne:變數}})即全刪(JSDoc已載)')
+                assert.strict.deepStrictEqual(await all('users'), [])
             })
 
         })

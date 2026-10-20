@@ -37,8 +37,9 @@ async function initSequelize(opt) {
     //註: 須傳入opt.pk, 否則importModels只認id欄, 主鍵另名而model另有非主鍵欄id時會把id改為主鍵並改寫使用者之model檔
     let r = await pm2resolve(importModels)(opt.fdModels, sequelize, opt.cl, { sync: false, type: opt.modelType, pk: opt.pk })
 
-    //check
+    //check, 匯入失敗時此處建立之sequelize不會回傳給呼叫端, 須在此關閉(R-LIFE)
     if (r.state === 'error') {
+        await sequelize.close()
         let err = `can not import model: ${opt.cl}, need to use genModelsByDB, genModelsByTabs or create ${opt.cl}.${opt.modelType}`
         return Promise.reject(err)
     }

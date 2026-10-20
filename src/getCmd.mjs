@@ -4,6 +4,16 @@ import isDate from 'lodash-es/isDate.js'
 import isarr from 'wsemi/src/isarr.mjs'
 import isbol from 'wsemi/src/isbol.mjs'
 import isstr from 'wsemi/src/isstr.mjs'
+import { YEAR_MIN, YEAR_MAX, inJetDate } from './dateRange.mjs'
+
+
+//以Date.prototype之方法取本地分量, 不讀物件自帶或子類別覆寫之方法, 令序列化之值即檢核之值(見dateRange.mjs)
+const getFullYear = Date.prototype.getFullYear
+const getMonth = Date.prototype.getMonth
+const getDate = Date.prototype.getDate
+const getHours = Date.prototype.getHours
+const getMinutes = Date.prototype.getMinutes
+const getSeconds = Date.prototype.getSeconds
 
 
 //產生送交Jet引擎執行之SQL文字
@@ -37,7 +47,7 @@ function escId(s) {
  *
  * 註: 字串以單引號包覆，內部單引號以連續兩個單引號跳脫(Jet之標準跳脫方式)
  * 註: 不可用N'...'前綴，該為SQL Server語法，Jet不支援
- * 註: 日期物件以#...#表示，字串則維持引號由Jet自行隱式轉換
+ * 註: 日期物件以#...#表示(本地分量，秒以下捨去；本地年須在100–9999，否則拋出，見dateRange.mjs)，字串則維持引號由Jet自行隱式轉換
  *
  * @param {*} v 輸入值
  * @returns {String} 回傳Jet值常值字串
@@ -62,12 +72,16 @@ function escVal(v) {
         return String(v)
     }
 
-    //date
+    //date, 本地年須在Jet可存放之範圍(Jet於年0–99靜默改年、年>=10000報語法錯), 越界者拋出且不回顯值;
+    //此為寫入前整批預檢(WOrmMdb.mjs之chkDates)之最後一道防線, 令任何寫入路徑皆不可能產出越界常值
     if (isDate(v)) {
+        if (!inJetDate(v)) {
+            throw new Error(`invalid data: date is not a valid time in years ${YEAR_MIN}-${YEAR_MAX}`)
+        }
         let p = (n, w = 2) => {
             return String(n).padStart(w, '0')
         }
-        let s = `${v.getFullYear()}-${p(v.getMonth() + 1)}-${p(v.getDate())} ${p(v.getHours())}:${p(v.getMinutes())}:${p(v.getSeconds())}`
+        let s = `${getFullYear.call(v)}-${p(getMonth.call(v) + 1)}-${p(getDate.call(v))} ${p(getHours.call(v))}:${p(getMinutes.call(v))}:${p(getSeconds.call(v))}`
         return `#${s}#`
     }
 

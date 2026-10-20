@@ -53,10 +53,28 @@ const CASES = [
     { key: 'rv:A7', find: () => ({ id: { $not: { $eq: 'a', $ne: 'b' } } }), exp: 'REJECT', rej: OP('$not') }, //1.0.36 命中 but(a)
     { key: 'rv:A7P', find: () => ({ id: { $eq: 'a', $ne: 'b' } }), exp: 'a' },
     { key: 'rv:A8', find: () => ({ id: { $not: { $gt: L300 } } }), exp: 'REJECT', rej: OP('$not') }, //1.0.36 為全部
-    { key: 'rv:A8P', find: () => ({ id: { $gt: L300 } }), exp: '' }, //已知限制(外審opus F2, 待主控裁示): 範圍界限為不可能存在之主鍵值(超過255字元)者恆不命中(同1.0.35); 嚴格語意上 id > 300個z 亦為無命中, 但 id < 300個z 應為全部(見rv:A9)
+    { key: 'rv:A8P', find: () => ({ id: { $gt: L300 } }), exp: '' }, //範圍界限為超過255字元者依欄型比較(LW6已解, R-FIND-03): id > 300個z 無命中(各id字串序皆小於300個z), 與非主鍵字串欄同
     { key: 'rv:A8b', find: () => ({ $not: { id: { $gt: L300 } } }), exp: 'REJECT', rej: OP('$not') }, //1.0.36 為全部
     { key: 'rv:A8c', find: () => ({ $nor: [{ id: { $gt: L300 } }] }), exp: 'REJECT', rej: OP('$nor') }, //1.0.36 為全部
-    { key: 'rv:A9', find: () => ({ id: { $lt: L300 } }), exp: '' }, //已知限制(外審opus F2, 待主控裁示): 同1.0.35恆不命中; 嚴格語意應為全部列(字串序皆小於300個z), 此斷言記錄現況而非應然
+    { key: 'rv:A9', find: () => ({ id: { $lt: L300 } }), exp: ALL }, //LW6已解(R2): 界限超過255字元者依欄型比較, 全部列(字串序皆小於300個z); 1.0.38 為恆不命中(靜默錯誤)
+
+    //new:LW6/LW2(第79項 run02, D7 R2/D8 選項B): 主鍵範圍運算子之非ok界限交cvFind依欄型比較或拒收; $ne:null交cvFind(IS NOT NULL)
+    { key: 'new:LW6a', find: () => ({ id: { $lte: L300 } }), exp: ALL },
+    { key: 'new:LW6b', find: () => ({ id: { $gte: L300 } }), exp: '' },
+    { key: 'new:LW6c', find: () => ({ id: { $gt: '' } }), exp: ALL }, //空字串為無效主鍵值, 但作為範圍界限有明確語意(皆大於空字串)
+    { key: 'new:LW6d', find: () => ({ id: { $lt: '' } }), exp: '' },
+    { key: 'new:LW6e', find: () => ({ id: { $gte: true } }), exp: 'REJECT', rej: /does not match column type \[str\]/ }, //1.0.38 為靜默無命中
+    { key: 'new:LW6f', find: () => ({ id: { $lt: new Date(2000, 0, 1) } }), exp: 'REJECT', rej: /does not match column type \[str\]/ },
+    { key: 'new:LW6g', find: () => ({ $and: [{ id: { $lt: L300 } }, { id: { $ne: 'a' } }] }), exp: but('a') }, //1.0.38: 恆假而回空
+    { key: 'new:LW6h', find: () => ({ $or: [{ id: { $gt: L300 } }, { id: 'a' }] }), exp: 'a' },
+    { key: 'new:LW6i', find: () => ({ $or: [{ id: { $lt: L300 } }, { id: 'zz-none' }] }), exp: ALL }, //1.0.38: 回 ''
+    { key: 'new:LW2a', find: () => ({ id: { $ne: null } }), exp: ALL }, //1.0.38 reject(LW2)
+    { key: 'new:LW2b', find: () => ({ $and: [{ id: { $ne: null } }, { id: { $ne: 'a' } }] }), exp: but('a') }, //dspec〈一之三〉6.之可攜寫法(排除NULL)套到主鍵欄
+    { key: 'new:LW2c', find: () => ({ id: { $ne: null, $gt: 'w' } }), exp: 'x_1' },
+    { key: 'new:LW2d', find: () => ({ $or: [{ id: { $ne: null } }, { name: 'zz' }] }), exp: ALL },
+    { key: 'new:LW2e', find: () => ({ $or: [{ id: null }, { id: { $ne: 'a' } }] }), exp: but('a') }, //含NULL之可攜寫法(原本即可用)
+    { key: 'new:LW2f', find: () => ({ id: { $eq: null } }), exp: '' }, //肯定語境之null主鍵值不命中(Q5維持)
+    { key: 'new:LW2g', find: () => ({ id: { $ne: undefined } }), exp: 'REJECT', rej: /undefined is not allowed/ }, //undefined仍reject
     { key: 'rv:A10', find: () => ({ id: { $not: [] } }), exp: 'REJECT', rej: OP('$not') }, //1.0.36 主鍵$not陣列即$nin, 空即恆成立而全部
     { key: 'rv:A11', find: () => ({ id: { $not: ['A '] } }), exp: 'REJECT', rej: OP('$not') }, //1.0.36 命中 but(a)
     { key: 'rv:A12', find: flipGetter, exp: 'REJECT', rej: /accessor/ }, //存取器一律reject(1.0.36 以快照令值只讀一次而命中 but(a))

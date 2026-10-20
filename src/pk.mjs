@@ -251,11 +251,15 @@ function isOpObj(c) {
  * 序號集合以佔位陣列置於條件內並列於回傳之slots(各含正規化後之主鍵值vals與佔位陣列is), 呼叫端以Jet判定命中列後以fillPkSlots就地填入,
  * 故命中判定與selectByPk、del等一致, 不經任何近似鍵
  * 註: 主鍵欄只認鍵與pk完全相符者(與reladb之cvFind之嚴格鍵一致), 大小寫或尾端空白不同之近似鍵原樣交cvFind拒收
- * 註: 範圍運算子($gt、$gte、$lt、$lte)以正規化值留於原欄比對(記憶體sqlite之語意, 為近似); 其餘運算子正常不可能到達(cvOrmFind已拒), 若到達則原樣留於原欄, 由cvFind再拒
- * 註: 肯定語境($eq、$in、隱含等值、範圍運算子)之無效、型別不符、不可能存在之值不命中(範圍運算子亦同, 不留null給cvFind);
- * 否定語境($ne、$nin)之無效或型別不符之值(如null、布林、Date)一律拋出:
- * 依[無效值不命中]推得之否定為[全部命中], 用於delAll即清空全表, 而此類值多為呼叫端之錯誤(如變數為null);
+ * 註: 範圍運算子($gt、$gte、$lt、$lte)留於原欄依記憶體sqlite比較(近似): 界限為有效主鍵值(ok)時以正規化值比較, 其餘(無效、型別不符、不可能存在)原樣留於原欄交cvFind依欄型比較或拒收
+ * (整數主鍵之k > 2.5應命中3、4、5, id < 300個z應為全部; cvFind欄型檢核不接受者如整數主鍵給'abc'、布林、Date則reject), 不改寫為恆假(LW6);
+ * 其餘運算子正常不可能到達(cvOrmFind已拒), 若到達則原樣留於原欄, 由cvFind再拒
+ * 註: 等值類肯定語境($eq、$in、隱含等值)之無效、型別不符、不可能存在之值不命中(對等值而言不可能等於主鍵欄之值即不命中, 本就正確, 不留null給cvFind);
+ * 否定語境($ne、$nin)之無效或型別不符之值(如布林、Date、空字串)一律拋出:
+ * 依[無效值不命中]推得之否定為[全部命中], 用於delAll即清空全表, 而此類值多為呼叫端之錯誤;
  * 不可能存在之值於否定語境依其語意為必不相等
+ * 註: $ne:null不是無效值而是[非NULL]: 原樣留於原欄交cvFind轉為IS NOT NULL(與非主鍵欄、reladb相同, 令dspec之可攜寫法於主鍵欄亦可用; LW2);
+ * 呼叫端若以變數為值, 變數為null時delAll({pk:{$ne:變數}})即刪除全部非NULL主鍵之列(JSDoc已載); {pk:null}、$eq:null維持肯定語境無效值不命中
  * 註: 非運算子物件(如{})視為主鍵值而非條件, 屬無效值, 不得因其無運算子而使主鍵條件消失(cvOrmFind已拒空運算子物件, 此為單獨呼叫本函數時之防線)
  * 註: 主鍵所衍生之序號條件併入同一物件(欄位wi之運算子物件{$in,$nin}), 不增巢狀層(增層會把合法深度放大而於其後cvFind內之再檢核被拒); 同運算子重複者才另以字串鍵{$and:[其餘, ...]}置放;
  * 邏輯陣列之元素若其主鍵條件皆化簡掉(如$ne僅含不可能存在之值)則以恆真之序號條件{wi:{$nin:[-1]}}代替空物件(白名單拒空條件); 不得用sequelize之Symbol Op(cvOrmFind拒Symbol鍵, reladb 1.1.10之cvFind對其reject)
@@ -316,13 +320,11 @@ function castPkFind(find, pk, tp, wi) {
         return { [wi]: { $nin: slot(vals) } }
     }
 
-    //rangeVal, 範圍運算子之值: ok回{v}; 其餘(無效、型別不符與不可能存在)回{no:true}表該子式不命中
+    //rangeVal, 範圍運算子之值: ok回正規化值; 其餘(無效、型別不符與不可能存在)原樣回傳, 留於原欄交cvFind依欄型比較或拒收
+    //註: 對範圍而言不可能存在之界限仍有明確語意(整數主鍵之k > 2.5應命中3、4、5; id < 300個z應為全部), 改寫為恆假會靜默回錯誤結果(LW6)
     function rangeVal(v) {
         let r = normPk(v, tp)
-        if (r.kind === 'ok') {
-            return { v: r.v }
-        }
-        return { no: true }
+        return r.kind === 'ok' ? r.v : v
     }
 
     //push
@@ -349,19 +351,18 @@ function castPkFind(find, pk, tp, wi) {
                 push(conds, cIn(normVals(v, false, path)))
             }
             else if (k === '$ne') {
-                push(conds, cNin(normVals([v], true, `${path}.$ne`)))
+                if (v === null) {
+                    putProp(org, k, v) //$ne:null不是無效值而是[非NULL], 留於原欄交cvFind轉為IS NOT NULL(LW2)
+                }
+                else {
+                    push(conds, cNin(normVals([v], true, `${path}.$ne`)))
+                }
             }
             else if (k === '$nin') {
                 push(conds, cNin(normVals(v, true, `${path}.$nin`)))
             }
             else if (OPS_RANGE.indexOf(k) >= 0) {
-                let r = rangeVal(v)
-                if (r.no) {
-                    push(conds, cIn([]))
-                }
-                else {
-                    putProp(org, k, r.v)
-                }
+                putProp(org, k, rangeVal(v))
             }
             else {
                 putProp(org, k, v)
