@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkFindColKind">chkFindColKind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -374,6 +374,275 @@
 </dl>
 
     
+
+
+
+        
+            
+
+    
+
+    <h4 class="name" id="chkFindColKind"><span class="type-signature"></span>chkFindColKind<span class="signature">(attrs, find, path<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>核對條件只引用被model宣告為白名單欄型之欄(R-FLOAT-07, 原LFL5、LFL7)</p>
+<p>白名單欄型: reladb之getColKind分類為str(STRING、TEXT、CHAR、CITEXT、UUID)、int(INTEGER、BIGINT、SMALLINT、MEDIUMINT、TINYINT)、
+num(FLOAT、REAL、DOUBLE、DECIMAL、NUMBER)、date(DATE)、dateonly(DATEONLY)、bool(BOOLEAN)者，即Jet欄型可對應者；
+其餘(any: TIME、ENUM、JSON、JSONB、BLOB、UUIDV1、UUIDV4、NOW、ARRAY、RANGE、GEOMETRY、GEOGRAPHY、HSTORE、INET、CIDR、MACADDR、TSVECTOR)被條件引用者一律拒收
+註: Jet欄型只有文字、數值、日期時間、是否等，沒有上列型別(TIME更無[僅時間]型別)，於model宣告者必為誤宣告或無法對應；
+reladb之getColKind將其歸any(不換算日期、不檢核值型別)，記憶體過濾表之欄亦不是CITEXT，條件交sqlite比較而與Jet原生不同(真Jet實測):
+文字欄分大小寫(delAll({name:{$ne:'APPLE'}})多刪apple)、日期時間欄以文字比較(空白分隔與T不等，$ne多命中)、
+TIME之delAll({dt:{$gt:'12:00:00'}})多刪早於12:00之列、ENUM/BLOB宣告於DOUBLE欄時數值依文字序比較。
+本套件不改寫非主鍵條件(R-FIND-00)，故改為fail-closed；欄須如實宣告為上列白名單欄型(Jet之DATETIME宣告為DATE，時間值以1899-12-30為日期)
+註: 以屬性名或資料庫欄名(attr.field)完全相符解析欄位(與cvFind之嚴格鍵一致，歧義與不存在者留給cvFind拒收)；以getColKind(含type.key後備)判定而不用instanceof(重複安裝兩份sequelize時instanceof為假)；
+VIRTUAL非資料庫欄，不在此判，交cvFind以unknown column name拒收；路徑格式同cvFind之find.欄名，
+訊息固定詞彙(型別名稱取自model之type.key，非條件值；無法辨識者為unknown)而不回顯條件值；不引用該欄者(含空條件)不受影響
+註: 須於讀取全表與寫入前呼叫(見WOrmMdb.mjs之findAll)，令拒收時不讀、不寫、不刪</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line103">line 103</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-parameters">Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>attrs</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入資料表欄位定義物件，取自model之rawAttributes</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>find</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入查詢條件物件(normFind回傳之複本)</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>path</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>'find'</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入訊息所用之路徑前綴，供遞迴使用</p></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-throws">Throws:</h5>
+
+        
+
+<dl>
+    <dt>
+        <div class="param-desc usertext">
+        <p>引用非白名單欄型之欄時拋出invalid find: column type &lt;型別&gt; is not supported at [路徑]</p>
+        </div>
+    </dt>
+    <dd></dd>
+    <dt>
+        <dl class="param-type">
+            <dt>
+                Type
+            </dt>
+            <dd>
+                
+<span class="param-type">Error</span>
+
+
+
+            </dd>
+        </dl>
+    </dt>
+    <dd></dd>
+</dl>
+
+
+    
+
+
 
 
 
@@ -4712,8 +4981,13 @@ Symbol鍵與不可列舉之鍵會被丟棄, 條件因而變成{}而使delAll刪�
 令尾端空白、全半形、平片假名、非ASCII大小寫等變體之命中與selectByPk、insert、save、del一致
 註: 條件由w-orm-reladb之cvFind轉譯(非主鍵條件之欄位型別/DATE/嚴格鍵單一擁有者; 運算子白名單與形狀層由wsemi之cvOrmFind檢核, 入口已於WOrmMdb.mjs之normFind完成, cvFind對複本再檢核一次, 冪等)，
 ctx依其帳本之深引用者接線契約: attrs取過濾表本身之rawAttributes(字串欄為CITEXT、含序號欄)、
-dateNoTz為'local'(Jet之DATETIME無時區, 無時區字串依主機時區)；不傳pk(主鍵等值由Jet判定, 不交sqlite)；
+dateNoTz為'floating'(Jet之DATETIME為無時區牆上時間: 條件值一律換算為牆上時間分量再作為UTC瞬間, 與主機時區無關)；不傳pk(主鍵等值由Jet判定, 不交sqlite)；
 reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
+註: 浮動時間之契約(reladb帳本R14, 本套件帳本R-FLOAT): ①數據側須同進同退——DATE欄之資料值(Jet回傳之牆上時間字串)入表前一律經toFloating換算為同一空間，
+混用(條件走floating而數據未換算)為靜默誤命中，故二者同在本函數；②toFloating回傳null者(無法換算)整批拒收，不得以原值或NULL代入
+(NULL使該列於範圍條件不命中而IS NULL命中，與要修之誤刪同型)，null/undefined之值不動；③記憶體表之Date為編碼後之浮動時間，不得回傳或回灌為條件
+(本函數回傳Jet原列而非記憶體表之Date)；DATE欄之判定與cvFind條件側同用reladb之getColKind(單一擁有者)
+註: 修前('local')於負偏移時區主機，Jet本地9999年末之哨兵列(9999-12-31 23:59:59)換算為UTC年10000而使範圍條件結果錯誤、delAll誤刪(原已知限制LF8)，夏令跳過之牆上時刻亦被正規化(原LF4)；浮動時間皆已解
 註: 原列序號欄之名稱由呼叫端以genInnerKeys產生(附加亂數)，與castPkFind所用者須相同，且不與使用者之欄位或條件同名
 註: 過濾表以原列序號keys.wi為主鍵，主鍵欄不設主鍵與唯一；
 結果依序號取回Jet之原列並依Jet回傳序排列，故select之內容即Jet原值(如DATE欄之字串、BOOLEAN欄之true/false)，
@@ -4723,7 +4997,7 @@ reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line105">line 105</a>
+        <a href="queryMemory.mjs.html">queryMemory.mjs</a>, <a href="queryMemory.mjs.html#line186">line 186</a>
     </li></ul></dd>
     
 
@@ -5020,7 +5294,7 @@ reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 21 2026 04:36:58 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 21 2026 15:27:28 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
