@@ -128,8 +128,8 @@ const CASES = [
     { key: 'K15', find: () => ({ id: { $in: 'a' } }), exp: 'REJECT', rej: /value must be an array/ }, //$in之值須為陣列(1.0.36 主鍵$in純量視為單元素陣列而命中 a)
     { key: 'K15P', find: () => ({ id: { $in: ['a'] } }), exp: 'a' },
 
-    //D: DATE 欄(reladb R4; dateNoTz:'local', Q3)
-    { key: 'D1', find: () => ({ dt: '2026-01-01T00:00:00' }), exp: 'a' }, //Jet回傳格式之無時區字串依主機時區
+    //D: DATE 欄(reladb R4; dateNoTz:'floating' 自第87項B4起〔原 'local', Q3〕: 無時區字串取其牆上分量, Date/epoch/帶時區字串取瞬間於主機時區之本地分量; 語意不變)
+    { key: 'D1', find: () => ({ dt: '2026-01-01T00:00:00' }), exp: 'a' }, //Jet回傳格式之無時區字串(取其牆上分量)
     { key: 'D2', find: () => ({ dt: new Date(2026, 0, 1) }), exp: 'a' },
     { key: 'D3', find: () => ({ dt: { $gt: '2026-03-01T00:00:00+08:00' } }), exp: 'b,d' },
     { key: 'D4', find: () => ({ dt: { $lt: 'garbage' } }), exp: 'REJECT' }, //1.0.35誤刪

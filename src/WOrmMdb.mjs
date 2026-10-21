@@ -35,7 +35,7 @@ import {
     getDeleteByPk,
     getDeleteAll
 } from './getCmd.mjs'
-import { initSequelize, queryMemory } from './queryMemory.mjs'
+import { initSequelize, queryMemory, chkFindColKind } from './queryMemory.mjs'
 import { YEAR_MIN, YEAR_MAX, normDates } from './dateRange.mjs'
 import { TPS_STR, getPkType, chkPkWf, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys } from './pk.mjs'
 
@@ -87,7 +87,7 @@ const MAX_LIST = 999
  * 字串包裝物件、陣列等非Date物件以String(v)取字串(同寫出時之序列化)判定；其餘字串、數值、布林交Jet判定(現況行為不變)；change事件之data帶正規化值
  * 註: 字串之預檢依model欄型(DATE/DATEONLY)判定，model須把Jet之DATETIME欄宣告為DATE或DATEONLY(宣告為TIME或STRING者字串不預檢)；
  * 資料列之Function或Error列、覆寫valueOf/constructor/Symbol.toStringTag之Date子類別不在保證範圍(已知限制LD5、LD6)；原型鏈上帶getter之列(類別實例等)自第66項起於呼叫當下攤平為純資料(見字串良構檢核之說明), 不再有「兩次讀值可能不同」之問題
- * 註: 負偏移時區主機含9999年末日哨兵列時之日期範圍條件見已知限制LF8(select之使用須知6.)
+ * 註: DATE欄之日期條件以牆上時間(浮動時間)比較，與主機時區無關，負偏移時區主機含9999年末日哨兵列時亦正確(原已知限制LF8，第87項B4已解；見select之使用須知6.)
  * 註: 字串良構檢核(第66項，見CLAUDE_rulebook.md之R-WF)：本套件與Jet之間經UTF-8交換資料，孤立代理碼元(String.prototype.isWellFormed()為false)會被改寫為U+FFFD，
  * 使不同主鍵寫成同一鍵、寫入值與讀回值不同，故一律拒收。(1)主鍵(字串)不得含NUL或孤立代理；(2)寫入資料(insert、insertBulk、save)之鍵名與字串值
  * (含巢狀物件、陣列元素、Map與Set等；model外之鍵亦檢)不得含孤立代理，值之NUL不拒；(3)opt.db、opt.cl、opt.url、opt.storage、opt.pk不得含孤立代理，建構時throw invalid opt.名稱: string contains lone surrogate。
@@ -719,6 +719,9 @@ function WOrmMdb(opt = {}) {
         let attrs = get(md, 'rawAttributes', {})
         let pkType = getMdPkType(md)
 
+        //check, 條件引用model宣告為非白名單欄型(TIME、ENUM、JSON、BLOB等)之欄者一律拒收(R-FLOAT-07), 先於讀取全表與其後之任何寫入; select與delAll共用
+        chkFindColKind(attrs, find)
+
         //data, 先查詢出access mdb內全部資料
         let data = await si.jet.query(getSelectAll(opt.cl))
 
@@ -767,13 +770,19 @@ function WOrmMdb(opt = {}) {
      *    null僅可用於欄位等值、$eq、$ne。白名單外之運算子($not $nor $regex $options $exists $where $expr $like $ilike等)、
      *    欄位層$and/$or、子查詢、函數值、Symbol鍵、undefined值、空的$nin/$and/$or、白名單外之欄名(須為model之屬性且符合^[\p{L}_][\p{L}\p{M}\p{N}_]*$)等
      *    一律整批reject，訊息為invalid find: 原因 at [路徑]。
-     * 4. 值依欄位型別檢核，DATE欄之無時區字串依主機時區；主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-WL、R-FIND、R-PK)；
+     * 4. 值依欄位型別檢核，DATE欄之日期條件為浮動時間(牆上時間，見6.)；主鍵等值類條件由Jet判定命中，與selectByPk、del一致(見CLAUDE_rulebook.md之R-WL、R-FIND、R-PK)；
      *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)；主鍵之$ne:null與其他欄位相同，意為[非NULL](主鍵不會是NULL，故命中全部列)，可攜寫法亦可用於主鍵欄；
      *    主鍵之範圍運算子($gt $gte $lt $lte)與其他欄位相同依欄位型別比較: 界限為整數主鍵之2.5、或超過255字元之字串亦正確比較，與欄位型別不符者(如整數主鍵給'abc'、布林)reject。
      * 5. 語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
      *    排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。
-     * 6. DATE欄之日期條件依主機時區解析；負偏移時區(如America/Los_Angeles)之主機，Jet內本地時間9999年末幾小時之列(如9999-12-31 23:59:59之[永不過期]哨兵)
-     *    於範圍條件會得到錯誤結果(記憶體sqlite以UTC文字比較)，delAll以日期範圍條件刪除時尤須留意(已知限制LF8，待reladb支援後處理)；正偏移時區與UTC不受影響。
+     * 6. DATE欄之日期條件以牆上時間(浮動時間)比較，與主機時區及夏令無關(Jet之DATETIME為無時區牆上時間)：無時區字串(yyyy-MM-ddTHH:mm:ss，T或單一空白分隔)直接取其牆上分量；
+     *    Date、epoch與帶時區之ISO字串先得瞬間，再取其於主機時區之本地分量(new Date(2026,0,1)即2026-01-01 00:00:00)；純日期字串reject。
+     *    負偏移時區主機(如America/Los_Angeles)含9999-12-31 23:59:59之[永不過期]哨兵列時，範圍條件與delAll亦正確(原已知限制LF8、LF4，第87項B4已解)。
+     *    Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換算者(如model宣告DATE而資料表欄實為任意文字)整批reject，訊息invalid data: date can not be converted to floating time at [row[索引].欄位名](不回顯值)；含不帶條件之select()亦然(全表與帶條件走同一路徑)，不帶條件之delAll()走DELETE FROM不經記憶體過濾故不受影響；條件值本身不合法者由cvFind先行拒收(invalid find)，先於資料列換算。
+     * 7. 條件只可引用model宣告為Jet可對應欄型之欄: STRING、TEXT、CHAR、CITEXT、UUID(文字)，INTEGER、BIGINT、SMALLINT、MEDIUMINT、TINYINT(整數)，FLOAT、REAL、DOUBLE、DECIMAL、NUMBER(數值)，DATE、DATEONLY(日期時間)，BOOLEAN(是否)。
+     *    引用其他欄型(TIME、ENUM、JSON、JSONB、BLOB、UUIDV1、UUIDV4、NOW、ARRAY、RANGE、GEOMETRY、GEOGRAPHY、HSTORE、INET、CIDR、MACADDR、TSVECTOR)之欄(任何運算子與值形式、含null、含巢狀$and/$or、屬性名或資料庫欄名皆算)者一律整批reject，
+     *    訊息invalid find: column type <型別> is not supported at [find.欄名]，先於讀取全表與任何刪除，不回顯值(R-FLOAT-07)。Jet欄型沒有這些型別(TIME更無[僅時間]型別)，宣告必為誤宣告，記憶體過濾將以與Jet不同之方式比較(如文字欄分大小寫、日期時間欄依文字比較，delAll會多刪)；
+     *    請把Jet之文字欄宣告為STRING/TEXT、整數欄INTEGER、浮點欄DOUBLE、DATETIME欄DATE(或DATEONLY)、是否欄BOOLEAN。不引用該欄者(含select()與delAll())不受影響。
      *
      * 註: 恆回傳陣列，無符合數據回傳空陣列而不回傳null
      * 註: 條件之入口形狀檢核(白名單、純量型別、欄名文法、上限、異常結構)先於載入model、讀取與連線，未通過者不開啟資料庫檔、不送SQL，並以整批性錯誤reject(發出一次error事件，不發change事件)；
@@ -1981,7 +1990,8 @@ function WOrmMdb(opt = {}) {
      *    整個find內相異主鍵值總數亦至多2000(跨陣列合計)；主鍵之$ne:null與其他欄位相同，意為[非NULL]，命中全部列；主鍵之範圍運算子依欄位型別比較(見select)。
      * 5. 條件值若來自可能為undefined、null或空陣列之變數，呼叫端須先自行判斷；undefined值會reject而非被忽略，
      *    空的$nin會reject，$in:[]則為恆假(刪除0筆)；注意delAll({pk:{$ne:變數}})於變數為null時等同全刪(非NULL主鍵之列全部命中，與非主鍵欄相同)。
-     *    負偏移時區主機以DATE範圍條件刪除時，9999年末日之哨兵列可能被誤刪(已知限制LF8，見select)。
+     *    DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主機以DATE範圍條件刪除時亦不誤刪9999年末日之哨兵列(原已知限制LF8，第87項B4已解；見select之使用須知6.)。
+     *    條件引用model宣告為非Jet可對應欄型(TIME、ENUM、JSON、BLOB等)之欄時整批reject，不刪除任何數據(見select之使用須知7.)。
      * 6. 語意差異(SQL式): $ne/$nin不命中NULL(三值邏輯)；字串比對不分大小寫(Jet)。需明確表達時可用可攜寫法:
      *    排除NULL為{$and:[{f:{$ne:null}},{f:{$ne:x}}]}，含NULL為{$or:[{f:null},{f:{$ne:x}}]}。
      *

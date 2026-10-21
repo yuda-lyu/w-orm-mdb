@@ -4,7 +4,7 @@ import get from 'lodash-es/get.js'
 import isarr from 'wsemi/src/isarr.mjs'
 import arrHas from 'wsemi/src/arrHas.mjs'
 import pm2resolve from 'wsemi/src/pm2resolve.mjs'
-import cvFind from 'w-orm-reladb/src/cvFind.mjs'
+import cvFind, { getColKind, toFloating } from 'w-orm-reladb/src/cvFind.mjs'
 import importModels from './importModels.mjs'
 import { TPS_STR, genInnerKeys } from './pk.mjs'
 
@@ -80,6 +80,82 @@ function getTypeNocase(tp) {
 
 
 /**
+ * 核對條件只引用被model宣告為白名單欄型之欄(R-FLOAT-07, 原LFL5、LFL7)
+ *
+ * 白名單欄型: reladb之getColKind分類為str(STRING、TEXT、CHAR、CITEXT、UUID)、int(INTEGER、BIGINT、SMALLINT、MEDIUMINT、TINYINT)、
+ * num(FLOAT、REAL、DOUBLE、DECIMAL、NUMBER)、date(DATE)、dateonly(DATEONLY)、bool(BOOLEAN)者，即Jet欄型可對應者；
+ * 其餘(any: TIME、ENUM、JSON、JSONB、BLOB、UUIDV1、UUIDV4、NOW、ARRAY、RANGE、GEOMETRY、GEOGRAPHY、HSTORE、INET、CIDR、MACADDR、TSVECTOR)被條件引用者一律拒收
+ * 註: Jet欄型只有文字、數值、日期時間、是否等，沒有上列型別(TIME更無[僅時間]型別)，於model宣告者必為誤宣告或無法對應；
+ * reladb之getColKind將其歸any(不換算日期、不檢核值型別)，記憶體過濾表之欄亦不是CITEXT，條件交sqlite比較而與Jet原生不同(真Jet實測):
+ * 文字欄分大小寫(delAll({name:{$ne:'APPLE'}})多刪apple)、日期時間欄以文字比較(空白分隔與T不等，$ne多命中)、
+ * TIME之delAll({dt:{$gt:'12:00:00'}})多刪早於12:00之列、ENUM/BLOB宣告於DOUBLE欄時數值依文字序比較。
+ * 本套件不改寫非主鍵條件(R-FIND-00)，故改為fail-closed；欄須如實宣告為上列白名單欄型(Jet之DATETIME宣告為DATE，時間值以1899-12-30為日期)
+ * 註: 以屬性名或資料庫欄名(attr.field)完全相符解析欄位(與cvFind之嚴格鍵一致，歧義與不存在者留給cvFind拒收)；以getColKind(含type.key後備)判定而不用instanceof(重複安裝兩份sequelize時instanceof為假)；
+ * VIRTUAL非資料庫欄，不在此判，交cvFind以unknown column name拒收；路徑格式同cvFind之find.欄名，
+ * 訊息固定詞彙(型別名稱取自model之type.key，非條件值；無法辨識者為unknown)而不回顯條件值；不引用該欄者(含空條件)不受影響
+ * 註: 須於讀取全表與寫入前呼叫(見WOrmMdb.mjs之findAll)，令拒收時不讀、不寫、不刪
+ *
+ * @param {Object} attrs 輸入資料表欄位定義物件，取自model之rawAttributes
+ * @param {Object} find 輸入查詢條件物件(normFind回傳之複本)
+ * @param {String} [path='find'] 輸入訊息所用之路徑前綴，供遞迴使用
+ * @throws {Error} 引用非白名單欄型之欄時拋出invalid find: column type <型別> is not supported at [路徑]
+ */
+function chkFindColKind(attrs, find, path = 'find') {
+
+    //attrs
+    attrs = attrs || {}
+
+    //check
+    if (find === null || typeof find !== 'object' || Array.isArray(find)) {
+        return
+    }
+
+    //typeOf, 屬性名優先, 否則以資料庫欄名解析; 回傳非白名單欄型之名稱, 白名單欄型與VIRTUAL回傳null
+    let typeOf = (name) => {
+        let ans = [name]
+        if (!Object.prototype.hasOwnProperty.call(attrs, name)) {
+            ans = Object.keys(attrs).filter((k) => {
+                return get(attrs, [k, 'field']) === name
+            })
+        }
+        for (let a of ans) {
+            if (getColKind(attrs, a) !== 'any') {
+                continue
+            }
+            let key = get(attrs, [a, 'type', 'key'])
+            if (key === 'VIRTUAL') {
+                continue
+            }
+            if (typeof key === 'string' && /^[A-Z][A-Z0-9 _]{0,31}$/.test(key)) {
+                return key
+            }
+            return 'unknown'
+        }
+        return null
+    }
+
+    for (let k of Object.keys(find)) {
+        let v = find[k]
+        let kp = `${path}.${k}`
+        if (k === '$and' || k === '$or') {
+            if (isarr(v)) {
+                v.forEach((x, i) => {
+                    chkFindColKind(attrs, x, `${kp}[${i}]`)
+                })
+            }
+        }
+        else if (k[0] !== '$') {
+            let t = typeOf(k)
+            if (t !== null) {
+                throw new Error(`invalid find: column type ${t} is not supported at [${kp}]`)
+            }
+        }
+    }
+
+}
+
+
+/**
  * 於記憶體內過濾數據
  *
  * 因Access之SQL方言不支援$in、$nin等條件，故由Jet取回全部數據後於記憶體sqlite內過濾
@@ -88,8 +164,13 @@ function getTypeNocase(tp) {
  * 令尾端空白、全半形、平片假名、非ASCII大小寫等變體之命中與selectByPk、insert、save、del一致
  * 註: 條件由w-orm-reladb之cvFind轉譯(非主鍵條件之欄位型別/DATE/嚴格鍵單一擁有者; 運算子白名單與形狀層由wsemi之cvOrmFind檢核, 入口已於WOrmMdb.mjs之normFind完成, cvFind對複本再檢核一次, 冪等)，
  * ctx依其帳本之深引用者接線契約: attrs取過濾表本身之rawAttributes(字串欄為CITEXT、含序號欄)、
- * dateNoTz為'local'(Jet之DATETIME無時區, 無時區字串依主機時區)；不傳pk(主鍵等值由Jet判定, 不交sqlite)；
+ * dateNoTz為'floating'(Jet之DATETIME為無時區牆上時間: 條件值一律換算為牆上時間分量再作為UTC瞬間, 與主機時區無關)；不傳pk(主鍵等值由Jet判定, 不交sqlite)；
  * reladb 1.1.10起ctx.escape與ctx.dialect已不使用($regex已移除), 故不傳
+ * 註: 浮動時間之契約(reladb帳本R14, 本套件帳本R-FLOAT): ①數據側須同進同退——DATE欄之資料值(Jet回傳之牆上時間字串)入表前一律經toFloating換算為同一空間，
+ * 混用(條件走floating而數據未換算)為靜默誤命中，故二者同在本函數；②toFloating回傳null者(無法換算)整批拒收，不得以原值或NULL代入
+ * (NULL使該列於範圍條件不命中而IS NULL命中，與要修之誤刪同型)，null/undefined之值不動；③記憶體表之Date為編碼後之浮動時間，不得回傳或回灌為條件
+ * (本函數回傳Jet原列而非記憶體表之Date)；DATE欄之判定與cvFind條件側同用reladb之getColKind(單一擁有者)
+ * 註: 修前('local')於負偏移時區主機，Jet本地9999年末之哨兵列(9999-12-31 23:59:59)換算為UTC年10000而使範圍條件結果錯誤、delAll誤刪(原已知限制LF8)，夏令跳過之牆上時刻亦被正規化(原LF4)；浮動時間皆已解
  * 註: 原列序號欄之名稱由呼叫端以genInnerKeys產生(附加亂數)，與castPkFind所用者須相同，且不與使用者之欄位或條件同名
  * 註: 過濾表以原列序號keys.wi為主鍵，主鍵欄不設主鍵與唯一；
  * 結果依序號取回Jet之原列並依Jet回傳序排列，故select之內容即Jet原值(如DATE欄之字串、BOOLEAN欄之true/false)，
@@ -161,15 +242,33 @@ async function queryMemory(opt, attrs, data, find, keys) {
         //where, 以cvFind轉譯, 條件不合法時拋錯; 先於寫入數據, 拒收時不做無謂之寫入
         let where = cvFind(find, {
             attrs: md.rawAttributes,
-            dateNoTz: 'local',
+            dateNoTz: 'floating',
         })
 
         //sync
         await md.sync()
 
-        //bulkCreate
+        //dateCols, DATE欄(與cvFind條件側同用getColKind判定, 令兩側對DATE欄之認定一致)
+        let dateCols = Object.keys(md.rawAttributes).filter((k) => {
+            return k !== keys.wi && getColKind(md.rawAttributes, k) === 'date'
+        })
+
+        //bulkCreate, DATE欄之值經toFloating換算為浮動時間(牆上時間分量作為UTC瞬間), 與條件側(dateNoTz:'floating')處於同一空間
+        //換算失敗(null)者整批拒收, 不得以原值或NULL代入; null與undefined不動(訊息不回顯值)
         let rows = data.map((v, i) => {
-            return { ...v, [keys.wi]: i }
+            let r = { ...v, [keys.wi]: i }
+            for (let k of dateCols) {
+                let x = r[k]
+                if (x === null || x === undefined) {
+                    continue
+                }
+                let t = toFloating(x)
+                if (t === null) {
+                    throw new Error(`invalid data: date can not be converted to floating time at [row[${i}].${k}]`)
+                }
+                r[k] = t
+            }
+            return r
         })
         await md.bulkCreate(rows)
 
@@ -203,4 +302,4 @@ async function queryMemory(opt, attrs, data, find, keys) {
 }
 
 
-export { initSequelize, queryMemory }
+export { initSequelize, queryMemory, chkFindColKind }
