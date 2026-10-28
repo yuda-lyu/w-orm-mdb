@@ -117,7 +117,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line119">line 119</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line122">line 122</a>
     </li></ul></dd>
     
 
@@ -289,7 +289,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
                 </td>
             
 
-            <td class="description last"><p>輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'</p></td>
+            <td class="description last"><p>輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'。解析失敗時建構函式拋出之Error訊息為<code>原因, opt.url[遮罩後連線字串]</code>(前綴與Error型態不變)：://之後一律不回顯(回顯為<code>scheme://***</code>，連線字串無主機，@之後可能是密碼之後半)，無://者為<code>***</code>，scheme須為識別字否則為<code>***</code>；<code>dialect[…] is not mdb</code>之dialect於無://或不合scheme樣式時亦為<code>***</code></p></td>
         </tr>
 
     
@@ -569,7 +569,87 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
                 </td>
             
 
-            <td class="description last"><p>輸入是否輸出實際執行的sql指令布林值，預設false</p></td>
+            <td class="description last"><p>輸入是否紀錄記憶體過濾表實際執行的sql指令布林值，預設false。為true時預設只輸出敘述種類(如SELECT)，不輸出sql全文：select之過濾表以INSERT寫入各列欄位值、以WHERE帶入條件值，需搭配opt.logDetail或opt.funLog才取得sql全文，有洩漏個資之風險，僅供除錯使用(送往Jet引擎之語句不在此紀錄)</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>logDetail</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>false</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入是否還原診斷輸出之完整細節布林值，預設false，型別錯誤者視同false。診斷輸出(console)預設只含固定標籤與不含個資之摘要(不含資料值、id、後端錯誤原文、路徑)；為true時還原為含細節的輸出(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。連線字串與帳密於任何情形皆以***遮罩</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>funLog</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>null</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入診斷輸出函數(label, safe, detail)，預設無，型別錯誤者視同未給。給予時診斷輸出只交給它而不寫console：label為固定標籤字串，safe為不含個資之摘要物件(可能為undefined)，detail為完整細節之遮罩拷貝(可能無此引數；連線字串與帳密已以***遮罩；深度與大小有上限，函數、二進位資料、Map/Set、存取器以標記字串代替，不沿用原型，不執行使用端程式)，供使用端遮罩後轉送。函數拋錯或回傳reject之promise皆被吞下，不影響各操作之結果</p></td>
         </tr>
 
     
@@ -787,7 +867,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2140">line 2140</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2158">line 2158</a>
     </li></ul></dd>
     
 
@@ -905,7 +985,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1775">line 1775</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1793">line 1793</a>
     </li></ul></dd>
     
 
@@ -1219,7 +1299,7 @@ DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2013">line 2013</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2031">line 2031</a>
     </li></ul></dd>
     
 
@@ -1501,13 +1581,14 @@ DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主�
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>由資料表物件生成各資料表的models資料</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>由資料表物件生成各資料表的models資料</p>
+<p>註: 其診斷輸出(檔案路徑、存檔失敗之錯誤)經本實例之診斷輸出單一出口(以第4個引數傳給w-orm-reladb，須≥1.1.17)，預設只輸出固定標籤與不含個資之摘要，opt.logDetail與opt.funLog可取得細節</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2171">line 2171</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2191">line 2191</a>
     </li></ul></dd>
     
 
@@ -1816,7 +1897,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line513">line 513</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line531">line 531</a>
     </li></ul></dd>
     
 
@@ -1937,7 +2018,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1059">line 1059</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1077">line 1077</a>
     </li></ul></dd>
     
 
@@ -2276,7 +2357,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1255">line 1255</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1273">line 1273</a>
     </li></ul></dd>
     
 
@@ -2583,7 +2664,7 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1403">line 1403</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1421">line 1421</a>
     </li></ul></dd>
     
 
@@ -2937,7 +3018,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line798">line 798</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line816">line 816</a>
     </li></ul></dd>
     
 
@@ -3231,7 +3312,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line873">line 873</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line891">line 891</a>
     </li></ul></dd>
     
 
@@ -3517,7 +3598,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 28 2026 02:01:24 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 28 2026 11:52:59 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

@@ -15,16 +15,20 @@ import { TPS_STR, genInnerKeys } from './pk.mjs'
  * 註: 本實例僅用於由sequelize產生SQL文字(見getCmd.mjs), 實際數據操作一律交Jet引擎,
  * 故其資料表為記憶體sqlite且不承載任何數據
  *
+ * 註: logging只在opt.logging為true且給予logSql時啟用, 且一律為函數(R-DIAG-04): 傳true時sequelize以console.log輸出sql全文(含欄位值與條件值)並觸發deprecation警告,
+ * 輸出須經getDiag之單一出口, 故不直接傳true
+ *
  * @param {Object} opt 輸入設定物件
+ * @param {Function} [logSql=null] 輸入sequelize之logging函數(sql全文), 未給則不輸出
  * @returns {Promise} 回傳Promise，resolve回傳{sequelize,mds}
  */
-async function initSequelize(opt) {
+async function initSequelize(opt, logSql = null) {
 
     //sequelize, 需使用物件式設定, 若用連線字串[sqlite::memory:]因非合法URL, 會被node的url.parse觸發DEP0170棄用警告
     let setOpt = {
         dialect: 'sqlite',
         storage: ':memory:',
-        logging: opt.logging,
+        logging: opt.logging === true && typeof logSql === 'function' ? logSql : false,
         define: {
             timestamps: false
         },
@@ -181,9 +185,10 @@ function chkFindColKind(attrs, find, path = 'find') {
  * @param {Array} data 輸入待過濾之數據陣列
  * @param {Object} find 輸入查詢條件物件，主鍵條件須已經castPkFind改寫，其餘為呼叫端之原始條件
  * @param {Object} [keys] 輸入原列序號欄之名稱{wi}，未給則自行產生(此時條件不得引用序號欄)
+ * @param {Function} [logSql=null] 輸入sequelize之logging函數(sql全文含過濾表之欄位值與條件值, 見initSequelize之說明)，未給則不輸出
  * @returns {Promise} 回傳Promise，resolve回傳過濾後之數據陣列(Jet原列)，條件不合法時reject
  */
-async function queryMemory(opt, attrs, data, find, keys) {
+async function queryMemory(opt, attrs, data, find, keys, logSql = null) {
 
     //keys
     if (!keys) {
@@ -199,7 +204,7 @@ async function queryMemory(opt, attrs, data, find, keys) {
     let setOpt = {
         dialect: 'sqlite',
         storage: ':memory:',
-        logging: opt.logging,
+        logging: opt.logging === true && typeof logSql === 'function' ? logSql : false,
         define: {
             timestamps: false
         },

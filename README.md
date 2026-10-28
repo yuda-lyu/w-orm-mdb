@@ -154,6 +154,68 @@ A `find` may now only use columns that the model declares as `STRING` `TEXT` `CH
 
 If a model declares such a type on a column that you filter on, change the declaration to the type that matches the Jet column (text `STRING` / `TEXT`, number `INTEGER` / `DOUBLE`, date-time `DATE`, yes/no `BOOLEAN`); the mdb file itself needs no change, the declaration lives in the model only. A Jet DATETIME column declared as `STRING` or `TEXT` is still accepted but compared as text (same misbehaviour as the second row); declare it as `DATE`.
 
+### Diagnostic output: `opt.logDetail`, `opt.funLog` and `opt.logging`
+
+Everything this package prints goes through **one exit** (`src/getDiag.mjs`). By default that exit writes only a fixed label and a short summary that holds **no data value, no primary key, no user identity, no error text of the back end and no path** — the console of a service is often collected by a log system, and a row's primary key (a user id or e-mail in downstream systems) or the text of an error must not end up there by accident. Connection strings and credentials (`opt.url`, the user name and the password, also as `user:password` — the password of an encrypted file —, URL encoded, with doubled single quotes, and as `scheme://user:password@host`) are **never** printed, not even in the detailed forms below: they are replaced by `***`.
+
+| Option | Default | Effect |
+|---|---|---|
+| `opt.logDetail` | `false` | `true` restores the former detailed console output (the error a subscriber threw, printed bare as before; the full SQL of `opt.logging`; the generated file path of `genModelsByTabs`). It can show data values and ids: **for debugging only**. Anything other than `true` is ignored. |
+| `opt.funLog` | none | A function `(label, safe, detail)`. When given, diagnostic output goes **only** to it, the console is not written. `label` is the fixed label, `safe` the summary without personal data (may be `undefined`), `detail` the full detail (the argument is absent when there is none); credentials are already replaced by `***` in all three (also in the label). Use it to mask and forward to your own logger. `detail` is a masked **copy**, bounded in size: plain objects (class instances become plain objects, the prototype is not kept), arrays, `Error`s (message, stack, `cause`, own fields), dates and wrapper objects (`new String(...)` is copied as its string) are copied; nesting deeper than 6 levels or more than 2000 nodes becomes `'[Truncated]'`, and functions, binary data, `Map`/`Set` and getters become markers (`'[Function]'`, `'[Binary 12 bytes]'`, `'[Object]'`, `'[Getter/Setter]'`). No code of yours (getters, custom `inspect`) is run to build it — the stack of an `Error` whose `name` or `message` is a getter is left out for that reason — with one exception: the traps of a `Proxy` are run (plain JavaScript cannot recognise a proxy). Anything but a function is ignored; a function that throws, or returns a promise that rejects, never affects the operation. |
+| `opt.logging` | `false` | `true` records the SQL that the in-memory filter table runs when a `find` is evaluated (`select` and `delAll` with conditions; the statements sent to the Jet engine are never logged). By default only the kind of statement is printed (`sql { stmt: 'SELECT' }`); the full SQL needs `logDetail` or `funLog`. |
+
+Like every other option, these are read once when the instance is constructed (a getter that throws makes the constructor throw, changing your object afterwards has no effect) and an option of the wrong type is ignored (`logDetail` must be `true`, `funLog` a function).
+
+**SQL records carry values.** To evaluate a `find`, the package copies the rows read from Jet into a throw-away in-memory table (`INSERT INTO users (id, name, …) VALUES ('a@b.c', …)`) and puts the condition values into its `WHERE`, so the full SQL contains primary keys and column values of **every row of the table**. That is why the full SQL is available only when you ask for it twice (`logging: true` together with `logDetail: true` or `funLog`), and why it is meant for debugging, not for production.
+
+What is printed by default:
+
+| Where | Before (1.0.42 and earlier) | Now |
+|---|---|---|
+| a `change` or `error` subscriber throws | `console.log(err)`: the whole error, including whatever the subscriber put in its message | `change handler threw { mode: 'insert', errType: 'Error' }` (or `error handler threw …`) — the operation, the error class, and a machine code (`ENOENT`, a small integer) when there is one |
+| `opt.logging: true` | sequelize wrote the full SQL of the in-memory filter table with `console.log` (all rows' values and the condition values), and warned `SEQUELIZE0002` about `logging: true` | `sql { stmt: 'SELECT' }` per statement |
+| the constructor throws for an invalid `opt.url` | `…, opt.url[mdb://user:password]` (the password in the message) | `…, opt.url[mdb://***]` (same prefix, same `Error`; see the breaking changes below) |
+| `genModelsByTabs` | `generate file:  <path>`, `save file catch <error>` | `generate file: { name: 'users', type: 'js' }`, `save file catch { name: 'users', type: 'js', errType: 'Error', errCode: 'EISDIR' }` — the exit of the instance is handed to `w-orm-reladb` (1.1.17 or later, the lower bound of this package's dependency), so `logDetail` and `funLog` apply to it as well. Earlier `w-orm-reladb` releases print with `console.log` themselves and are not covered |
+
+```alias
+// production: only labels and summaries on the console
+let w = WOrmMdb({ url, storage })
+
+// debugging: the former detail, credentials still masked
+let wd = WOrmMdb({ url, storage, logging: true, logDetail: true })
+
+// forward everything to your own logger, masking what you must
+let wf = WOrmMdb({
+    url,
+    storage,
+    logging: true,
+    funLog: (label, safe, detail) => {
+        logger.info({ label, safe }) // safe holds no personal data
+        // `detail` has full text, keys and values: mask it before it leaves your process
+    },
+})
+```
+
+### Breaking changes: diagnostic output
+
+Only what is printed changes. The values a function resolves or rejects with, their timing, and the `change` and `error` events (including the error text and the data they carry: they are return values, not diagnostics) are the same as before.
+
+- The detailed console output listed above is now opt-in (`opt.logDetail`).
+- `opt.logging: true` no longer prints the SQL text by default: **to see the full SQL add `logDetail: true`, or read it from `funLog`**. By itself `logging: true` now prints only the kind of statement. It is passed to sequelize as a function, so the sequelize warning `SEQUELIZE0002` about `logging: true` is gone as well.
+
+  ```alias
+  // before (1.0.42 and earlier): full SQL on the console, ids and column values of all rows included
+  WOrmMdb({ url, storage, logging: true })
+
+  // now: the same output, asked for explicitly (credentials in it are masked)
+  WOrmMdb({ url, storage, logging: true, logDetail: true })
+  // or receive it yourself: funLog('sql', { stmt: 'SELECT' }, 'Executing (default): SELECT …')
+  WOrmMdb({ url, storage, logging: true, funLog: (label, safe, detail) => { /* … */ } })
+  ```
+- The constructor still throws an `Error` for an invalid `opt.url`, with the same message prefix as before (`no dialect in opt.url`, `dialect[…] is not mdb`, `invalid username or password in opt.url`, `invalid username in opt.url`, `invalid password in opt.url`), but the quoted `opt.url[…]` no longer carries the user name or the password (the message goes to stderr when nothing catches it). Whatever follows `://` is never shown: the value appears as `<scheme>://***` (`mdb://user:password` as `mdb://***`, `mdb://user:pa@ss@x` as `mdb://***`). This package's connection string has no host part (the parser takes what precedes the first `@` as `user:password` and ignores the rest), and a user name or password may itself contain `@` or `:`, so the text after an `@` can be the tail of the password — unlike the connection strings of the SQL back ends of `w-orm-reladb`, where the host after the last `@` is quoted. Without `://` the whole value is `***`; a scheme that is not a plain identifier is `***`. In `dialect[…] is not mdb` the dialect is shown only when the value has `://` and a plain identifier in front of it (`dialect[oracle] is not mdb`), otherwise it is `***` (a value without `://` is the whole `opt.url`, which may be only a password). Example: `dialect[***] is not mdb, opt.url[***]`.
+- The summary may name the operation (`mode`) and the error class and machine code (`errType`, `errCode`): program identifiers that are also part of the reject messages. A user name on its own is masked only when it has at least 3 characters (shorter ones would blot out unrelated text); `user:password` and the connection string are always masked. A password of one or two characters is masked everywhere it occurs and so blots out those letters in the details (and in the summary). The default `opt.url` `mdb://username:password` is a placeholder, and the words `username` and `password` are masked in the details like any other credential. `errCode` is shown only when it looks like a machine code (`ENOENT`, `E2BIG`, `EAI_AGAIN`, `ERR_…`, or an integer of at most 5 digits such as a Jet error number).
+- Not covered: sequelize may print a few fixed warnings of its own (they carry no row data, and `funLog` cannot reach them); the error of a failed Jet call (the text from the Jet engine) is still what a rejected promise or an `error` event carries — it is returned, not printed; the traps of a `Proxy` passed as a thrown error are run when the detail is copied; and credentials that are not this instance's own (for example another URL inside an error text whose password contains a quote) are only masked on a best-effort basis — `mdb://…` is masked up to the next space or quote, other `scheme://user:password@host` only when the user name and password contain no `/`, quote or space.
+
 #### Example by js settings 
 > **Link:** [[dev source code](https://github.com/yuda-lyu/w-orm-mdb/blob/main/g-js.mjs)]
 ```alias

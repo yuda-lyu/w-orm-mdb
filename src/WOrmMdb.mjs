@@ -37,6 +37,7 @@ import {
 } from './getCmd.mjs'
 import { initSequelize, queryMemory, chkFindColKind } from './queryMemory.mjs'
 import { YEAR_MIN, YEAR_MAX, normDates } from './dateRange.mjs'
+import { getOptLog, getSecrets, getDiag, getBriefErr, getSqlStmt, maskUrl, maskDialect } from './getDiag.mjs'
 import { TPS_STR, getPkType, chkPkWf, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys } from './pk.mjs'
 
 
@@ -103,14 +104,16 @@ const MAX_LIST = 999
  *
  * @class
  * @param {Object} [opt={}] 輸入設定物件，預設{}
- * @param {String} [opt.url='mdb://username:password'] 輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'
+ * @param {String} [opt.url='mdb://username:password'] 輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'。解析失敗時建構函式拋出之Error訊息為`原因, opt.url[遮罩後連線字串]`(前綴與Error型態不變)：://之後一律不回顯(回顯為`scheme://***`，連線字串無主機，@之後可能是密碼之後半)，無://者為`***`，scheme須為識別字否則為`***`；`dialect[…] is not mdb`之dialect於無://或不合scheme樣式時亦為`***`
  * @param {String} [opt.storage='./worm.mdb'] 輸入mdb資料庫檔案位置字串，預設'./worm.mdb'
  * @param {Boolean} [opt.useEncryption=false] 輸入是否使用加密保護，型別為布林值，預設false
  * @param {String} [opt.db='worm'] 輸入使用資料庫名稱字串，mdb並不需要給只是配合w-orm系列統一設定，預設'worm'
  * @param {String} [opt.cl='test'] 輸入使用資料表名稱字串，預設'test'
  * @param {String} [opt.fdModels='./models'] 輸入資料表設定檔所在資料夾字串，預設'./models'
  * @param {String} [opt.modelType='js'] 輸入資料表設定檔類型字串，可有'js'、'json'，預設'js'
- * @param {Boolean} [opt.logging=false] 輸入是否輸出實際執行的sql指令布林值，預設false
+ * @param {Boolean} [opt.logging=false] 輸入是否紀錄記憶體過濾表實際執行的sql指令布林值，預設false。為true時預設只輸出敘述種類(如SELECT)，不輸出sql全文：select之過濾表以INSERT寫入各列欄位值、以WHERE帶入條件值，需搭配opt.logDetail或opt.funLog才取得sql全文，有洩漏個資之風險，僅供除錯使用(送往Jet引擎之語句不在此紀錄)
+ * @param {Boolean} [opt.logDetail=false] 輸入是否還原診斷輸出之完整細節布林值，預設false，型別錯誤者視同false。診斷輸出(console)預設只含固定標籤與不含個資之摘要(不含資料值、id、後端錯誤原文、路徑)；為true時還原為含細節的輸出(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。連線字串與帳密於任何情形皆以***遮罩
+ * @param {Function} [opt.funLog=null] 輸入診斷輸出函數(label, safe, detail)，預設無，型別錯誤者視同未給。給予時診斷輸出只交給它而不寫console：label為固定標籤字串，safe為不含個資之摘要物件(可能為undefined)，detail為完整細節之遮罩拷貝(可能無此引數；連線字串與帳密已以***遮罩；深度與大小有上限，函數、二進位資料、Map/Set、存取器以標記字串代替，不沿用原型，不執行使用端程式)，供使用端遮罩後轉送。函數拋錯或回傳reject之promise皆被吞下，不影響各操作之結果
  * @param {String} [opt.pk='id'] 輸入數據主鍵字串，預設'id'
  * @param {Boolean} [opt.autoGenPk=true] 輸入若數據主鍵欄位沒給時則自動給予隨機uuid，型別為布林值，預設true
  * @param {Boolean} [opt.useStable=true] 輸入是否使用穩定模式，使用佇列管理同時只能進行一種操作故會犧牲效能，型別為布林值，預設true
@@ -133,7 +136,7 @@ function WOrmMdb(opt = {}) {
         for (let k in opt) {
             names.add(k)
         }
-        for (let k of ['url', 'db', 'cl', 'fdModels', 'modelType', 'logging', 'pk', 'autoGenPk', 'useStable', 'storage', 'useEncryption']) {
+        for (let k of ['url', 'db', 'cl', 'fdModels', 'modelType', 'logging', 'logDetail', 'funLog', 'pk', 'autoGenPk', 'useStable', 'storage', 'useEncryption']) {
             names.add(k)
         }
         let o = {}
@@ -200,8 +203,9 @@ function WOrmMdb(opt = {}) {
     //建構為同步而無從以Promise.reject回報, 拋出即為reject之同步對應;
     //若僅console.log而回傳未綁定各函數之ee, 錯誤不經任何管道抵達呼叫端, 呼叫端僅得到
     //[w.select is not a function]之無關訊息, 與本規格[錯誤不得靜默]之通則相違
+    //訊息前綴與Error型態不變, 回顯之opt.url經maskUrl(R-DIAG-06): 帳號與密碼不出現(未捕獲時Node會把訊息印到stderr); maskUrl為純函數, 不依賴尚未建立之diag
     let throwUrlErr = (msg) => {
-        throw new Error(`${msg}, opt.url[${opt.url}]`)
+        throw new Error(`${msg}, opt.url[${maskUrl(opt.url)}]`)
     }
 
 
@@ -213,7 +217,8 @@ function WOrmMdb(opt = {}) {
         throwUrlErr('no dialect in opt.url')
     }
     if (dialect !== 'mdb') {
-        throwUrlErr(`dialect[${dialect}] is not mdb`)
+        //dialect取自第一個://之前, 無://時即整串opt.url(可能含帳密), 故經maskDialect(R-DIAG-06)
+        throwUrlErr(`dialect[${maskDialect(opt.url)}] is not mdb`)
     }
     u = get(ss, 1, '') //另存給後面使用
 
@@ -237,6 +242,19 @@ function WOrmMdb(opt = {}) {
         if (password === '') {
             throwUrlErr('invalid password in opt.url')
         }
+    }
+
+
+    //diag, 診斷輸出之單一出口(R-DIAG): src內所有console輸出與傳給sequelize、w-orm-reladb之diag皆經此, 除getDiag.mjs外不得直接呼叫console;
+    //預設只輸出固定標籤與不含個資之摘要, opt.logDetail還原細節, opt.funLog取代console; 連線字串與帳密(opt.url、username、password)於任何輸出皆遮罩;
+    //getOptLog取固定快照, 其後不再讀取使用端之opt
+    let diag = getDiag(getOptLog(opt), getSecrets(opt.url, username, password))
+
+
+    //logSql, 傳給sequelize之logging函數(僅opt.logging為true時傳入, 為函數時sequelize不再以console.log輸出並免去logging:true之deprecation警告):
+    //sequelize以(sql全文, 查詢選項)呼叫, 只取第一個引數; sql全文含記憶體過濾表之欄位值(INSERT)與條件值(WHERE), 故預設只輸出敘述種類, 全文僅logDetail與funLog之細節有
+    let logSql = (sql) => {
+        diag('sql', { stmt: getSqlStmt(sql) }, () => sql, true)
     }
 
 
@@ -287,7 +305,7 @@ function WOrmMdb(opt = {}) {
             ee.emit('change', mode, data, res)
         }
         catch (err) {
-            console.log(err)
+            diag('change handler threw', { mode, ...getBriefErr(err) }, () => err, true)
         }
     }
 
@@ -309,7 +327,7 @@ function WOrmMdb(opt = {}) {
             ee.emit('error', mode, data, getErrMsg(err))
         }
         catch (errEmit) {
-            console.log(errEmit)
+            diag('error handler threw', { mode, ...getBriefErr(errEmit) }, () => errEmit, true)
         }
     }
 
@@ -520,7 +538,7 @@ function WOrmMdb(opt = {}) {
         //initSequelize, 匯入失敗屬影響本次操作全部數據之整批性錯誤
         let sequelize = null
         let mds = null
-        await initSequelize(opt)
+        await initSequelize(opt, logSql)
             .then((r) => {
                 sequelize = r.sequelize
                 mds = r.mds
@@ -753,7 +771,7 @@ function WOrmMdb(opt = {}) {
         fillPkSlots(slots, idxOf)
 
         //queryMemory
-        let rs = await queryMemory(opt, attrs, data, findPk, keys)
+        let rs = await queryMemory(opt, attrs, data, findPk, keys, logSql)
 
         return rs
     }
@@ -2162,6 +2180,8 @@ function WOrmMdb(opt = {}) {
     /**
      * 由資料表物件生成各資料表的models資料
      *
+     * 註: 其診斷輸出(檔案路徑、存檔失敗之錯誤)經本實例之診斷輸出單一出口(以第4個引數傳給w-orm-reladb，須≥1.1.17)，預設只輸出固定標籤與不含個資之摘要，opt.logDetail與opt.funLog可取得細節
+     *
      * @memberOf WOrmMdb
      * @param {String} [fd='./models'] 輸入models儲存的資料夾名稱字串，預設'./models'
      * @param {Object} [tabs={}] 輸入各資料表物件，預設{}
@@ -2169,7 +2189,10 @@ function WOrmMdb(opt = {}) {
      * @param {String} [opt.type='js'] 輸入資料表類型字串，預設'js'
      */
     function genModelsByTabs(...input) {
-        _genModelsByTabs(...input)
+
+        //第4個引數diag為本實例之診斷輸出出口(R-DIAG-05): w-orm-reladb 1.1.17(genModelsByTabs.mjs:106)接受之, 其產生model檔之輸出(檔案路徑、存檔失敗之錯誤)皆走diag(:151,:154);
+        //logDetail與funLog即由diag承接, 不替換全域console; 依賴須≥1.1.17(package.json之下限), 更舊版本不認得而直接console.log
+        _genModelsByTabs(input[0], input[1], input[2], diag)
     }
 
 
