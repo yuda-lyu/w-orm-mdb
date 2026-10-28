@@ -157,3 +157,17 @@
 - **白名單對照組不可省**:只證明[any 被拒]不足以證明[沒誤殺];第三組以 17 個白名單欄型、67 個條件對 Jet 原生 `WHERE` 比命中集合,並以[收緊一個分類〔str/int/num/date/dateonly/bool〕視為 any]之變異證明對照組能殺誤殺。
 - **ARRAY/GEOMETRY/GEOGRAPHY 的不帶條件 `select()` 仍失敗**(sequelize sqlite 方言建表即拋 `values.map is not a function` 等),屬範圍外,README 已載。
 - **變異腳本陷阱**:`String.prototype.replace(a, b)` 的 `b` 含 `$'`、`$&`、`$$` 會被當替換樣式(變異字串裡的 `'$'` 恰為 `$'`,把其後整段原文塞進去,產出語法錯誤的副本,mocha 回報 `passing=0 failing=0` 而被誤記為存活);一律用函式替換 `replace(a, () => b)`,且 `passing=0 failing=0` 要視為無效變異而非存活。
+
+## bin-mdb 教訓(2026-10-28,D 類外部執行檔制式規格,R-BIN;dspec〈外部執行檔之存放下載校驗與離線〉)
+
+- **接手先驗 `node_modules/wsemi/src`**:主控預跑之 `npm i wsemi@1.9.27` 以 exit=1 結束(21 秒),留下殘缺的 `node_modules/wsemi`(只有 LICENSE/docs/examples,缺 `src/` 與 `package.json`);重跑 `npm i wsemi@1.9.27`(約 2 分鐘)即正常。`npm i` 另把 `package.json` 末尾補了換行、`package-lock.json` 之 version 欄由 1.0.41 同步為 1.0.43(皆非本輪意圖,無害)。
+- **舊 `getFdExe` 依 cwd 找 exe**(`path.resolve()` 之 `./src/` 或 `./node_modules/w-orm-mdb/src/`):從他處 cwd 執行必失敗(HEAD 副本自 repo 根執行得 `can not find folder for connMDB`,自副本內執行才過)。新版 `pkgRoot` 由 `import.meta.url` 推得,不依賴 cwd;`unit-ensurebins` 之 jet 整合案以他處 cwd(`os.tmpdir()`)執行,舊設計不可能通過。
+- **UMD**:rollup 把 `import.meta.url` 轉為 `pathToFileURL(__filename)`,`dist/` 之上一層即套件根。驗證法:`rollupFiles` 之 `fdTar` 指到 `./tmp/…`(不動追蹤中的 `dist/`),模擬 `<根>/dist/*.umd.js` + `bin/manifest.json` + `bin-cache/`,於他處 cwd `require` 後跑 `ensureBins()` 與 `insert`/`select`。`os`、`url`、`crypto`、`stream`、`stream/promises`、`child_process` 被 rollup 視為外部相依(警告 guessing 名稱),Node 下可用,不需改 `gDistRollup.mjs`。
+- **匯出形狀**:以靜態屬性 `WOrmMdb.ensureBins` 匯出(`import wo from 'w-orm-mdb'; wo.ensureBins()`),不加 named export——w-package-tools 建置期檢查單一 default 匯出,named + default 之 UMD 會變成 `exports.default`,破壞 `require` 使用者。
+- **中介檔位置**:原本寫在 exe 旁(`src/`),exe 移入內容定址快取後不宜混放(快取可能共用或唯讀),改 `os.tmpdir()`。Windows 的 `os.tmpdir()` 讀 `TEMP`,測試以 `TEMP`/`TMP` 指向測試資料夾(驗用畢即刪)與不存在之資料夾(驗位置:應 `ENOENT`)。**位置要用[放哪裡才會失敗]驗證,不能只看事後殘留**:變異 MU6(中介檔寫快取夾)不被[快取內只有 exe]殺死(中介檔用畢即刪),是靠[TEMP 指向不存在資料夾仍成功]殺死。
+- **測試供檔**:`test/tools/binEnv.mjs`(由 `unit-setup.mjs` 與 `tools/srcDir.mjs` 載入)把 `bin/connMDB.exe` 依清單 sha256 播種到預設快取 `bin-cache/<sha256>/`,並設 `W_BIN_OFFLINE=1`(測試絕不連網;`bin/` 與清單不一致時離線明確失敗)。專案 `CLAUDE.md` 稱 `unit-setup.mjs`[載入無副作用]已過時。`W_BIN_OFFLINE` 設在父行程後會被子行程繼承,以子行程驗環境變數之測試須自行先刪三個 `W_BIN_*` 再設(`envOf`)。
+- **斷言錯誤格式**:`E_OFFLINE_MISSING` 之 `err.missing[0]` 有 `name/sha256/size/cachePath/mirrorPath`,訊息含完整路徑,可直接斷言(`unit-ensurebins` › T6)。
+- **每次 `runOnce` 呼叫 ensureBins 之成本**(`tmp` 內 bench,Windows,快取命中已校驗者):約 0.8 ms/次(500 次循序與併發皆然),首次(含雜湊 11776 位元組)約 7 ms;對照一次 `jet.query`(含 exe 冷啟)約 238 ms,不到 0.4%。故不另做行程內路徑記憶(記憶會繞過 D4 的檔案識別比對)。
+- **變異**:10 個(`.npmignore` 三行、清單 sha256/commit、中介檔位置、pkgRoot 依 cwd、不匯出、吞錯、忽略環境變數鏡像)殺死 10、存活 0,基準 17 案綠。變異腳本以記憶體內原文還原並比對還原後內容。
+- **範例腳本前後相同**:`g-js`、`g-json`、`g-js-encryption`、`g-js-concurrency` 於 HEAD 副本(`git archive HEAD` 解到 `./tmp/`,須自副本內執行)與現況之輸出(隨機 id 正規化後)逐行相同。範例會覆寫根目錄 `worm.mdb`:執行前複製備份、事後以 `cp` 還原,`git status` 無變。
+- **未做**:真實 GitHub 網址之下載(測試不得連外網;網址形狀由本機伺服器之路徑斷言涵蓋:`/<repo>/<commit>/bin/connMDB.exe`)。發布前建議在連網機器實跑一次 `WOrmMdb.ensureBins()`(提交 3ca537c 已推上 GitHub)。

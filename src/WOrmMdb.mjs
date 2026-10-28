@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import jetOpen, { CODE_DUP_KEY } from './jet.mjs'
+import ensureBins from './ensureBins.mjs'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import get from 'lodash-es/get.js'
 import map from 'lodash-es/map.js'
@@ -2349,6 +2350,10 @@ function WOrmMdb(opt = {}) {
 
     return ee
 }
+
+
+//ensureBins, 預先取得並校驗外部執行檔connMDB.exe(離線部署前於連網機器呼叫, 見README), 以靜態屬性匯出以維持單一default匯出
+WOrmMdb.ensureBins = ensureBins
 
 
 export default WOrmMdb

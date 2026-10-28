@@ -1,8 +1,9 @@
 import fs from 'fs'
+import './tools/binEnv.mjs'
 
 
 //各unit測試檔之共用層
-//註: 本檔不含測試案例, mocha(無設定檔, 預設納入test/*.mjs)載入本檔亦無副作用
+//註: 本檔不含測試案例; 載入時經tools/binEnv.mjs將bin/connMDB.exe播種到快取並設W_BIN_OFFLINE=1(Windows), 令測試取得之執行檔來自repo且不連網
 
 
 /**

@@ -8,3 +8,6 @@ tmp
 test/temp*
 .opencode
 .claude
+
+# 外部執行檔之快取(制式規格 S5)
+/bin-cache/

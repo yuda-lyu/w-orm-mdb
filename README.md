@@ -18,7 +18,40 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 npm i w-orm-mdb
 ```
 
-> **Zero-install requirement:** Runs on Windows only. The package operates mdb files through the bundled `connMDB.exe`, which uses the Windows built-in Jet 4.0 engine and built-in .NET Framework 4.x — no need to install AccessDatabaseEngine, Java or any SDK. Supports `.mdb` (Jet4, Access 2000-2003 format, max 2GB) including password-protected files; `.accdb` is not supported.
+> **Zero-install requirement:** Runs on Windows only. The package operates mdb files through `connMDB.exe` (downloaded and verified on first use, see [External executable](#external-executable)), which uses the Windows built-in Jet 4.0 engine and built-in .NET Framework 4.x — no need to install AccessDatabaseEngine, Java or any SDK. Supports `.mdb` (Jet4, Access 2000-2003 format, max 2GB) including password-protected files; `.accdb` is not supported.
+
+### External executable
+
+The package reaches the Jet engine through one small executable, `connMDB.exe` (x86; C# source in `srcCs/`). **It is not part of the npm package**: the package contains only the manifest `bin/manifest.json`, which records the source, SHA-256 and size of the file.
+
+| File | Purpose | Source |
+|---|---|---|
+| `connMDB.exe` | one-shot bridge to the Jet 4.0 engine (reads a request from a JSON file, writes the result to JSON files) | `bin/connMDB.exe` of the GitHub repository `yuda-lyu/w-orm-mdb`, pinned to the commit recorded in `bin/manifest.json` |
+
+- **First use**: the first call that needs the engine (`select`, `insert`, `createStorage`, …) downloads the file from `https://raw.githubusercontent.com/yuda-lyu/w-orm-mdb/<commit>/bin/connMDB.exe`, checks it against the SHA-256 and size in `bin/manifest.json`, and keeps it in `<package root>/bin-cache/<sha256>/connMDB.exe`. Nothing is downloaded when the package is installed. Later calls take the file from the cache and check it again before use (once per process, again if the file changes). A file that does not match the manifest is never used and never left behind; a tampered cache file is deleted and fetched again.
+- **`WOrmMdb.ensureBins()`** does the same ahead of time (for example on a build machine) and resolves to `{ 'connMDB.exe': '<absolute path>' }`. It reads the environment variables below.
+- **Environment variables** (read by `ensureBins()` and by every call that uses the engine):
+  - `W_BIN_CACHE=<folder>`: keep the cache in `<folder>/w-orm-mdb/<sha256>/connMDB.exe` instead of the package folder (use it when `node_modules` is read-only; several packages can share one folder).
+  - `W_BIN_MIRROR=<folder or http(s) base URL>`: look in the mirror before GitHub. The layout is `<mirror>/w-orm-mdb/<sha256>/connMDB.exe`. A file from the mirror is checked against the manifest like any other, so a mirror cannot supply a different file; a file that does not match is refused and the next source is tried.
+  - `W_BIN_OFFLINE=1`: never connect to GitHub; use only the cache and the mirror. When the file is missing the call rejects with `code: 'E_OFFLINE_MISSING'`, and the message names the file, its SHA-256 and size, and the exact cache and mirror paths where it must be put.
+- **Offline deployment** (a machine that cannot reach GitHub):
+  1. On a machine with network access set `W_BIN_CACHE` to an empty folder and run a script that calls `ensureBins()` once:
+
+     ```alias
+     // prepare.mjs
+     import WOrmMdb from 'w-orm-mdb'
+     console.log(await WOrmMdb.ensureBins())
+     ```
+
+     (PowerShell: `$env:W_BIN_CACHE='D:\mirror'; node prepare.mjs`.) The folder now holds `w-orm-mdb/<sha256>/connMDB.exe`.
+  2. Copy the whole folder to the offline machine and set `W_BIN_MIRROR=<that folder>` (and `W_BIN_OFFLINE=1` to forbid any network access). The first use copies the verified file into the local cache.
+
+### Breaking changes: external executable
+
+- `connMDB.exe` is no longer inside the npm package. The first use needs network access to GitHub or a mirror (see above); machines that cannot do either must be prepared as described under *Offline deployment*.
+- The executable is no longer looked up under the working directory (`./src/` or `./node_modules/w-orm-mdb/src/`): it is found through the cache, so the process may run from any working directory.
+- The temporary request and result files of each call (`_<id>_in.json`, `_<id>_res.json`, `_<id>_q<k>.jsonl`) are written to the operating system's temporary folder (`os.tmpdir()`), not next to the executable. They are deleted after the call.
+- A failure to obtain the executable rejects the call with an `Error` that has a `code` (`E_OFFLINE_MISSING`, `E_HASH_MISMATCH`, `E_SIZE_MISMATCH`, `E_HTTP`, `E_NETWORK`, …) before any statement is run. Before, a missing executable rejected with the string `can not find folder for connMDB`.
 
 ### Condition (`find`) whitelist for `select` and `delAll`
 

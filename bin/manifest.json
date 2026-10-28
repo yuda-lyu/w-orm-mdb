@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "pkg": "w-orm-mdb",
+  "mode": "pinned",
+  "repo": "yuda-lyu/w-orm-mdb",
+  "commit": "3ca537c26e10dbe9009d2e4f79f05576adfa21a8",
+  "files": [
+    {
+      "name": "connMDB.exe",
+      "path": "bin/connMDB.exe",
+      "sha256": "aa58592a222c7a0590dbbd24e7f5c74a8c407e983abd030736a9561ac4aea4b1",
+      "size": 11776
+    }
+  ]
+}

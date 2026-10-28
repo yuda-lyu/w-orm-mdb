@@ -1,13 +1,16 @@
 import path from 'path'
+import os from 'os'
 import fs from 'fs'
 import genID from 'wsemi/src/genID.mjs'
-import fsIsFile from 'wsemi/src/fsIsFile.mjs'
 import execProcess from 'wsemi/src/execProcess.mjs'
+import ensureBins from './ensureBins.mjs'
 
 
 //透過connMDB.exe(one-shot)操作Access mdb
 //exe使用Windows內建Jet 4.0引擎(32-bit)與內建.NET Framework 4.x, 目標機不需安裝任何東西
+//exe不隨npm包發布, 由ensureBins(wsemi之fsEnsureBins)於首次使用時依bin/manifest.json取得並校驗(制式規格: 外部執行檔之存放下載校驗與離線)
 //協定: 寫入fpIn(JSON)後呼叫exe, exe執行完寫fpRes(JSON), 查詢結果逐列寫jsonl檔
+//中介檔(fpIn, fpRes, jsonl)寫在作業系統暫存資料夾, 不寫在快取資料夾(快取內容由清單校驗, 且可能為共用或唯讀)
 
 
 //Jet引擎之錯誤編號, 由exe取自OleDbError之SQLState(如3022重複鍵, 3058主鍵為Null, 3464型別不符)
@@ -42,34 +45,21 @@ function delay(ms) {
 }
 
 
-function getFdExe() {
+//fnExe
+const fnExe = `connMDB.exe`
 
-    //fdSrv
-    let fdSrv = path.resolve()
 
-    //fnExe
-    let fnExe = `connMDB.exe`
-
-    //fdExe
-    let fdExe = ''
-    if (true) {
-        let fdExeSrc = `${fdSrv}/src/`
-        let fdExeNM = `${fdSrv}/node_modules/w-orm-mdb/src/`
-        if (fsIsFile(`${fdExeSrc}${fnExe}`)) {
-            fdExe = fdExeSrc
-        }
-        else if (fsIsFile(`${fdExeNM}${fnExe}`)) {
-            fdExe = fdExeNM
-        }
-        else {
-            return null
-        }
-    }
-
-    return {
-        fdExe,
-        prog: `${fdExe}${fnExe}`,
-    }
+/**
+ * 取得connMDB.exe之絕對路徑
+ *
+ * 註: 每次呼叫皆經ensureBins, 其於本行程首次使用時校驗大小與SHA-256, 之後以檔案識別判定未變者不重複雜湊
+ * 註: 取得失敗(離線缺檔, 下載失敗, 雜湊不符等)時reject帶code之Error, 此時尚未執行任何指令
+ *
+ * @ignore
+ */
+async function getProg() {
+    let bins = await ensureBins({ names: fnExe })
+    return bins[fnExe]
 }
 
 
@@ -133,12 +123,11 @@ function jetOpen(db) {
      */
     async function runOnce(cmds, opt = {}) {
 
-        //fdExe
-        let r = getFdExe()
-        if (r === null) {
-            return Promise.reject('can not find folder for connMDB')
-        }
-        let { fdExe, prog } = r
+        //prog, 取得失敗時整批reject(尚未執行任何指令)
+        let prog = await getProg()
+
+        //fdTmp
+        let fdTmp = os.tmpdir()
 
         //useTransaction
         let useTransaction = opt.useTransaction === true
@@ -147,14 +136,14 @@ function jetOpen(db) {
         let id = genID()
 
         //fpIn, fpRes
-        let fpIn = `${fdExe}_${id}_in.json`
-        let fpRes = `${fdExe}_${id}_res.json`
+        let fpIn = path.join(fdTmp, `_${id}_in.json`)
+        let fpRes = path.join(fdTmp, `_${id}_res.json`)
 
         //fpOuts, 為query類指令配置jsonl輸出檔, 以cmd索引為鍵以免因失敗略過而錯位
         let fpOuts = {}
         cmds = cmds.map((c, k) => {
             if (c.type === 'query') {
-                let fpOut = `${fdExe}_${id}_q${k}.jsonl`
+                let fpOut = path.join(fdTmp, `_${id}_q${k}.jsonl`)
                 fpOuts[k] = fpOut
                 return { ...c, fpOut }
             }
