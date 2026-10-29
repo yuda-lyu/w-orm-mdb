@@ -1,5 +1,6 @@
 import get from 'lodash-es/get.js'
 import chkOrmStr from 'wsemi/src/chkOrmStr.mjs'
+import { ownErr } from 'w-orm-reladb/src/ownErr.mjs'
 
 
 //主鍵之型別判定、正規化與等值判定之輔助
@@ -204,7 +205,7 @@ function genInnerKeys(attrs) {
             return { wi }
         }
     }
-    throw new Error('can not generate inner keys for memory filter')
+    throw ownErr('can not generate inner keys for memory filter')
 }
 
 
@@ -288,9 +289,9 @@ function castPkFind(find, pk, tp, wi) {
     //slots, 序號集合之佔位
     let slots = []
 
-    //err, 否定語境之無效值: 同cvOrmFind之錯誤格式invalid find: 原因 at [路徑], 不回顯值
+    //err, 否定語境之無效值: 同cvOrmFind之錯誤格式invalid find: 原因 at [路徑], 不回顯值; 固定詞彙, 經ownErr登記令整批reject原樣交出(R-DIAG)
     function err(path) {
-        return new Error(`invalid find: invalid primary key value in negative condition at [${path}]`)
+        return ownErr(`invalid find: invalid primary key value in negative condition at [${path}]`)
     }
 
     //normVals, 多值之正規化(純量視為單元素陣列); 肯定語境之無效、型別不符與不可能存在者略過(不命中); 否定語境之無效或型別不符拋出(path為錯誤訊息之路徑)

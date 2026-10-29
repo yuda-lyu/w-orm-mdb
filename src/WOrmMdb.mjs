@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import jetOpen, { CODE_DUP_KEY } from './jet.mjs'
+import jetOpen, { CODE_DUP_KEY, ERR_NO_RES } from './jet.mjs'
 import ensureBins from './ensureBins.mjs'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import get from 'lodash-es/get.js'
@@ -26,7 +26,11 @@ import pmQueue from 'wsemi/src/pmQueue.mjs'
 import cvOrmFind from 'wsemi/src/cvOrmFind.mjs'
 import chkOrmStr from 'wsemi/src/chkOrmStr.mjs'
 import chkOrmData from 'wsemi/src/chkOrmData.mjs'
+import getDiag from 'wsemi/src/getDiag.mjs'
+import getDiagSecrets from 'wsemi/src/getDiagSecrets.mjs'
+import maskDiagUrl from 'wsemi/src/maskDiagUrl.mjs'
 import _genModelsByTabs from 'w-orm-reladb/src/genModelsByTabs.mjs'
+import { ownErr, markOwnErr, isOwnErr } from 'w-orm-reladb/src/ownErr.mjs'
 import {
     getSelectAll,
     getSelectByPk,
@@ -36,9 +40,10 @@ import {
     getDeleteByPk,
     getDeleteAll
 } from './getCmd.mjs'
-import { initSequelize, queryMemory, chkFindColKind } from './queryMemory.mjs'
+import { initSequelize, queryMemory, chkFindColKind, getImportErr, ERR_NOT_ARR } from './queryMemory.mjs'
 import { YEAR_MIN, YEAR_MAX, normDates } from './dateRange.mjs'
-import { getOptLog, getSecrets, getDiag, getBriefErr, getSqlStmt, maskUrl, maskDialect } from './getDiag.mjs'
+import getSqlStmt from './getSqlStmt.mjs'
+import maskDialect from './maskDialect.mjs'
 import { TPS_STR, getPkType, chkPkWf, normPk, kFast, castPkFind, fillPkSlots, genInnerKeys } from './pk.mjs'
 
 
@@ -60,6 +65,15 @@ const KEY_CONT = Symbol('worm-mdb-container')
 
 //條件(find)之$and/$or長度上限: SQLite運算式樹深度上限為1000, 平鋪1000項即DB錯誤
 const MAX_LIST = 999
+
+
+//診斷輸出(R-DIAG, 主控dspec〈診斷輸出與遮罩〉; 實作為wsemi之getDiag, 規則見wsemi之R-DIAG-01): safe摘要會用到之鍵(白名單外之鍵由getDiag丟棄, errType與errCode恆含);
+//stmt為sql紀錄之敘述種類, mode為操作別, name與type為w-orm-reladb之genModelsByTabs所用(其第4參數diag之契約)
+const SAFE_KEYS = ['stmt', 'mode', 'name', 'type']
+
+
+//連線字串之回顯可保留之scheme(maskDiagUrl): 本套件只接受mdb, 其餘一律***
+const SCHEMES = ['mdb']
 
 
 /**
@@ -102,10 +116,14 @@ const MAX_LIST = 999
  * 既有資料不遷移：修正前經本套件寫入之孤立代理已被改寫為U+FFFD且無從還原，檢出法見README。
  * 註: Jet之字串等值由其排序規則決定(不分大小寫、忽略尾端半形空白、全半形、假名與增補平面字元等)，良構字串亦可能相等：'a'、'a'+emoji、'a'+U+FFFD為同一主鍵
  * (selectByPk('a'+emoji)命中'a'，del可刪到'a')，與大小寫同屬設計，套件不改變(要精確比對須由資料庫端另處理)
+ * 註: 診斷輸出與遮罩一律用wsemi之共用模組(getDiag、getDiagSecrets、maskDiagUrl，規則見wsemi之R-DIAG-01與主控dspec〈診斷輸出與遮罩〉)。
+ * 對外錯誤值(整批reject、error事件之訊息、逐筆結果之err)凡為外來值(Jet引擎與connMDB.exe之錯誤文字、執行檔之取得或執行失敗、sequelize、呼叫端數據之getter或toString等)者，
+ * 整批reject與error事件經diag.err(wsemi之maskDiagErr)、逐筆err於建立時經diag.mask：只遮憑證(連線字串、密碼與帳號:密碼〔至少4字元〕、mdb://之後整段)，不遮單獨帳號與資料庫檔案路徑；
+ * 含憑證者為遮罩後之副本(錯誤類別與instanceof不變，訊息之憑證為***)，否則為原值；本套件以固定詞彙組成之訊息(invalid find、invalid data、can not import model等)原樣交出(固定字串經遮罩挖空可反推短密碼)
  *
  * @class
  * @param {Object} [opt={}] 輸入設定物件，預設{}
- * @param {String} [opt.url='mdb://username:password'] 輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'。解析失敗時建構函式拋出之Error訊息為`原因, opt.url[遮罩後連線字串]`(前綴與Error型態不變)：://之後一律不回顯(回顯為`scheme://***`，連線字串無主機，@之後可能是密碼之後半)，無://者為`***`，scheme須為識別字否則為`***`；`dialect[…] is not mdb`之dialect於無://或不合scheme樣式時亦為`***`
+ * @param {String} [opt.url='mdb://username:password'] 輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'。解析失敗時建構函式拋出之Error訊息為`原因, opt.url[遮罩後連線字串]`(前綴與Error型態不變)：回顯經wsemi之maskDiagUrl，scheme為mdb(不分大小寫)者為`mdb://***`(://之後一律不回顯，連線字串無主機，@之後可能是密碼之後半)，其餘(其他scheme、無://者、非字串)一律為`***`；`dialect[…] is not mdb`之dialect只回顯已知方言名(mdb、mssql、sqlite、mysql、mariadb、postgres，不分大小寫，回顯小寫形)，其餘(未知方言、看似scheme之秘密、無://者)一律為`***`
  * @param {String} [opt.storage='./worm.mdb'] 輸入mdb資料庫檔案位置字串，預設'./worm.mdb'
  * @param {Boolean} [opt.useEncryption=false] 輸入是否使用加密保護，型別為布林值，預設false
  * @param {String} [opt.db='worm'] 輸入使用資料庫名稱字串，mdb並不需要給只是配合w-orm系列統一設定，預設'worm'
@@ -113,8 +131,8 @@ const MAX_LIST = 999
  * @param {String} [opt.fdModels='./models'] 輸入資料表設定檔所在資料夾字串，預設'./models'
  * @param {String} [opt.modelType='js'] 輸入資料表設定檔類型字串，可有'js'、'json'，預設'js'
  * @param {Boolean} [opt.logging=false] 輸入是否紀錄記憶體過濾表實際執行的sql指令布林值，預設false。為true時預設只輸出敘述種類(如SELECT)，不輸出sql全文：select之過濾表以INSERT寫入各列欄位值、以WHERE帶入條件值，需搭配opt.logDetail或opt.funLog才取得sql全文，有洩漏個資之風險，僅供除錯使用(送往Jet引擎之語句不在此紀錄)
- * @param {Boolean} [opt.logDetail=false] 輸入是否還原診斷輸出之完整細節布林值，預設false，型別錯誤者視同false。診斷輸出(console)預設只含固定標籤與不含個資之摘要(不含資料值、id、後端錯誤原文、路徑)；為true時還原為含細節的輸出(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。連線字串與帳密於任何情形皆以***遮罩
- * @param {Function} [opt.funLog=null] 輸入診斷輸出函數(label, safe, detail)，預設無，型別錯誤者視同未給。給予時診斷輸出只交給它而不寫console：label為固定標籤字串，safe為不含個資之摘要物件(可能為undefined)，detail為完整細節之遮罩拷貝(可能無此引數；連線字串與帳密已以***遮罩；深度與大小有上限，函數、二進位資料、Map/Set、存取器以標記字串代替，不沿用原型，不執行使用端程式)，供使用端遮罩後轉送。函數拋錯或回傳reject之promise皆被吞下，不影響各操作之結果
+ * @param {Boolean} [opt.logDetail=false] 輸入是否於console輸出遮罩後之診斷細節布林值，預設false，須為true才生效(型別錯誤者視同false)。診斷輸出由wsemi之getDiag實作(選項語意見其說明)：console預設只含固定標籤與不含個資之摘要(safe只留stmt、mode、name、type、errType、errCode)；為true時改為(標籤, 遮罩後之細節)(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。細節中之連線字串、帳號、密碼、帳號:密碼與資料庫檔案路徑以***遮罩
+ * @param {Function} [opt.funLog=null] 輸入診斷輸出函數(label, safe, detail)，預設無，須為函數才生效(型別錯誤者視同未給)。給予時診斷輸出只交給它而不寫console(logDetail不作用)：label為固定標籤字串，safe為摘要物件(可能為undefined)，detail為遮罩後之細節拷貝(wsemi之maskDiagCopy；可能無此引數)。函數拋錯被吞下，回傳之原生Promise標記已處理，不影響各操作之結果
  * @param {String} [opt.pk='id'] 輸入數據主鍵字串，預設'id'
  * @param {Boolean} [opt.autoGenPk=true] 輸入若數據主鍵欄位沒給時則自動給予隨機uuid，型別為布林值，預設true
  * @param {Boolean} [opt.useStable=true] 輸入是否使用穩定模式，使用佇列管理同時只能進行一種操作故會犧牲效能，型別為布林值，預設true
@@ -189,6 +207,8 @@ function WOrmMdb(opt = {}) {
         }
     }
 
+    //storageRaw, 呼叫端給予之原形式(診斷細節之儲存路徑遮罩兼用原形式與絕對路徑)
+    let storageRaw = opt.storage
     opt.storage = path.resolve(opt.storage)
     if (!isbol(opt.useEncryption)) {
         opt.useEncryption = false
@@ -204,9 +224,10 @@ function WOrmMdb(opt = {}) {
     //建構為同步而無從以Promise.reject回報, 拋出即為reject之同步對應;
     //若僅console.log而回傳未綁定各函數之ee, 錯誤不經任何管道抵達呼叫端, 呼叫端僅得到
     //[w.select is not a function]之無關訊息, 與本規格[錯誤不得靜默]之通則相違
-    //訊息前綴與Error型態不變, 回顯之opt.url經maskUrl(R-DIAG-06): 帳號與密碼不出現(未捕獲時Node會把訊息印到stderr); maskUrl為純函數, 不依賴尚未建立之diag
+    //訊息前綴與Error型態不變, 回顯之opt.url經wsemi之maskDiagUrl(R-DIAG-06; dspec Q2): scheme為mdb者mdb://***, 其餘***, 帳號、密碼與主機皆不出現(未捕獲時Node會把訊息印到stderr);
+    //maskDiagUrl為純函數, 不依賴尚未建立之diag; 本訊息為固定詞彙, 不經diag.err
     let throwUrlErr = (msg) => {
-        throw new Error(`${msg}, opt.url[${maskUrl(opt.url)}]`)
+        throw new Error(`${msg}, opt.url[${maskDiagUrl(opt.url, { schemes: SCHEMES })}]`)
     }
 
 
@@ -218,7 +239,7 @@ function WOrmMdb(opt = {}) {
         throwUrlErr('no dialect in opt.url')
     }
     if (dialect !== 'mdb') {
-        //dialect取自第一個://之前, 無://時即整串opt.url(可能含帳密), 故經maskDialect(R-DIAG-06)
+        //dialect取自第一個://之前, 可能是帳密(無://時即整串opt.url, 或看似scheme之秘密), 故經maskDialect只回顯已知方言名(R-DIAG-06)
         throwUrlErr(`dialect[${maskDialect(opt.url)}] is not mdb`)
     }
     u = get(ss, 1, '') //另存給後面使用
@@ -246,16 +267,21 @@ function WOrmMdb(opt = {}) {
     }
 
 
-    //diag, 診斷輸出之單一出口(R-DIAG): src內所有console輸出與傳給sequelize、w-orm-reladb之diag皆經此, 除getDiag.mjs外不得直接呼叫console;
-    //預設只輸出固定標籤與不含個資之摘要, opt.logDetail還原細節, opt.funLog取代console; 連線字串與帳密(opt.url、username、password)於任何輸出皆遮罩;
-    //getOptLog取固定快照, 其後不再讀取使用端之opt
-    let diag = getDiag(getOptLog(opt), getSecrets(opt.url, username, password))
+    //diag, 診斷輸出之單一出口(R-DIAG): wsemi之getDiag實例, src內所有console輸出與傳給sequelize、w-orm-reladb之diag皆經此, src不得直接呼叫console;
+    //預設只輸出固定標籤與safe摘要, opt.logDetail改為細節, opt.funLog取代console(getDiag於此讀一次opt.logDetail、opt.funLog, 其後不再讀);
+    //秘密來源: opt.url、帳號、密碼(含帳號:密碼, 即Jet加密檔之資料庫密碼)、資料庫檔案路徑(原形式、正規化與絕對路徑; 只用於診斷細節, 對外錯誤值不遮路徑, dspec Q3);
+    //樣式mdbUrl: 文字內之mdb://之後整段不回顯(不依賴已知秘密; 帳密可含@與:)
+    let diag = getDiag(opt, {
+        secrets: getDiagSecrets({ urls: [opt.url], username, password, paths: [storageRaw, path.normalize(storageRaw), opt.storage] }),
+        patterns: ['mdbUrl'],
+        safeKeys: SAFE_KEYS,
+    })
 
 
     //logSql, 傳給sequelize之logging函數(僅opt.logging為true時傳入, 為函數時sequelize不再以console.log輸出並免去logging:true之deprecation警告):
     //sequelize以(sql全文, 查詢選項)呼叫, 只取第一個引數; sql全文含記憶體過濾表之欄位值(INSERT)與條件值(WHERE), 故預設只輸出敘述種類, 全文僅logDetail與funLog之細節有
     let logSql = (sql) => {
-        diag('sql', { stmt: getSqlStmt(sql) }, () => sql, true)
+        diag('sql', { stmt: getSqlStmt(sql) }, () => sql)
     }
 
 
@@ -293,6 +319,47 @@ function WOrmMdb(opt = {}) {
 
 
     /**
+     * 取整批性錯誤之對外值，供整批reject與error事件使用(R-DIAG，dspec〈診斷輸出與遮罩〉D3)
+     *
+     * 註: 本套件以固定詞彙產生之錯誤原樣交出——經w-orm-reladb之ownErr登記之Error(本套件與其cvFind所拋、wsemi之cvOrmFind經normFind登記者)、
+     * 本實例初始化失敗之si.err(已於initAdodb處置)、固定之字串訊息(ERR_NO_RES、ERR_NOT_ARR)：固定字串經遮罩挖空可反推短密碼(如密碼為invalid時invalid find被切碎)
+     * 註: 其餘(Jet引擎與connMDB.exe之錯誤文字、執行檔之取得或執行失敗、sequelize、呼叫端數據之getter或toString、Proxy陷阱等外來值)一律經diag.err，
+     * 含憑證者為遮罩後之副本(錯誤類別與instanceof不變)，否則為原值；判定依來源登記而不依內容
+     *
+     * @ignore
+     * @param {*} err 輸入捕獲之錯誤
+     * @param {Object} [si=null] 輸入實例物件
+     * @returns {*} 回傳對外值
+     */
+    function outErr(err, si = null) {
+        if (isOwnErr(err)) {
+            return err
+        }
+        if (typeof err === 'string' && (err === ERR_NO_RES || err === ERR_NOT_ARR || (si !== null && err === get(si, 'err')))) {
+            return err
+        }
+        return diag.err(err)
+    }
+
+
+    /**
+     * 取逐筆結果之err欄位: Jet引擎之錯誤文字屬外來值，於建立時即經diag.mask(只遮憑證)，令回傳值與error事件同源；無錯誤文字者為固定詞彙dflt(原樣)
+     *
+     * @ignore
+     * @param {Object} rr 輸入Jet之逐筆結果
+     * @param {String} dflt 輸入無錯誤文字時之固定訊息
+     * @returns {String} 回傳錯誤訊息字串
+     */
+    function getJetErrMsg(rr, dflt) {
+        let e = get(rr, 'error')
+        if (e === undefined) {
+            return dflt
+        }
+        return diag.mask(getErrMsg(e))
+    }
+
+
+    /**
      * 發出change事件，訂閱函數拋錯不得影響本次操作之結果，故另包try並自行吞掉
      *
      * @ignore
@@ -306,7 +373,7 @@ function WOrmMdb(opt = {}) {
             ee.emit('change', mode, data, res)
         }
         catch (err) {
-            diag('change handler threw', { mode, ...getBriefErr(err) }, () => err, true)
+            diag('change handler threw', { mode, ...diag.brief(err) }, () => err)
         }
     }
 
@@ -314,6 +381,7 @@ function WOrmMdb(opt = {}) {
     /**
      * 發出error事件，操作發生錯誤時發出，錯誤訊息一律轉為字串
      * 註: 事件僅為附加通知，所送出之資訊必另有正規管道——整批性錯誤經Promise.reject，逐筆失敗經該筆之err欄位
+     * 註: err須為已處置之對外值(整批者經outErr、逐筆者經getJetErrMsg或為固定詞彙)，令訊息與reject、逐筆err同源(R-DIAG)；data為呼叫端之輸入，原樣送出
      * 註: 訂閱函數拋錯不得影響本次操作之結果，故另包try並自行吞掉
      * 註: 正常結果不得發出本事件，如insert全數已存在、save合併後內容相同、del主鍵未命中、selectByPk查無數據
      *
@@ -328,7 +396,7 @@ function WOrmMdb(opt = {}) {
             ee.emit('error', mode, data, getErrMsg(err))
         }
         catch (errEmit) {
-            diag('error handler threw', { mode, ...getBriefErr(errEmit) }, () => errEmit, true)
+            diag('error handler threw', { mode, ...diag.brief(errEmit) }, () => errEmit)
         }
     }
 
@@ -483,7 +551,7 @@ function WOrmMdb(opt = {}) {
 
         //check, 型別不符
         if (r.kind === 'mismatch') {
-            throw new Error(`invalid data[${k}].${opt.pk}, type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`)
+            throw ownErr(`invalid data[${k}].${opt.pk}, type mismatch with pk column [${opt.pk}] in model [${opt.cl}]`)
         }
 
         //check, 不可能存在
@@ -491,24 +559,24 @@ function WOrmMdb(opt = {}) {
             if (mode === 'save') {
                 return { v: lockPk(v), cannot: true }
             }
-            throw new Error(`invalid data[${k}].${opt.pk}, can not be stored: exceeds 255 characters`)
+            throw ownErr(`invalid data[${k}].${opt.pk}, can not be stored: exceeds 255 characters`)
         }
 
         //check, autoGenPk為false時主鍵須由呼叫端自備
         if (!opt.autoGenPk) {
-            throw new Error(`invalid data[${k}].${opt.pk}, autoGenPk is false`)
+            throw ownErr(`invalid data[${k}].${opt.pk}, autoGenPk is false`)
         }
 
         //at
         let at = get(md, `rawAttributes.${opt.pk}`)
         if (!iseobj(at)) {
-            throw new Error(`can not find pk column [${opt.pk}] in model [${opt.cl}]`)
+            throw ownErr(`can not find pk column [${opt.pk}] in model [${opt.cl}]`)
         }
 
         //check, 自動產生之主鍵值為字串, 主鍵欄位須為字串類型方能容納
         let tp = get(at, 'type.key', '')
         if (!arrHas(tp, TPS_STR)) {
-            throw new Error(`autoGenPk is true but pk column [${opt.pk}] in model [${opt.cl}] is [${tp}], auto generated pk is a string, need to set autoGenPk to false and supply pk by caller`)
+            throw ownErr(`autoGenPk is true but pk column [${opt.pk}] in model [${opt.cl}] is [${tp}], auto generated pk is a string, need to set autoGenPk to false and supply pk by caller`)
         }
 
         //genIDSeq, 為UUIDv7格式而具單調遞增性, 主鍵接近順序遞增可減少索引頁面分裂
@@ -526,6 +594,9 @@ function WOrmMdb(opt = {}) {
      * 註: 每個實例自帶其sequelize(區域變數)，close只關閉自己的且可重複呼叫(第二次起為空操作)，
      * 故useStable為false之並行呼叫、重複init皆各自釋放，不會被後建者覆寫而漏關或被誤關；close之後不再使用該實例
      *
+     * 註: err為匯入model失敗之訊息字串(無失敗為null): 本套件之固定詞彙原樣, 外來之失敗(sequelize之建立或關閉)經diag.err只遮憑證(R-DIAG);
+     * jet為內部之Jet介面(供以option.instance傳回本套件之各函數), 由呼叫端直接呼叫時其錯誤文字為原文(已知限制LDG12)
+     *
      * @memberOf WOrmMdb
      * @returns {Promise} 回傳Promise，resolve回傳實例物件{mds,jet,err,close}，reject回傳錯誤訊息
      */
@@ -537,6 +608,7 @@ function WOrmMdb(opt = {}) {
         let jet = jetOpen({ path: opt.storage, password: getDbPassword() })
 
         //initSequelize, 匯入失敗屬影響本次操作全部數據之整批性錯誤
+        //err為字串, 各函數以之整批reject(與init回傳之err同): 本套件之匯入失敗訊息(固定詞彙)原樣, 其餘(sequelize之建立或關閉失敗等外來值)經diag.err(R-DIAG)
         let sequelize = null
         let mds = null
         await initSequelize(opt, logSql)
@@ -545,7 +617,7 @@ function WOrmMdb(opt = {}) {
                 mds = r.mds
             })
             .catch((e) => {
-                err = getErrMsg(e)
+                err = e === getImportErr(opt) ? e : diag.err(getErrMsg(e))
             })
 
         //closed, 本實例是否已關閉
@@ -561,7 +633,13 @@ function WOrmMdb(opt = {}) {
                 }
                 closed = true
                 if (sequelize !== null) {
-                    await sequelize.close()
+                    //關閉失敗(sequelize之錯誤, 外來值)經diag.err: 各函數於finally呼叫, 其拋錯直接成為該函數之reject(R-DIAG)
+                    try {
+                        await sequelize.close()
+                    }
+                    catch (e) {
+                        throw diag.err(e)
+                    }
                 }
             },
         }
@@ -587,7 +665,7 @@ function WOrmMdb(opt = {}) {
         }))
         let r = normDates(data, cols, dateCols)
         if (r !== null) {
-            throw new Error(`invalid data: date is not a valid time in years ${YEAR_MIN}-${YEAR_MAX} at [data[${r.k}].${r.col}]`)
+            throw ownErr(`invalid data: date is not a valid time in years ${YEAR_MIN}-${YEAR_MAX} at [data[${r.k}].${r.col}]`)
         }
     }
 
@@ -602,7 +680,7 @@ function WOrmMdb(opt = {}) {
     function getMd(si) {
         let md = get(si, `mds.${opt.cl}`)
         if (!md) {
-            throw new Error(`can not find model [${opt.cl}]`)
+            throw ownErr(`can not find model [${opt.cl}]`)
         }
         return md
     }
@@ -628,13 +706,19 @@ function WOrmMdb(opt = {}) {
      * 註: maxIn為2000, 因主鍵$in之每個元素需由Jet逐筆以=判定(約1.6ms/元素, 2000筆約3.6秒); maxList為999, 因SQLite運算式樹深度上限為1000;
      * w-orm-reladb之cvFind內建之檢核不提供maxIn注入, 故2000之上限須由本呼叫強制
      * 註: 須於select與delAll之try內第一步呼叫, 先於initAdodb(匯入model)、讀取與刪除, 令壞find不載入model、不開啟資料庫檔、不送SQL, 並經reject與error事件回報
+     * 註: cvOrmFind之錯誤恆為固定詞彙(讀取條件時呼叫端拋出之例外亦轉為固定原因), 經markOwnErr登記令整批reject原樣交出(R-DIAG)
      *
      * @ignore
      * @param {*} find 輸入查詢條件
      * @returns {Object} 回傳查詢條件之複本, 無自有鍵代表全部
      */
     function normFind(find) {
-        return cvOrmFind(find, { maxIn: MAX_IN, maxList: MAX_LIST })
+        try {
+            return cvOrmFind(find, { maxIn: MAX_IN, maxList: MAX_LIST })
+        }
+        catch (err) {
+            throw markOwnErr(err)
+        }
     }
 
 
@@ -764,7 +848,7 @@ function WOrmMdb(opt = {}) {
         //分散於$or/$and內之多個陣列可使總數遠超單一陣列上限(實測98000值阻塞同行程之全域佇列328秒; 外審opus F3), 故於送Jet前就總數把關
         let nPk = new Set(vals.map((v) => `${typeof v}:${String(v)}`)).size
         if (nPk > MAX_IN) {
-            throw new Error(`invalid find: too many primary key values (> ${MAX_IN}) at [find]`)
+            throw ownErr(`invalid find: too many primary key values (> ${MAX_IN}) at [find]`)
         }
 
         //idxOf, 由Jet判定各主鍵值之命中列, 填入序號佔位
@@ -852,7 +936,7 @@ function WOrmMdb(opt = {}) {
         }
         catch (err) {
             isErr = true
-            res = err
+            res = outErr(err, si) //外來值經diag.err, 本套件之固定詞彙原樣(R-DIAG)
         }
         finally {
 
@@ -943,7 +1027,7 @@ function WOrmMdb(opt = {}) {
         }
         catch (err) {
             isErr = true
-            res = err
+            res = outErr(err, si) //外來值經diag.err, 本套件之固定詞彙原樣(R-DIAG)
         }
         finally {
 
@@ -1106,11 +1190,13 @@ function WOrmMdb(opt = {}) {
             msg = firstWf(chkWf(data, true))
         }
         catch (err) {
-            emitError('insert', data, err)
-            return Promise.reject(err)
+            //走訪時呼叫端數據之存取器或Proxy陷阱拋出(外來值)
+            let e = outErr(err)
+            emitError('insert', data, e)
+            return Promise.reject(e)
         }
         if (msg !== null) {
-            let err = new Error(msg)
+            let err = ownErr(msg)
             emitError('insert', data, err)
             return Promise.reject(err)
         }
@@ -1224,7 +1310,7 @@ function WOrmMdb(opt = {}) {
         }
         catch (err) {
             isErr = true
-            res = err
+            res = outErr(err, si) //外來值經diag.err, 本套件之固定詞彙原樣(R-DIAG)
         }
         finally {
 
@@ -1296,11 +1382,13 @@ function WOrmMdb(opt = {}) {
             msg = firstWf(chkWf(data, true))
         }
         catch (err) {
-            emitError('insertBulk', data, err)
-            return Promise.reject(err)
+            //走訪時呼叫端數據之存取器或Proxy陷阱拋出(外來值)
+            let e = outErr(err)
+            emitError('insertBulk', data, e)
+            return Promise.reject(e)
         }
         if (msg !== null) {
-            let err = new Error(msg)
+            let err = ownErr(msg)
             emitError('insertBulk', data, err)
             return Promise.reject(err)
         }
@@ -1363,7 +1451,7 @@ function WOrmMdb(opt = {}) {
         }
         catch (err) {
             isErr = true
-            res = err
+            res = outErr(err, si) //外來值經diag.err, 本套件之固定詞彙原樣(R-DIAG)
         }
         finally {
 
@@ -1454,8 +1542,10 @@ function WOrmMdb(opt = {}) {
             msgs = chkWf(data, true)
         }
         catch (err) {
-            emitError('save', data, err)
-            return Promise.reject(err)
+            //走訪時呼叫端數據之存取器或Proxy陷阱拋出(外來值)
+            let e = outErr(err)
+            emitError('save', data, e)
+            return Promise.reject(e)
         }
 
         //rests, 逐筆結果, 未定案者為null
@@ -1574,7 +1664,7 @@ function WOrmMdb(opt = {}) {
                                 nInserted: 0,
                                 nModified: 0,
                                 ok: 0,
-                                err: getErrMsg(get(rr, 'error', 'can not read data')),
+                                err: getJetErrMsg(rr, 'can not read data'), //Jet之錯誤文字(外來值)建立時即遮(R-DIAG)
                             }
                             return
                         }
@@ -1704,7 +1794,7 @@ function WOrmMdb(opt = {}) {
                                 nInserted: 0,
                                 nModified: 0,
                                 ok: 0,
-                                err: getErrMsg(rr.error),
+                                err: diag.mask(getErrMsg(rr.error)), //Jet之錯誤文字(外來值)建立時即遮(R-DIAG)
                             }
                         })
                     }
@@ -1737,7 +1827,7 @@ function WOrmMdb(opt = {}) {
         }
         catch (err) {
             isErr = true
-            res = err
+            res = outErr(err, si) //外來值經diag.err, 本套件之固定詞彙原樣(R-DIAG)
         }
         finally {
 
@@ -1816,8 +1906,10 @@ function WOrmMdb(opt = {}) {
             msgs = chkWf(data, false)
         }
         catch (err) {
-            emitError('del', data, err)
-            return Promise.reject(err)
+            //走訪時呼叫端數據之存取器或Proxy陷阱拋出(外來值)
+            let e = outErr(err)
+            emitError('del', data, e)
+            return Promise.reject(e)
         }
 
         //rests, 逐筆結果, 未定案者為null
@@ -1949,7 +2041,7 @@ function WOrmMdb(opt = {}) {
                             n: 1,
                             nDeleted: 0,
                             ok: 0,
-                            err: getErrMsg(get(rr, 'error', 'can not delete data')),
+                            err: getJetErrMsg(rr, 'can not delete data'), //Jet之錯誤文字(外來值)建立時即遮(R-DIAG)
                         }
                     })
                 }
@@ -1962,7 +2054,7 @@ function WOrmMdb(opt = {}) {
         }
         catch (err) {
             isErr = true
-            res = err
+            res = outErr(err, si) //外來值經diag.err, 本套件之固定詞彙原樣(R-DIAG)
         }
         finally {
 
@@ -2084,7 +2176,7 @@ function WOrmMdb(opt = {}) {
                     let pkv = get(v, opt.pk)
                     if (!isEffPk(pkv)) {
                         //無有效主鍵者無從精確定位, 不得靜默略過而使刪除少於預期
-                        throw new Error(`can not delete data without valid ${opt.pk}`)
+                        throw ownErr(`can not delete data without valid ${opt.pk}`)
                     }
                     pkvs.push(pkv)
                 })
@@ -2124,7 +2216,7 @@ function WOrmMdb(opt = {}) {
         }
         catch (err) {
             isErr = true
-            res = err
+            res = outErr(err, si) //外來值經diag.err, 本套件之固定詞彙原樣(R-DIAG)
         }
         finally {
 
@@ -2170,8 +2262,10 @@ function WOrmMdb(opt = {}) {
             await jet.create()
         }
         catch (err) {
-            emitError('createStorage', null, err)
-            return Promise.reject(err)
+            //Jet(ADOX)之錯誤文字、執行檔之取得或執行失敗(外來值)經diag.err; 固定詞彙原樣(R-DIAG)
+            let e = outErr(err)
+            emitError('createStorage', null, e)
+            return Promise.reject(e)
         }
 
         return 'created'
@@ -2181,7 +2275,7 @@ function WOrmMdb(opt = {}) {
     /**
      * 由資料表物件生成各資料表的models資料
      *
-     * 註: 其診斷輸出(檔案路徑、存檔失敗之錯誤)經本實例之診斷輸出單一出口(以第4個引數傳給w-orm-reladb，須≥1.1.17)，預設只輸出固定標籤與不含個資之摘要，opt.logDetail與opt.funLog可取得細節
+     * 註: 其診斷輸出(檔案路徑、存檔失敗之錯誤)經本實例之診斷輸出單一出口(wsemi之getDiag實例，以第4個引數傳給w-orm-reladb，須≥1.1.18)，預設只輸出固定標籤與{name,type[,errType,errCode]}，opt.logDetail與opt.funLog可取得遮罩後之細節
      *
      * @memberOf WOrmMdb
      * @param {String} [fd='./models'] 輸入models儲存的資料夾名稱字串，預設'./models'
@@ -2191,8 +2285,9 @@ function WOrmMdb(opt = {}) {
      */
     function genModelsByTabs(...input) {
 
-        //第4個引數diag為本實例之診斷輸出出口(R-DIAG-05): w-orm-reladb 1.1.17(genModelsByTabs.mjs:106)接受之, 其產生model檔之輸出(檔案路徑、存檔失敗之錯誤)皆走diag(:151,:154);
-        //logDetail與funLog即由diag承接, 不替換全域console; 依賴須≥1.1.17(package.json之下限), 更舊版本不認得而直接console.log
+        //第4個引數diag為本實例之診斷輸出出口(R-DIAG-05): w-orm-reladb 1.1.18之genModelsByTabs以其diag參數契約接受wsemi之getDiag實例(函數且帶brief),
+        //只以固定標籤呼叫(generate file:、save file catch; safe之鍵name、type, 本實例之SAFE_KEYS含之), 不合契約者改用其預設出口; logDetail與funLog即由diag承接, 不替換全域console;
+        //依賴須≥1.1.18(package.json之下限), 1.1.17以前之diag參數非wsemi實例之契約
         _genModelsByTabs(input[0], input[1], input[2], diag)
     }
 
@@ -2280,7 +2375,7 @@ function WOrmMdb(opt = {}) {
 
     //snap, 數據於呼叫當下即同步複製並攤平各列(第66項, 見CLAUDE_rulebook.md之R-WF): useStable時各函數經佇列延後執行(pmQueue於執行前delay),
     //若於函數內才複製, 呼叫端於呼叫後立即改動原數據(如重用同一陣列、改動共用之原型)會影響實際檢核與寫入之值; insert、insertBulk、save、del只使用此複本,
-    //檢核與寫入皆作用於同一份複本; 複製或攤平拋錯(如存取器拋錯)與函數內之其他錯誤同為rejected promise(不發error事件, 同複製前之行為)
+    //檢核與寫入皆作用於同一份複本; 複製或攤平拋錯(如存取器拋錯)與函數內之其他錯誤同為rejected promise(不發error事件, 同複製前之行為); 其值為呼叫端程式拋出(外來值), 經diag.err(R-DIAG)
     //外層批次以索引迴圈建成普通陣列: 不採用輸入陣列(或其子類別)自帶之map/Symbol.species, 以免批次被改變型別或靜默變成零筆; 洞視同undefined(同修改前lodash map之走訪)
     //既有之[無資料]判定(非物件、空物件、空陣列)須以cloneDeep後之原輸入為準而先於攤平: 攤平會把只有無關getter之物件變成非空, 使原本不處理之輸入多出一列
     let snap = (fn) => {
@@ -2302,7 +2397,7 @@ function WOrmMdb(opt = {}) {
                 }
             }
             catch (err) {
-                return Promise.reject(err)
+                return Promise.reject(diag.err(err))
             }
             return fn(d, ...rest)
         }

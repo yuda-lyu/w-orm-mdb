@@ -171,3 +171,24 @@
 - **變異**:10 個(`.npmignore` 三行、清單 sha256/commit、中介檔位置、pkgRoot 依 cwd、不匯出、吞錯、忽略環境變數鏡像)殺死 10、存活 0,基準 17 案綠。變異腳本以記憶體內原文還原並比對還原後內容。
 - **範例腳本前後相同**:`g-js`、`g-json`、`g-js-encryption`、`g-js-concurrency` 於 HEAD 副本(`git archive HEAD` 解到 `./tmp/`,須自副本內執行)與現況之輸出(隨機 id 正規化後)逐行相同。範例會覆寫根目錄 `worm.mdb`:執行前複製備份、事後以 `cp` 還原,`git status` 無變。
 - **未做**:真實 GitHub 網址之下載(測試不得連外網;網址形狀由本機伺服器之路徑斷言涵蓋:`/<repo>/<commit>/bin/connMDB.exe`)。發布前建議在連網機器實跑一次 `WOrmMdb.ensureBins()`(提交 3ca537c 已推上 GitHub)。
+
+## mig-mdb 教訓(2026-10-30,第 161 項第 3 波:改用 wsemi 共用診斷模組,R-DIAG-13)
+
+- **外來值分流不能靠「在進入點包」**:呼叫端數據之 getter/toString/Proxy 陷阱在 snap、flatRow 之延後存取器、chkWf、procPk、chkDates、getCmd 之 escVal 等多處被呼叫,逐一包會漏;改為整批 catch 一律 `outErr`(預設 `diag.err`,fail-closed),本套件之固定詞彙以**來源登記**放行(w-orm-reladb `src/ownErr.mjs` 之 WeakSet;cvOrmFind 以 `markOwnErr`)。字串型之固定詞彙無法進 WeakSet,以值比對(`si.err` 身分、`ERR_NOT_ARR`、`ERR_NO_RES`);以值比對安全,因外來字串若恰等於固定訊息,其內容即固定訊息本身。
+- **`new Error` 之用途以原始碼盤點鎖定**:`src` 之 `new Error(…)` 只許 Jet 文字(`*.error`)與建構期拋錯,本套件訊息一律 `ownErr`;日後新增固定詞彙之拋錯而忘了登記,`unit-diaglog` 即紅(否則該訊息在密碼恰為其子字串時被切碎)。
+- **造出含憑證之 Jet 錯誤文字**:Jet 之「找不到資料表」訊息回顯表名,以「model 存在、資料表不存在、表名含密碼字樣」得真 Jet 之外來錯誤(七函數與逐筆 err 全覆蓋);另以控制組(同表名、密碼不同)證明回顯確實發生,免得遮罩案在輸入本就無憑證時空過。表名含帳號字樣者驗「單獨帳號不遮」(殺 `diag.copy` 錯置之變異)。
+- **快照前之[無資料]判定**:只有原型 getter 之類別實例,cloneDeep 後無自有可列舉鍵 → `iseobj` 為 false → insert 等直接回 `{ n: 0 }`,getter 不會被讀;造「主鍵 getter 拋錯」之列須另帶一個自有欄位。
+- **wsemi 以最後一個 `@` 分帳密與主機,本套件以第一個**:`mdb://u:p@ss@tail` 之 `tail` 被 wsemi 視為主機而不列秘密(LDG9);Jet 只收到 `u:p`,故不在本套件繞道加秘密,以測試記錄行為。整串 url 為秘密時,其遮罩為單一 `***`(與 `mdbUrl` 樣式之區間合併),期望值寫 `close failed ***` 而非 `mdb://***`。
+- **測試鎖排隊長時,把探測與全部驗證併入已在佇列中之同一指令**:quiet-run 於取得鎖後才讀腳本,佇列中之 `probe1.mjs` 改為「探測後 spawn run-all」(受影響 4 檔 → 修前紅 → 變異 → 範例前後 → 全套),一次取鎖完成;變異之各檔以一次 `mocha --parallel` 並行、依 json 之 `file` 歸屬失敗,縮短鎖內時間。受影響測試有紅時自動略過變異(基準不可靠)。
+- **project CLAUDE.md 之 README 範圍**:不許另立新節,破壞性變更寫入既有〈Breaking changes: diagnostic output〉之末段(與 reladb 另立新節不同)。
+- **變異之「只被原始碼盤點殺死」要追到行為案**:run2 之 39 個全殺,但 M06(del 整批 catch)、M19(save 寫入階段之逐筆 err)只由 `unit-diaglog` 之盤點殺死——沒有行為案以外來憑證觸及。補案法:del/save 之 openFailed 以「資料庫檔不存在、檔名含密碼字樣」(Jet 訊息回顯路徑);save 寫入失敗以「model 另宣告資料表沒有之欄、欄名含密碼字樣」(Jet 回 unknown field name)。補後以 `MIG_MUTS=M06,M19` 只重跑二案。
+- **純函數之期望值也要預算**:`new Date(10, 0, 1)` 為 1910 年(0–99 年映射 1900 起),造本地年 10 須 `setFullYear(10)`;此錯令第一次取鎖之全套 1 failing 並使變異被守門略過,多排一次鎖。
+- **時程**:測試鎖排隊三次共約 128 分鐘(81 + 39 + 7),鎖內實跑約 37 分鐘(12 + 22 + 3;探測約 10 秒、受影響 4 檔約 70 秒、全套約 8 分、修前紅約 1.5 分、變異 39 個約 12 分〔每個約 10 秒,含 wo 者約 70 秒〕、範例約 30 秒)。
+
+## mig-mdb2 教訓(2026-10-30,主控裁定:LDG10 選 B〔maskDialect 白名單〕、帳本分拆)
+
+- **「看似 scheme 之秘密」的回顯策略要全站一致**:`maskDiagUrl` 只保留宣告之 scheme(R13),而 `maskDialect` 原以識別字樣式放行,同一個訊息 `dialect[…] is not mdb, opt.url[…]` 兩處不一致(`myPasswordXYZ://h` 在 dialect 處回顯)。改法不是加更多樣式,而是**白名單 + 輸出白名單之字面值**:比對用 `toLowerCase()` 後與白名單相等,回顯的是白名單陣列中的元素,故輸出恆不含輸入任何字元(連大小寫都不洩漏),變異 M09/M10 分別守「大小寫不敏感」與「回顯小寫形」。
+- **白名單之來源要實查**:`mdb` 為本套件,其餘五名取 `w-orm-reladb/src/WOrmReladb.mjs` 之 `DIALECTS`(`['mssql','sqlite','mysql','mariadb','postgres']`);近似名(`postgresql`、`mdb2`、`sqlite3`)不放行。無 `://` 者即使整串恰為方言名也 `***`(可能就是密碼);只看第一個 `://`。
+- **Unicode 摺疊之測試**:`'ſqlite'`(長 s)經 NFKC 會變 `sqlite`、Kelvin 符號 `K` 經 `toLowerCase` 為 `k`;測試固定這兩個輸入為 `***`,變異「比對前 NFKC」須被殺。純 `toLowerCase` 不摺疊長 s,故現行碼安全。
+- **帳本分拆**:用 Write 寫的一次性腳本(`tmp/mig-mdb2/splitRulebook.mjs`)依 `## ` 標題切節、按類型分組輸出,回驗各節文字逐字存在於新檔、位元組守恆(各節總和 + 檔頭 = 原稿);分拆前後用 `checkRefs.mjs` 蒐集 repo 內所有 `R-` 起首之節號引用並對帳本標題解析,未定義集合不變(只有 `unit-instance-lifecycle` 內三個測試自有編號,屬分拆前即有)。索引與經驗文字不要寫看似節號之佔位字樣(會被引用核對當成未定義的節)。引用路徑仍寫 `sgud/rule/rulebook.md`,由主檔索引以節號前綴導到各檔,不改各檔註解。
+- **分組以單檔 ≤ 約 37 KB 為度**:條件類(R-FIND、R-WL 與三則系列規格摘要)若與 R-FLOAT 同檔為 62 KB,故 R-FLOAT 另成 `rulebook_float.md`;各檔大小見 `rulebook.md` 索引。

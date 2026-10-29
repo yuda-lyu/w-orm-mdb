@@ -7,14 +7,15 @@ import { isWindows, setupStorage, cleanStorage, mkOpt } from './unit-setup.mjs'
 import { scenario, scenarioWrongPw, normScenario, ID, PW } from './tools/diagScenario.mjs'
 
 
-//spec: sgud/rule/rulebook.md 之 R-DIAG: 診斷輸出之單一出口(src/getDiag.mjs)於WOrmMdb實例(真Jet引擎)之行為
-//  R-DIAG-01 預設只輸出固定標籤與不含個資之摘要(不出現資料值、id、後端錯誤原文、連線憑證)
-//  R-DIAG-02 logDetail為true還原細節(格式與修改前一致: bare者為單一引數), 連線憑證仍遮罩
-//  R-DIAG-03 funLog(label, safe, detail)取代console, detail為遮罩後之完整細節; 型別錯誤之選項視同未給
+//spec: sgud/rule/rulebook.md 之 R-DIAG(主控dspec〈診斷輸出與遮罩〉、wsemi之R-DIAG-01): 診斷輸出之單一出口(wsemi之getDiag實例)於WOrmMdb實例(真Jet引擎)之接線
+//  R-DIAG-01 預設只輸出固定標籤與safe摘要(不出現資料值、id、後端錯誤原文、連線憑證)
+//  R-DIAG-02 logDetail為true輸出(標籤, 遮罩後之細節)(wsemi之getDiag, 無bare), 連線憑證與資料庫檔案路徑遮罩
+//  R-DIAG-03 funLog(label, safe, detail)取代console, detail為遮罩後之細節拷貝; 型別錯誤之選項視同未給
 //  R-DIAG-04 opt.logging為true時sequelize紀錄函數經單一出口(預設只輸出敘述種類, 無deprecation警告)
-//  R-DIAG-05 genModelsByTabs傳diag予w-orm-reladb(須≥1.1.17; 本套件不替換全域console.log, 見unit-diaglog之依賴契約案)
-//  R-DIAG-08 回傳契約不變: 各操作之resolve/reject內容、事件payload與時機與修改前(git HEAD)相同, 固定預期值為test/tools/diagGolden.json
-//  R-DIAG-09 站點掃描: src內除getDiag.mjs外無console、process.stdout/stderr、emitWarning呼叫, 傳給sequelize之logging只有函數或false
+//  R-DIAG-05 genModelsByTabs傳本實例之diag予w-orm-reladb(須≥1.1.18之diag參數契約; 本套件不替換全域console.log)
+//  R-DIAG-08 回傳契約不變: 不含憑證之情境下各操作之resolve/reject內容、事件payload與時機與修改前(git HEAD)相同, 固定預期值為test/tools/diagGolden.json
+//  R-DIAG-09 站點掃描: src內無console、process.stdout/stderr、emitWarning呼叫(出口在wsemi), 傳給sequelize之logging只有函數或false
+//註: 對外錯誤值(reject、error事件、逐筆err)之接線另見unit-diaglog-wire
 //註: 後端(Jet)錯誤訊息隨系統語系而異, 比對時換成固定字串(見tools/diagScenario.mjs之normScenario)
 
 
@@ -148,6 +149,7 @@ if (isWindows()) {
                     assert.deepStrictEqual(Object.keys(l.args[1]).sort(), ['errType', 'mode'], '摘要只有操作別與錯誤類別')
                     assert.strictEqual(l.args[1].errType, 'Error')
                 }
+                assert.deepStrictEqual([...new Set(cp.lines.map((l) => l.k))], ['log'], 'level省略: 各站皆寫console.log(stdout)')
                 let modes = cp.lines.filter((l) => l.args[0] === 'change handler threw').map((l) => l.args[1].mode)
                 assert.deepStrictEqual(modes, ['delAll', 'insert', 'save', 'del'])
                 let modesErr = cp.lines.filter((l) => l.args[0] === 'error handler threw').map((l) => l.args[1].mode)
@@ -189,20 +191,22 @@ if (isWindows()) {
 
         describe('logDetail(R-DIAG-02)', function() {
 
-            it('還原舊輸出: 訂閱函數拋出之錯誤原樣(單一Error引數, 同修改前之console.log(err)); sql全文為單一字串引數(同sequelize之舊輸出)', async function() {
+            it('輸出(標籤, 細節): 訂閱函數拋出之錯誤為(change handler threw|error handler threw, Error副本); sql全文為(sql, 字串)(wsemi之getDiag無bare)', async function() {
                 let w = mk({ logging: true, logDetail: true })
                 let cp = await capture(() => scenarioLeak(w))
-                let errs = cp.lines.filter((l) => l.args.length === 1 && l.args[0] instanceof Error)
+                let errs = cp.lines.filter((l) => l.args.length === 2 && ['change handler threw', 'error handler threw'].includes(l.args[0]) && l.args[1] instanceof Error)
                 assert.ok(errs.length >= 5, `訂閱函數拋錯之輸出: ${errs.length}`)
                 for (let l of errs) {
-                    assert.strictEqual(l.args[0].message, `listener ${ID} ${PW}`)
+                    assert.strictEqual(l.args[1].message, `listener ${ID} ${PW}`)
                 }
-                let sqls = cp.lines.filter((l) => l.args.length === 1 && typeof l.args[0] === 'string')
+                let sqls = cp.lines.filter((l) => l.args.length === 2 && l.args[0] === 'sql' && typeof l.args[1] === 'string')
                 assert.ok(sqls.length >= 3)
                 for (let l of sqls) {
-                    assert.ok(l.args[0].startsWith('Executing (default): '), l.args[0])
+                    assert.ok(l.args[1].startsWith('Executing (default): '), l.args[1])
                 }
-                let all = sqls.map((l) => l.args[0]).join('\n')
+                assert.strictEqual(cp.lines.length, errs.length + sqls.length, '無其他形式之輸出')
+                assert.deepStrictEqual([...new Set(cp.lines.map((l) => l.k))], ['log'], 'level省略: logDetail之細節亦寫console.log(stdout)')
+                let all = sqls.map((l) => l.args[1]).join('\n')
                 assert.ok(all.indexOf(`'${VNAME}'`) >= 0, 'sql全文應含條件值')
                 assert.ok(/INSERT INTO `users`/.test(all) && all.indexOf(`'${VID}'`) >= 0, 'select之過濾表以INSERT寫入各列欄位值(含id), sql全文應含之')
                 assert.deepStrictEqual(cp.warnings, [])
@@ -377,7 +381,7 @@ if (isWindows()) {
                     await w2.insert({ id: VID, name: VNAME })
                     await w2.del({ id: VID })
                 })
-                let errs = cp2.lines.filter((l) => l.args.length === 1 && l.args[0] instanceof Error)
+                let errs = cp2.lines.filter((l) => l.args.length === 2 && l.args[0] === 'change handler threw' && l.args[1] instanceof Error)
                 assert.strictEqual(errs.length, 2)
             })
 
@@ -505,11 +509,11 @@ if (isWindows()) {
                 }
                 assert.ok(s.indexOf('***') >= 0)
                 assert.ok(s.indexOf(ID) >= 0, '非憑證之細節應保留')
-                let errs = cp.lines.filter((l) => l.args.length === 1 && l.args[0] instanceof Error)
+                let errs = cp.lines.filter((l) => l.args.length === 2 && l.args[0] === 'change handler threw' && l.args[1] instanceof Error)
                 assert.ok(errs.length >= 2)
-                assert.strictEqual(errs[0].args[0].message, `boom *** *** *** ${ID}`)
-                let sqls = cp.lines.filter((l) => l.args.length === 1 && typeof l.args[0] === 'string')
-                assert.ok(sqls.some((l) => l.args[0].indexOf(`'***'`) >= 0), 'sql之條件值(密碼)應遮罩')
+                assert.strictEqual(errs[0].args[1].message, `boom *** *** *** ${ID}`)
+                let sqls = cp.lines.filter((l) => l.args.length === 2 && l.args[0] === 'sql' && typeof l.args[1] === 'string')
+                assert.ok(sqls.some((l) => l.args[1].indexOf(`'***'`) >= 0), 'sql之條件值(密碼)應遮罩')
             })
 
             it('funLog: detail(完整細節)之憑證遮罩, safe不含憑證', async function() {
@@ -542,7 +546,7 @@ if (isWindows()) {
 
         })
 
-        describe('genModelsByTabs之輸出經單一出口(R-DIAG-05; w-orm-reladb≥1.1.17其輸出走傳入之diag, 預設只輸出標籤, logDetail與funLog由diag承接)', function() {
+        describe('genModelsByTabs之輸出經單一出口(R-DIAG-05; w-orm-reladb≥1.1.18以其diag參數契約收本實例之wsemi getDiag實例, 預設只輸出標籤與{name,type}, logDetail與funLog由diag承接)', function() {
 
             let fdOut = null
 
@@ -587,6 +591,7 @@ if (isWindows()) {
                 assert.ok(labels.includes('save file catch'), JSON.stringify(labels))
                 for (let l of cp.lines) {
                     assert.strictEqual(l.args.length, 2, '預設輸出為(標籤, 摘要)')
+                    assert.strictEqual(l.k, 'log', 'genModelsByTabs之輸出寫console.log(stdout)')
                 }
                 assert.deepStrictEqual(cp.lines[0].args[1], { name: 'tgen2', type: 'js' })
                 let sc = cp.lines[1].args[1]
@@ -594,15 +599,17 @@ if (isWindows()) {
                 assert.ok(sc.errCode === undefined || /^E[A-Z]+$/.test(sc.errCode), `errCode應為機器代碼: ${sc.errCode}`)
             })
 
-            it('logDetail還原檔案路徑與存檔失敗之錯誤(含路徑); funLog收(label, safe, detail)且不寫console', async function() {
+            it('logDetail輸出(標籤, 細節): 產生之檔案路徑、存檔失敗之錯誤副本(其自帶之path於細節遮罩, wsemi之動態秘密); funLog收(label, safe, detail)且不寫console', async function() {
                 let w1 = mk({ logDetail: true })
                 let cp = await capture(async () => {
                     w1.genModelsByTabs(fdOut, tabs('tgen3'), { type: 'js' })
                     w1.genModelsByTabs(fdOut, badTabs, { type: 'js' })
                 })
-                let s = flat(cp)
-                assert.ok(s.indexOf('tgen3.js') >= 0, s)
-                assert.ok(s.indexOf('bad|name') >= 0, s)
+                let gen = cp.lines.filter((l) => l.args[0] === 'generate file:')
+                assert.ok(gen.length === 1 && gen[0].args.length === 2 && String(gen[0].args[1]).indexOf('tgen3.js') >= 0, flat(cp))
+                let sc = cp.lines.filter((l) => l.args[0] === 'save file catch')
+                assert.ok(sc.length === 1 && sc[0].args.length === 2 && sc[0].args[1] instanceof Error, flat(cp))
+                assert.ok(sc[0].args[1].message.indexOf('***') >= 0 && sc[0].args[1].message.indexOf('bad|name') < 0, `存檔失敗之錯誤路徑應於細節遮罩: ${sc[0].args[1].message}`)
 
                 let got = []
                 let w2 = mk({ funLog: (...a) => got.push(a) })
@@ -611,8 +618,8 @@ if (isWindows()) {
                     w2.genModelsByTabs(fdOut, badTabs, { type: 'js' })
                 })
                 assert.deepStrictEqual(cp2.lines, [])
-                assert.ok(got.some((a) => a[0] === 'generate file:' && String(a[2]).indexOf('tgen4.js') >= 0), util.inspect(got, { depth: 3 }))
-                assert.ok(got.some((a) => a[0] === 'save file catch' && util.inspect(a[2], { showHidden: true }).indexOf('bad|name') >= 0), util.inspect(got, { depth: 3 }))
+                assert.ok(got.some((a) => a[0] === 'generate file:' && a.length === 3 && String(a[2]).indexOf('tgen4.js') >= 0), util.inspect(got, { depth: 3 }))
+                assert.ok(got.some((a) => a[0] === 'save file catch' && a.length === 3 && a[2] instanceof Error && a[1].name === 'bad|name'), util.inspect(got, { depth: 3 }))
             })
 
             it('funLog內呼叫console.log(常見之轉送寫法): 不遞迴, funLog每筆輸出只被呼叫一次', async function() {
@@ -692,12 +699,9 @@ if (isWindows()) {
             }
             const fns = () => fs.readdirSync(fdSrc()).filter((v) => v.endsWith('.mjs'))
 
-            it('src內除getDiag.mjs外無console、process.stdout、process.stderr、emitWarning之呼叫', function() {
+            it('src內無console、process.stdout、process.stderr、emitWarning之呼叫(診斷輸出之出口為wsemi之getDiag)', function() {
                 let hits = []
                 for (let fn of fns()) {
-                    if (fn === 'getDiag.mjs') {
-                        continue
-                    }
                     code(fn).forEach((ln, k) => {
                         if (/\bconsole\s*[.[]|process\s*\.\s*(stdout|stderr)|emitWarning|\bwarn\s*\(/.test(ln)) {
                             hits.push(`${fn}#${k}: ${ln.trim()}`)
@@ -707,9 +711,12 @@ if (isWindows()) {
                 assert.deepStrictEqual(hits, [])
             })
 
-            it('getDiag.mjs為唯一之console出口(console之呼叫皆為diag之輸出)且存在', function() {
-                let calls = code('getDiag.mjs').filter((ln) => /\bconsole\s*\.\s*\w+\s*\(/.test(ln))
-                assert.ok(calls.length >= 1 && calls.length <= 4, `getDiag.mjs之console呼叫數: ${calls.length}`)
+            it('單一實作(dspec D1): src無自寫之診斷出口與遮罩(無getDiag.mjs), WOrmMdb之getDiag、getDiagSecrets、maskDiagUrl皆取自wsemi', function() {
+                assert.ok(!fns().includes('getDiag.mjs'), 'src/getDiag.mjs應已刪除')
+                let c = code('WOrmMdb.mjs').join('\n')
+                for (let [nm, mod] of [['getDiag', 'getDiag'], ['getDiagSecrets', 'getDiagSecrets'], ['maskDiagUrl', 'maskDiagUrl']]) {
+                    assert.ok(new RegExp(`^import ${nm} from 'wsemi/src/${mod}\\.mjs'$`, 'm').test(c), `${nm}應取自wsemi`)
+                }
             })
 
             it('src內任何檔皆不對console賦值或重新定義(不替換全域console.log; R-DIAG-05)', function() {

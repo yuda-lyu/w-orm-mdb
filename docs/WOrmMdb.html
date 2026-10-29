@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkFindColKind">chkFindColKind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#ensureBins">ensureBins</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkFindColKind">chkFindColKind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#ensureBins">ensureBins</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getImportErr">getImportErr</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -111,13 +111,17 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
 另於字串進入SQL文字之出口(escVal、escId)再檢一次作最後防線；String包裝物件以其字串值檢核並寫成一般字串(Jet只存文字)，列內巢狀之類別實例與Map之物件鍵為共用參照(已知限制)。
 既有資料不遷移：修正前經本套件寫入之孤立代理已被改寫為U+FFFD且無從還原，檢出法見README。
 註: Jet之字串等值由其排序規則決定(不分大小寫、忽略尾端半形空白、全半形、假名與增補平面字元等)，良構字串亦可能相等：'a'、'a'+emoji、'a'+U+FFFD為同一主鍵
-(selectByPk('a'+emoji)命中'a'，del可刪到'a')，與大小寫同屬設計，套件不改變(要精確比對須由資料庫端另處理)</p></li></ul></dd>
+(selectByPk('a'+emoji)命中'a'，del可刪到'a')，與大小寫同屬設計，套件不改變(要精確比對須由資料庫端另處理)
+註: 診斷輸出與遮罩一律用wsemi之共用模組(getDiag、getDiagSecrets、maskDiagUrl，規則見wsemi之R-DIAG-01與主控dspec〈診斷輸出與遮罩〉)。
+對外錯誤值(整批reject、error事件之訊息、逐筆結果之err)凡為外來值(Jet引擎與connMDB.exe之錯誤文字、執行檔之取得或執行失敗、sequelize、呼叫端數據之getter或toString等)者，
+整批reject與error事件經diag.err(wsemi之maskDiagErr)、逐筆err於建立時經diag.mask：只遮憑證(連線字串、密碼與帳號:密碼〔至少4字元〕、mdb://之後整段)，不遮單獨帳號與資料庫檔案路徑；
+含憑證者為遮罩後之副本(錯誤類別與instanceof不變，訊息之憑證為***)，否則為原值；本套件以固定詞彙組成之訊息(invalid find、invalid data、can not import model等)原樣交出(固定字串經遮罩挖空可反推短密碼)</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line123">line 123</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line141">line 141</a>
     </li></ul></dd>
     
 
@@ -289,7 +293,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
                 </td>
             
 
-            <td class="description last"><p>輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'。解析失敗時建構函式拋出之Error訊息為<code>原因, opt.url[遮罩後連線字串]</code>(前綴與Error型態不變)：://之後一律不回顯(回顯為<code>scheme://***</code>，連線字串無主機，@之後可能是密碼之後半)，無://者為<code>***</code>，scheme須為識別字否則為<code>***</code>；<code>dialect[…] is not mdb</code>之dialect於無://或不合scheme樣式時亦為<code>***</code></p></td>
+            <td class="description last"><p>輸入連接資料庫字串，資料庫僅可選'mdb'，預設'mdb://username:password'。解析失敗時建構函式拋出之Error訊息為<code>原因, opt.url[遮罩後連線字串]</code>(前綴與Error型態不變)：回顯經wsemi之maskDiagUrl，scheme為mdb(不分大小寫)者為<code>mdb://***</code>(://之後一律不回顯，連線字串無主機，@之後可能是密碼之後半)，其餘(其他scheme、無://者、非字串)一律為<code>***</code>；<code>dialect[…] is not mdb</code>之dialect只回顯已知方言名(mdb、mssql、sqlite、mysql、mariadb、postgres，不分大小寫，回顯小寫形)，其餘(未知方言、看似scheme之秘密、無://者)一律為<code>***</code></p></td>
         </tr>
 
     
@@ -609,7 +613,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
                 </td>
             
 
-            <td class="description last"><p>輸入是否還原診斷輸出之完整細節布林值，預設false，型別錯誤者視同false。診斷輸出(console)預設只含固定標籤與不含個資之摘要(不含資料值、id、後端錯誤原文、路徑)；為true時還原為含細節的輸出(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。連線字串與帳密於任何情形皆以***遮罩</p></td>
+            <td class="description last"><p>輸入是否於console輸出遮罩後之診斷細節布林值，預設false，須為true才生效(型別錯誤者視同false)。診斷輸出由wsemi之getDiag實作(選項語意見其說明)：console預設只含固定標籤與不含個資之摘要(safe只留stmt、mode、name、type、errType、errCode)；為true時改為(標籤, 遮罩後之細節)(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。細節中之連線字串、帳號、密碼、帳號:密碼與資料庫檔案路徑以***遮罩</p></td>
         </tr>
 
     
@@ -649,7 +653,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
                 </td>
             
 
-            <td class="description last"><p>輸入診斷輸出函數(label, safe, detail)，預設無，型別錯誤者視同未給。給予時診斷輸出只交給它而不寫console：label為固定標籤字串，safe為不含個資之摘要物件(可能為undefined)，detail為完整細節之遮罩拷貝(可能無此引數；連線字串與帳密已以***遮罩；深度與大小有上限，函數、二進位資料、Map/Set、存取器以標記字串代替，不沿用原型，不執行使用端程式)，供使用端遮罩後轉送。函數拋錯或回傳reject之promise皆被吞下，不影響各操作之結果</p></td>
+            <td class="description last"><p>輸入診斷輸出函數(label, safe, detail)，預設無，須為函數才生效(型別錯誤者視同未給)。給予時診斷輸出只交給它而不寫console(logDetail不作用)：label為固定標籤字串，safe為摘要物件(可能為undefined)，detail為遮罩後之細節拷貝(wsemi之maskDiagCopy；可能無此引數)。函數拋錯被吞下，回傳之原生Promise標記已處理，不影響各操作之結果</p></td>
         </tr>
 
     
@@ -867,7 +871,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2159">line 2159</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2251">line 2251</a>
     </li></ul></dd>
     
 
@@ -985,7 +989,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1794">line 1794</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1884">line 1884</a>
     </li></ul></dd>
     
 
@@ -1299,7 +1303,7 @@ DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2032">line 2032</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2124">line 2124</a>
     </li></ul></dd>
     
 
@@ -1582,13 +1586,13 @@ DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主�
     
     <dt class="tag-description">Description:</dt>
     <dd class="tag-description"><ul class="dummy"><li><p>由資料表物件生成各資料表的models資料</p>
-<p>註: 其診斷輸出(檔案路徑、存檔失敗之錯誤)經本實例之診斷輸出單一出口(以第4個引數傳給w-orm-reladb，須≥1.1.17)，預設只輸出固定標籤與不含個資之摘要，opt.logDetail與opt.funLog可取得細節</p></li></ul></dd>
+<p>註: 其診斷輸出(檔案路徑、存檔失敗之錯誤)經本實例之診斷輸出單一出口(wsemi之getDiag實例，以第4個引數傳給w-orm-reladb，須≥1.1.18)，預設只輸出固定標籤與{name,type[,errType,errCode]}，opt.logDetail與opt.funLog可取得遮罩後之細節</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2192">line 2192</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2286">line 2286</a>
     </li></ul></dd>
     
 
@@ -1891,13 +1895,15 @@ DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主�
 <p>註: connMDB.exe為one-shot程序，每次呼叫各自開啟與關閉連線，故實例本身不持有資料庫連線；
 sequelize僅用於匯入models以取得欄位定義，不承載任何數據
 註: 每個實例自帶其sequelize(區域變數)，close只關閉自己的且可重複呼叫(第二次起為空操作)，
-故useStable為false之並行呼叫、重複init皆各自釋放，不會被後建者覆寫而漏關或被誤關；close之後不再使用該實例</p></li></ul></dd>
+故useStable為false之並行呼叫、重複init皆各自釋放，不會被後建者覆寫而漏關或被誤關；close之後不再使用該實例</p>
+<p>註: err為匯入model失敗之訊息字串(無失敗為null): 本套件之固定詞彙原樣, 外來之失敗(sequelize之建立或關閉)經diag.err只遮憑證(R-DIAG);
+jet為內部之Jet介面(供以option.instance傳回本套件之各函數), 由呼叫端直接呼叫時其錯誤文字為原文(已知限制LDG12)</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line532">line 532</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line603">line 603</a>
     </li></ul></dd>
     
 
@@ -2018,7 +2024,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1078">line 1078</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1162">line 1162</a>
     </li></ul></dd>
     
 
@@ -2357,7 +2363,7 @@ sequelize僅用於匯入models以取得欄位定義，不承載任何數據
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1274">line 1274</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1360">line 1360</a>
     </li></ul></dd>
     
 
@@ -2664,7 +2670,7 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1422">line 1422</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1510">line 1510</a>
     </li></ul></dd>
     
 
@@ -3018,7 +3024,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line817">line 817</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line901">line 901</a>
     </li></ul></dd>
     
 
@@ -3312,7 +3318,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line892">line 892</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line976">line 976</a>
     </li></ul></dd>
     
 
@@ -3598,7 +3604,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 28 2026 22:00:30 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 30 2026 04:44:45 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

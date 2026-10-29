@@ -33,6 +33,10 @@ const msTryOpen = 25
 const codesTryOpen = [3734, 3050]
 
 
+//exe未產出結果檔且無執行錯誤文字時之固定詞彙reject(R-DIAG: WOrmMdb之outErr據以原樣交出; 其餘reject為Jet引擎、執行檔之取得與執行之錯誤, 屬外來值, 由WOrmMdb經diag.err)
+const ERR_NO_RES = 'connMDB.exe did not produce result file'
+
+
 /**
  * 等待指定毫秒
  *
@@ -200,7 +204,7 @@ function jetOpen(db) {
 
         //check, exe未產出結果檔
         if (res === null) {
-            return Promise.reject(errTemp || 'connMDB.exe did not produce result file')
+            return Promise.reject(errTemp || ERR_NO_RES)
         }
 
         return res
@@ -249,4 +253,4 @@ function jetOpen(db) {
 
 
 export default jetOpen
-export { CODE_DUP_KEY }
+export { CODE_DUP_KEY, ERR_NO_RES }

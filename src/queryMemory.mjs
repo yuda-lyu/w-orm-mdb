@@ -5,8 +5,24 @@ import isarr from 'wsemi/src/isarr.mjs'
 import arrHas from 'wsemi/src/arrHas.mjs'
 import pm2resolve from 'wsemi/src/pm2resolve.mjs'
 import cvFind, { getColKind, toFloating } from 'w-orm-reladb/src/cvFind.mjs'
+import { ownErr } from 'w-orm-reladb/src/ownErr.mjs'
 import importModels from './importModels.mjs'
 import { TPS_STR, genInnerKeys } from './pk.mjs'
+
+
+//本模組以固定詞彙reject之字串訊息(R-DIAG: WOrmMdb之outErr據以原樣交出, 不經diag.err; 固定字串經遮罩挖空可反推短密碼)
+const ERR_NOT_ARR = 'data is not an array'
+
+
+/**
+ * 匯入model失敗之訊息(固定詞彙與呼叫端之表名), initSequelize以之reject; WOrmMdb之initAdodb據以辨識本套件之訊息(原樣交出), 其餘外來錯誤經diag.err
+ *
+ * @param {Object} opt 輸入設定物件
+ * @returns {String} 回傳訊息字串
+ */
+function getImportErr(opt) {
+    return `can not import model: ${opt.cl}, need to use genModelsByDB, genModelsByTabs or create ${opt.cl}.${opt.modelType}`
+}
 
 
 /**
@@ -16,7 +32,7 @@ import { TPS_STR, genInnerKeys } from './pk.mjs'
  * 故其資料表為記憶體sqlite且不承載任何數據
  *
  * 註: logging只在opt.logging為true且給予logSql時啟用, 且一律為函數(R-DIAG-04): 傳true時sequelize以console.log輸出sql全文(含欄位值與條件值)並觸發deprecation警告,
- * 輸出須經getDiag之單一出口, 故不直接傳true
+ * 輸出須經診斷輸出之單一出口(WOrmMdb之diag, 即wsemi之getDiag實例), 故不直接傳true
  *
  * @param {Object} opt 輸入設定物件
  * @param {Function} [logSql=null] 輸入sequelize之logging函數(sql全文), 未給則不輸出
@@ -44,8 +60,7 @@ async function initSequelize(opt, logSql = null) {
     //check, 匯入失敗時此處建立之sequelize不會回傳給呼叫端, 須在此關閉(R-LIFE)
     if (r.state === 'error') {
         await sequelize.close()
-        let err = `can not import model: ${opt.cl}, need to use genModelsByDB, genModelsByTabs or create ${opt.cl}.${opt.modelType}`
-        return Promise.reject(err)
+        return Promise.reject(getImportErr(opt))
     }
 
     return {
@@ -151,7 +166,7 @@ function chkFindColKind(attrs, find, path = 'find') {
         else if (k[0] !== '$') {
             let t = typeOf(k)
             if (t !== null) {
-                throw new Error(`invalid find: column type ${t} is not supported at [${kp}]`)
+                throw ownErr(`invalid find: column type ${t} is not supported at [${kp}]`)
             }
         }
     }
@@ -197,7 +212,7 @@ async function queryMemory(opt, attrs, data, find, keys, logSql = null) {
 
     //check
     if (!isarr(data)) {
-        return Promise.reject('data is not an array')
+        return Promise.reject(ERR_NOT_ARR)
     }
 
     //sequelize
@@ -269,7 +284,7 @@ async function queryMemory(opt, attrs, data, find, keys, logSql = null) {
                 }
                 let t = toFloating(x)
                 if (t === null) {
-                    throw new Error(`invalid data: date can not be converted to floating time at [row[${i}].${k}]`)
+                    throw ownErr(`invalid data: date can not be converted to floating time at [row[${i}].${k}]`)
                 }
                 r[k] = t
             }
@@ -307,4 +322,4 @@ async function queryMemory(opt, attrs, data, find, keys, logSql = null) {
 }
 
 
-export { initSequelize, queryMemory, chkFindColKind }
+export { initSequelize, queryMemory, chkFindColKind, getImportErr, ERR_NOT_ARR }

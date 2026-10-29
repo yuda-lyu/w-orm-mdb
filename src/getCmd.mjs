@@ -4,6 +4,7 @@ import isDate from 'lodash-es/isDate.js'
 import isarr from 'wsemi/src/isarr.mjs'
 import isbol from 'wsemi/src/isbol.mjs'
 import chkOrmStr from 'wsemi/src/chkOrmStr.mjs'
+import { ownErr } from 'w-orm-reladb/src/ownErr.mjs'
 import { YEAR_MIN, YEAR_MAX, inJetDate } from './dateRange.mjs'
 
 
@@ -43,7 +44,7 @@ function escId(s) {
     //不檢NUL; 固定詞彙不回顯值
     let why = chkOrmStr(t, { nul: false })
     if (why !== null) {
-        throw new Error(`invalid identifier: ${why}`)
+        throw ownErr(`invalid identifier: ${why}`)
     }
 
     return `[${t}]`
@@ -84,7 +85,7 @@ function escVal(v) {
     //此為寫入前整批預檢(WOrmMdb.mjs之chkDates)之最後一道防線, 令任何寫入路徑皆不可能產出越界常值
     if (isDate(v)) {
         if (!inJetDate(v)) {
-            throw new Error(`invalid data: date is not a valid time in years ${YEAR_MIN}-${YEAR_MAX}`)
+            throw ownErr(`invalid data: date is not a valid time in years ${YEAR_MIN}-${YEAR_MAX}`)
         }
         let p = (n, w = 2) => {
             return String(n).padStart(w, '0')
@@ -101,7 +102,7 @@ function escVal(v) {
     //不檢NUL(值之NUL不屬共用檢核, NUL於Jet由SQL文字截斷而報錯, 現況行為不變)
     let why = chkOrmStr(s, { nul: false })
     if (why !== null) {
-        throw new Error(`invalid data: ${why}`)
+        throw ownErr(`invalid data: ${why}`)
     }
 
     return `'${s.replace(/'/g, `''`)}'`
