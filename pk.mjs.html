@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkFindColKind">chkFindColKind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#ensureBins">ensureBins</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WOrmMdb.html">WOrmMdb</a><ul class='methods'><li data-type='method'><a href="WOrmMdb.html#.createStorage">createStorage</a></li><li data-type='method'><a href="WOrmMdb.html#.del">del</a></li><li data-type='method'><a href="WOrmMdb.html#.delAll">delAll</a></li><li data-type='method'><a href="WOrmMdb.html#.genModelsByTabs">genModelsByTabs</a></li><li data-type='method'><a href="WOrmMdb.html#.initAdodb">initAdodb</a></li><li data-type='method'><a href="WOrmMdb.html#.insert">insert</a></li><li data-type='method'><a href="WOrmMdb.html#.insertBulk">insertBulk</a></li><li data-type='method'><a href="WOrmMdb.html#.save">save</a></li><li data-type='method'><a href="WOrmMdb.html#.select">select</a></li><li data-type='method'><a href="WOrmMdb.html#.selectByPk">selectByPk</a></li></ul></li></ul><h3>Global</h3><ul><li><a href="global.html#castPkFind">castPkFind</a></li><li><a href="global.html#chkFindColKind">chkFindColKind</a></li><li><a href="global.html#chkPkWf">chkPkWf</a></li><li><a href="global.html#ensureBins">ensureBins</a></li><li><a href="global.html#escId">escId</a></li><li><a href="global.html#escVal">escVal</a></li><li><a href="global.html#fillPkSlots">fillPkSlots</a></li><li><a href="global.html#genInnerKeys">genInnerKeys</a></li><li><a href="global.html#getDeleteAll">getDeleteAll</a></li><li><a href="global.html#getDeleteByPk">getDeleteByPk</a></li><li><a href="global.html#getImportErr">getImportErr</a></li><li><a href="global.html#getInsert">getInsert</a></li><li><a href="global.html#getPkType">getPkType</a></li><li><a href="global.html#getSelectAll">getSelectAll</a></li><li><a href="global.html#getSelectByPk">getSelectByPk</a></li><li><a href="global.html#getSelectByPks">getSelectByPks</a></li><li><a href="global.html#getUpdate">getUpdate</a></li><li><a href="global.html#importModels">importModels</a></li><li><a href="global.html#inJetDate">inJetDate</a></li><li><a href="global.html#inJetYear">inJetYear</a></li><li><a href="global.html#initSequelize">initSequelize</a></li><li><a href="global.html#isPlainObj">isPlainObj</a></li><li><a href="global.html#jetOpen">jetOpen</a></li><li><a href="global.html#kFast">kFast</a></li><li><a href="global.html#normDates">normDates</a></li><li><a href="global.html#normPk">normPk</a></li><li><a href="global.html#queryMemory">queryMemory</a></li></ul>
     
 </nav>
 
@@ -47,6 +47,7 @@
         <article>
             <pre class="prettyprint source linenums"><code>import get from 'lodash-es/get.js'
 import chkOrmStr from 'wsemi/src/chkOrmStr.mjs'
+import { ownErr } from 'w-orm-reladb/src/ownErr.mjs'
 
 
 //主鍵之型別判定、正規化與等值判定之輔助
@@ -251,7 +252,7 @@ function genInnerKeys(attrs) {
             return { wi }
         }
     }
-    throw new Error('can not generate inner keys for memory filter')
+    throw ownErr('can not generate inner keys for memory filter')
 }
 
 
@@ -335,9 +336,9 @@ function castPkFind(find, pk, tp, wi) {
     //slots, 序號集合之佔位
     let slots = []
 
-    //err, 否定語境之無效值: 同cvOrmFind之錯誤格式invalid find: 原因 at [路徑], 不回顯值
+    //err, 否定語境之無效值: 同cvOrmFind之錯誤格式invalid find: 原因 at [路徑], 不回顯值; 固定詞彙, 經ownErr登記令整批reject原樣交出(R-DIAG)
     function err(path) {
-        return new Error(`invalid find: invalid primary key value in negative condition at [${path}]`)
+        return ownErr(`invalid find: invalid primary key value in negative condition at [${path}]`)
     }
 
     //normVals, 多值之正規化(純量視為單元素陣列); 肯定語境之無效、型別不符與不可能存在者略過(不命中); 否定語境之無效或型別不符拋出(path為錯誤訊息之路徑)
@@ -540,7 +541,7 @@ export {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 28 2026 22:00:30 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 30 2026 04:44:45 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
