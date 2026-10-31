@@ -5,6 +5,8 @@
 - 套件版本:`package.json` 為 1.0.44;發布與版號由維護者與主控決定。
 - 依賴現況:`node_modules` 之 `w-orm-reladb` 為 1.1.18、`wsemi` 1.9.31、`sequelize` 6.37.8;`package.json` 範圍 `w-orm-reladb ^1.1.18`、`wsemi ^1.9.31`(2026-10-30 mig-mdb 自 `^1.1.17`、`^1.9.27` 升:wsemi 診斷共用模組自 1.9.31 起,reladb `genModelsByTabs` 之 diag 參數契約〔wsemi getDiag 實例〕與 `src/ownErr.mjs` 自 1.1.18 起;下限由 `unit-diaglog` 釘住)。
 
+- 語料 wire 案處置(2026-11-01,orm233): `unit-diaglog-wire` 之 `WIRE_APPLIED`(17)＋`WIRE_NA`(6)對 wsemi 1.9.36 語料 wire 案 23 個全數分類;新增之 A11(`genDiagFunLog` 之 `opt.safeKeys`)、C14(`getDiagBriefErr` 之 `types`)、U22(`getDiagSecrets` 之 `conns`)皆判不適用: `src/WOrmMdb.mjs` 只引入 `getDiag`(:29)與 `getDiagSecrets`(:30),兩者不引入 `genDiagFunLog`;宣告為 `getDiagSecrets({ urls, username, password, paths })`、`patterns:['mdbUrl']`、`safeKeys: SAFE_KEYS`(不匯出之區域常數,:274-278),無 `codes`、`types`、`conns`.A07 仍為適用(使用端以 `genDiagFunLog` 之 `funLog` 接管之路徑,測試內 import `genDiagFunLog`).最近一次全套驗證(2026-11-01,orm233,wsemi 1.9.36): `npm test`(`quiet-run --lock`)3152 passing / 610 pending / 0 failing.
+
 ## 功能與規則、測試對照
 
 | 功能 | 規則(rulebook) | 測試檔 | 狀態 |

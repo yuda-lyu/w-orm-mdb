@@ -147,6 +147,9 @@ let WIRE_NA = {
     R02: '需兩組網址(畸形之pg網址與語料之url)為秘密來源; 本套件之秘密來源只有單一opt.url(mdb://帳號:密碼, 無主機), 改以本套件之同型案(mdb無主機連線字串之@後片段)驗證, 見〈宣告〉',
     O15: 'safe之鍵皆為本套件固定之stmt、mode、name、type與errType、errCode, 無呼叫端可控之鍵(原始碼盤點鎖定於unit-diaglog)',
     A01: 'genDiagFunLog自身不讀第3引數之行為; 經本套件之路徑即A07接線(getDetail不被呼叫, 細節不產生)',
+    A11: 'genDiagFunLog之opt.safeKeys(轉接器對safe頂層鍵之白名單過濾)全在轉接器內執行(wsemi之genDiagFunLog.mjs), 本套件src只引入getDiag與getDiagSecrets(兩者皆不引入genDiagFunLog), 不傳也不讀opt.safeKeys, 其SAFE_KEYS為不匯出之區域常數(WOrmMdb.mjs, 見O15); 經本套件之路徑(使用端以轉接器之funLog接管)即A07接線, 本套件對safe的貢獻只有固定鍵(stmt、mode、name、type與errType、errCode)',
+    C14: 'getDiagBriefErr之types宣告(pg之DatabaseError形態): 本套件之getDiag宣告只有secrets、patterns:[mdbUrl]、safeKeys, 不宣告codes與types, 驅動錯誤之errType恆為Error',
+    U22: 'getDiagSecrets之conns(連線位址依內容分類): 本套件以urls(opt.url)、username、password、paths分別宣告秘密來源, 不用conns',
 }
 
 
