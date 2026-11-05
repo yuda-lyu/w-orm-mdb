@@ -26,11 +26,21 @@ const CODE_DUP_KEY = 3022 //重複鍵: 主鍵或唯一索引衝突
 //已實機重現: 未重試時跨行程併發save出現寫入遺失, 單行程useStable為false時出現逐筆失敗。
 //此類失敗發生於連線開啟階段, 該次呼叫尚未執行任何指令(由exe之openFailed標記保證,
 //exe於開啟失敗時一律中止其後cmds), 故重試整批為安全且不會重複套用寫入。
-//僅白名單錯誤碼重試(3734為已實測之鎖競爭, 3050為鎖檔無法建立),
-//密碼錯誤/檔案不存在/格式不符等永久性開啟失敗不重試, 直接回報
+//同一併發開啟下另有四種錯誤已實機重現(探測: 純讀、零寫入、每輪換新mdb複本、16並行, 約0.7~1.2%之呼叫於首次嘗試開啟失敗, 皆為openFailed):
+//  3031 Not a valid password.(無密碼之檔、連線字串不帶密碼亦出現)
+//  3049 Cannot open database ''.(檔名為空字串)
+//  3045 Could not use ''; file already in use.(檔名為空字串)
+//  3356 You attempted to open a database that is already opened exclusively by user ... Try again when the database is available.(連線字串無任何獨占設定)
+//其訊息中之檔名為空字串(3734亦曾見使用者與主機名稱為空字串, 但非必然), 推測為引擎讀到另一連線正在建立或釋放時尚未就緒之鎖檔狀態(機制未證實);
+//實測檔案本身完好, 重試即可開啟(同樣之探測於納入前800次中7次失敗, 納入後800/800成功; 多數於第2次嘗試即恢復)。
+//僅白名單錯誤碼重試: 3734(已實測之鎖競爭)、3050(鎖檔無法建立)、3045、3031、3049、3356(上述併發開啟時之暫態);
+//白名單係依實測所見之碼, 非窮舉; 檔案不存在(3024)/格式不符(3343)/無錯誤碼等永久性開啟失敗不重試, 直接回報。
+//註: 3031(真實之密碼錯誤)、3049(檔案毀損)、3045與3356(被他程序獨占)亦可為永久性, 無從由錯誤碼區辨,
+//    故這類失敗同樣重試至用盡後才回報(結果與訊息不變), 代價為多花時間: 各次嘗試間隔25ms×序號, 7次間隔合計700ms, 另加8次啟動exe(各約0.3秒),
+//    實測錯誤密碼由約0.33秒變為約3.4秒才回報
 const nTryOpen = 8
 const msTryOpen = 25
-const codesTryOpen = [3734, 3050]
+const codesTryOpen = [3734, 3050, 3045, 3031, 3049, 3356]
 
 
 //exe未產出結果檔且無執行錯誤文字時之固定詞彙reject(R-DIAG: WOrmMdb之outErr據以原樣交出; 其餘reject為Jet引擎、執行檔之取得與執行之錯誤, 屬外來值, 由WOrmMdb經diag.err)
@@ -82,7 +92,7 @@ function jetOpen(db) {
      *
      * 註: 僅於exe未產出結果檔時reject; 個別cmd之失敗一律經results逐筆回報而不reject,
      * 令呼叫端得以errorCode判別衝突與其他錯誤並各自處置
-     * 註: 連線開啟失敗(openFailed)且錯誤碼屬可重試之鎖競爭類時整批重試, 見codesTryOpen之說明;
+     * 註: 連線開啟失敗(openFailed, 即零語句已執行)且錯誤碼屬可重試之併發開啟暫態(鎖競爭類與讀到未就緒狀態類)時整批重試, 至多8次嘗試, 見codesTryOpen之說明;
      * 重試耗盡或不可重試者, 回傳之結果物件仍帶openFailed為true, 供呼叫端辨識為整批性錯誤
      *
      * @param {Array} cmds 輸入指令陣列, 各項為{type,sql,stopOnError}
@@ -104,7 +114,7 @@ function jetOpen(db) {
                 break
             }
 
-            //check, 永久性開啟失敗(密碼錯誤/檔案不存在/格式不符)不重試, 直接回報
+            //check, 永久性開啟失敗(檔案不存在/格式不符/無錯誤碼等)不重試, 直接回報
             let ec = ((res.results || [])[0] || {}).errorCode
             if (codesTryOpen.indexOf(ec) < 0) {
                 break

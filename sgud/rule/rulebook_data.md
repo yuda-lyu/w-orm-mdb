@@ -74,7 +74,7 @@
 | LD1 | 毫秒截斷:Jet 不收含小數秒之字串與常值,寫入含毫秒之 Date 後 `select({d: 同一 Date})` 回空(O4);O1 的字串正規化亦捨去小數秒 |
 | LD2 | DATE 欄收數值/布林:交 Jet 當 OLE 序號靜默接受(`true`→1899-12-29、`40000`→2009-07-06;epoch 毫秒報 3464),與 reladb(epoch 毫秒)不一致;非 DATE 欄之 `new Boolean(false)` 被寫成 `True`(O3;DATE 欄之 Boolean 物件已改為字串 `'false'`) |
 | LD3 | `save` 更新路徑對含日期欄之列,`nModified` 恆為 1(`isEqual` 比 Date/正規化字串與 Jet 字串永不相等;資料庫實際未變)(O2)。**O1 後新增後果**:`select` 取出之列原樣 `save` 原為 `ok:0`(Jet 3464),現為成功且 `nModified:1`(即使整列未改);日期值不變 |
-| LD4 | `useStable:false` 高併發下偶發 Jet 3031(`Not a valid password.`)與「Cannot open database ''」(480 次 select 中 2 次;`selectByPk` × 8 並行偶發),不在 `jet.mjs` 重試白名單(3734、3050)內(O6);測試因此不要求並行呼叫皆成功 |
+| LD4 | **(已解,第 319 項,見 `rulebook_open.md` R-OPEN)** 原:`useStable:false` 高併發下偶發 Jet 3031(`Not a valid password.`)與「Cannot open database ''」(480 次 select 中 2 次;`selectByPk` × 8 並行偶發),不在 `jet.mjs` 重試白名單(3734、3050)內(O6);原記「測試因此不要求並行呼叫皆成功」與測試實況不符(`unit-concurrency`、`unit-instance-lifecycle` 要求全成功,故機率性紅)。現:3031、3049(即「Cannot open database ''」)、3045、3356 與 3734、3050 同列重試白名單(開啟失敗且零語句已執行者整批重試,至多 8 次),並行呼叫皆成功成立;代價為永久性之此類失敗(如真實錯誤密碼)回報由約 0.33 秒變約 3.4 秒(R-OPEN LO2) |
 | LD5 | **字串預檢依 model 欄型**(`type.key` 為 DATE/DATEONLY):model 把 Jet DATETIME 欄宣告為 TIME 或 STRING 時字串不預檢,`'0050-06-15'` 照舊被 Jet 靜默改年(外審 opus F3);model 須如實宣告。Date 物件不受此限(任何欄位皆檢)。根治需由 exe 回傳實際欄型 |
 | LD6 | **資料列須為一般物件(自有資料屬性)**:原型鏈上帶 getter 之列(兩次讀值可能不同)、`Function`/`Error` 列(`cloneDeep` 不複製,預檢略過或就地改寫呼叫端物件)、覆寫 `valueOf`/`constructor`/`Symbol.toStringTag` 之 Date 子類別(`cloneDeep` 先於預檢呼叫之)不在保證範圍(外審 argon F2;皆為既有形狀,`procPk`/`pickCols` 同;JSON 來源之資料不可能有此形狀)。如需保證須以單趟快照取代 `cloneDeep`,屬較大改動,未做 |
 | LD7 | 主鍵 `$ne`+`$nin`(或 `$eq`+`$in`)並列於同欄時 `castPkFind` 另置一層 `$and`,使深度倍增,貼近上限(深度 32)者被其後 cvFind 誤拒(外審 argon F3;即 LW3 所載之罕見組合,fail-closed;非本批引入) |

@@ -1,9 +1,9 @@
 # 狀態(現況)
 
-本檔只記現況(各功能做到哪裡、對應之規則帳本條目與測試檔、已知缺口與待辦、最近一次驗證或發布之版本),不寫過程;過程與教訓見 `sgud/exp/experience.md`,規則細節見 `sgud/rule/rulebook*.md`(2026-10-30 起依類型分拆:`rulebook.md` 為「哪類查哪檔」之索引,規則在 `rulebook_pk.md`、`rulebook_find.md`、`rulebook_float.md`、`rulebook_data.md`、`rulebook_diag.md`、`rulebook_bin.md`;節號與標題不變)。
+本檔只記現況(各功能做到哪裡、對應之規則帳本條目與測試檔、已知缺口與待辦、最近一次驗證或發布之版本),不寫過程;過程與教訓見 `sgud/exp/experience.md`,規則細節見 `sgud/rule/rulebook*.md`(2026-10-30 起依類型分拆:`rulebook.md` 為「哪類查哪檔」之索引,規則在 `rulebook_pk.md`、`rulebook_find.md`、`rulebook_float.md`、`rulebook_data.md`、`rulebook_diag.md`、`rulebook_bin.md`、`rulebook_open.md`〔2026-11-05 新增〕;節號與標題不變)。
 
-- 套件版本:`package.json` 為 1.0.44;發布與版號由維護者與主控決定。
-- 依賴現況:`node_modules` 之 `w-orm-reladb` 為 1.1.18、`wsemi` 1.9.31、`sequelize` 6.37.8;`package.json` 範圍 `w-orm-reladb ^1.1.18`、`wsemi ^1.9.31`(2026-10-30 mig-mdb 自 `^1.1.17`、`^1.9.27` 升:wsemi 診斷共用模組自 1.9.31 起,reladb `genModelsByTabs` 之 diag 參數契約〔wsemi getDiag 實例〕與 `src/ownErr.mjs` 自 1.1.18 起;下限由 `unit-diaglog` 釘住)。
+- 套件版本:`package.json` 為 1.0.53;發布與版號由維護者與主控決定。
+- 依賴現況(2026-11-05 核對):`node_modules` 之 `w-orm-reladb` 為 1.1.28、`wsemi` 1.9.51、`w-auto-sequelize` 1.0.61;`package.json` 範圍 `w-orm-reladb ^1.1.28`、`wsemi ^1.9.51`(下限沿革:wsemi 診斷共用模組自 1.9.31 起,reladb `genModelsByTabs` 之 diag 參數契約〔wsemi getDiag 實例〕與 `src/ownErr.mjs` 自 1.1.18 起;由 `unit-diaglog` 釘住)。
 
 - 語料 wire 案處置(2026-11-01,orm233): `unit-diaglog-wire` 之 `WIRE_APPLIED`(17)＋`WIRE_NA`(6)對 wsemi 1.9.36 語料 wire 案 23 個全數分類;新增之 A11(`genDiagFunLog` 之 `opt.safeKeys`)、C14(`getDiagBriefErr` 之 `types`)、U22(`getDiagSecrets` 之 `conns`)皆判不適用: `src/WOrmMdb.mjs` 只引入 `getDiag`(:29)與 `getDiagSecrets`(:30),兩者不引入 `genDiagFunLog`;宣告為 `getDiagSecrets({ urls, username, password, paths })`、`patterns:['mdbUrl']`、`safeKeys: SAFE_KEYS`(不匯出之區域常數,:274-278),無 `codes`、`types`、`conns`.A07 仍為適用(使用端以 `genDiagFunLog` 之 `funLog` 接管之路徑,測試內 import `genDiagFunLog`).最近一次全套驗證(2026-11-01,orm233,wsemi 1.9.36): `npm test`(`quiet-run --lock`)3152 passing / 610 pending / 0 failing.
 
@@ -19,6 +19,7 @@
 | 非主鍵日期條件:浮動時間;非白名單欄型條件拒收 | R-FLOAT(含 R-FLOAT-07) | `unit-float-tz`、`unit-float-e2e`、`unit-float-twocopy`、`unit-find-coltype` | 完成 |
 | 字串良構檢核 | R-WF | `unit-wf1~6`、`unit-wellformed` | 完成 |
 | **診斷輸出與遮罩:改用 wsemi 共用模組(第 161 項第 3 波;原第 153 項之自寫 `getDiag.mjs` 已刪)** | **R-DIAG(以 R-DIAG-13 為準)** | **`unit-diaglog`(純函數與原始碼盤點,不需 Windows)、`unit-urlerr`(建構函式訊息,不需 Windows)、`unit-diaglog-wo`(實例接線,真 Jet)、`unit-diaglog-wire`(對外錯誤值接線與共用語料,真 Jet)** | **完成(mig-mdb,2026-10-30;mig-mdb2 補 LDG10〔maskDialect 白名單〕與帳本分拆),待主控複審與發布** |
+| **連線開啟失敗之有限重試(併發開啟暫態:Jet 3734/3050/3045/3031/3049/3356;LD4 已解)** | **R-OPEN(`rulebook_open.md`)** | **`unit-jet-retry`(假執行檔注入 + 真實 Jet 3 案);經公開 API:`unit-encryption`、`unit-concurrency`、`unit-instance-lifecycle`** | **完成(第 319 項,2026-11-05)** |
 | **外部執行檔 `connMDB.exe` 之存放/下載/校驗/離線(D 類制式規格)** | **R-BIN** | **`unit-binmanifest`(T1、T2、清單形狀;與平台無關)、`unit-ensurebins`(T3~T7、環境變數、jet 整合;整合 3 案僅 Windows);功能測試之執行檔由 `test/tools/binEnv.mjs` 供** | **完成(bin-mdb,2026-10-28),待主控跑全套與發布** |
 
 ## 外部執行檔(R-BIN)現況
@@ -28,6 +29,12 @@
 - 改 exe 之流程見 R-BIN-02(兩步提交);`srcCs/build.bat` 輸出已改 `..\bin\connMDB.exe`。
 - README:〈External executable〉與〈Breaking changes: external executable〉兩節(新增;專案 CLAUDE.md 之 README 改動範圍待主控同步)。
 - 待辦:發布前在連網機器實跑一次 `WOrmMdb.ensureBins()` 確認真實 GitHub 網址之下載(測試不連外網,未實測);專案 `CLAUDE.md` 之〈exe 重編方式〉、〈測試〉、〈README〉三處待主控同步。
+
+## 連線開啟失敗之重試(R-OPEN)現況
+
+- `src/jet.mjs` 之 `run`:開啟失敗(`openFailed`,零語句已執行)且 `results[0].errorCode` 在 `codesTryOpen = [3734, 3050, 3045, 3031, 3049, 3356]` 者整批重試,至多 8 次嘗試,間隔 `25ms × 序號`;永久性(3024、3343、無錯誤碼)與非開啟失敗不重試;用盡後原樣回報。白名單為**實測所見,非窮舉**(R-OPEN LO1)。
+- 代價:永久性之此類失敗(如錯誤密碼)回報由約 0.33 秒變約 3.4 秒;`useStable:true` 之全域佇列使連續 N 個此類呼叫約 N × 3.4 秒(R-OPEN LO2、LO3)。縮短之選項(對模糊碼另設較少次數)留待主控裁示(LO4)。
+- 測試鷹架:`test/tools/fakeConnMDB.cs`(假執行檔,測試時以 Windows 內建 csc 編譯於 `test/temp-jet-retry/`)。
 
 ## 診斷輸出(R-DIAG)現況
 
@@ -42,9 +49,12 @@
 
 1. **依賴下限為 genModelsByTabs 契約之防線**:w-orm-reladb < 1.1.18 之 diag 參數非 wsemi 實例之契約;`package.json` 下限 `^1.1.18`,`unit-diaglog`〈依賴w-orm-reladb之genModelsByTabs之diag參數契約〉釘住。降版須同步取消。
 2. 已知限制(R-DIAG-13):LDG9 密碼含未編碼 `@` 之尾段單獨出現時不遮;LDG11 reject 清單之短密碼(<4)不遮;LDG12 `init()` 回傳之內部 `jet` 由呼叫端直接呼叫時其錯誤文字為原文(主控裁定維持,不改介面);其餘依 wsemi R-DIAG-01 之已知限制。LDG10(`dialect[…]` 回顯看似 scheme 之秘密)已於 mig-mdb2 解決:`maskDialect` 只回顯已知方言名(見 R-DIAG-13〈mig-mdb2〉)。
-3. 其餘既有已知限制見 rulebook 各節(L、L-FIND、L-WL、LD、LFL、LWF)。
+3. 其餘既有已知限制見 rulebook 各節(L、L-FIND、L-WL、LD、LFL、LWF、LO)。
+4. **R-OPEN 待裁示**:永久性之模糊碼(3031/3049/3045/3356)重試至用盡才回報,錯誤密碼約 3.4 秒;是否對這四碼另設較少嘗試(實測暫態全於第 2 次嘗試恢復)見 R-OPEN LO4。
 
 ## 最近一次驗證
+
+- 2026-11-05 mdb319(併發開啟暫態失敗之重試白名單,LD4 已解;對最終 src):全套 `npm test`(`quiet-run --lock`)兩次各 **3185 passing / 610 pending / 0 failing**,exit 0(8 分 29 秒、9 分 01 秒;較 3152 增 33 案即 `unit-jet-retry`);`unit-concurrency`＋`unit-instance-lifecycle` 各 10 輪:修前現版依賴 1/10 輪紅、舊依賴 0/10、修後 0/10(修後輪次之白名單尚未含 3356);jet 層探測(16 並行 × 50 輪 = 800 次)修前現版 7 失敗、舊依賴 10、修後 0;重試迴圈探測 1600 次(含 3356)0 失敗;修前紅 `unit-jet-retry` 33 案中 15 紅;變異 18 個殺死 18、存活 0;`npx eslint` 對修改檔 0 問題;範例 4 支於隔離副本輸出與檔尾註解一致。獨立審查(sonnet):功能缺陷 0,文件層 3 條已修。詳見 `rulebook_open.md` 末節。
 
 - 2026-10-30 mig-mdb2(主控裁定:LDG10 選 B〔`maskDialect` 白名單〕、帳本分拆;對最終 src,單次 `quiet-run --lock`):全套 `npm test` **3152 passing / 610 pending / 0 failing**,exit 0(9 分 21 秒;較 mig-mdb 之 3140 增 12 案:`unit-diaglog` +4、`unit-urlerr` +7、`unit-diaglog-wire` +1〔mig-mdb 全套後才加入者〕);受影響 4 檔(`unit-diaglog` 21、`unit-urlerr` 36、`unit-diaglog-wo` 42、`unit-diaglog-wire` 45)**144/144**;修前紅(修改前之 `maskDialect` + 新測試)`unit-diaglog`+`unit-urlerr` 57 案中紅 15;變異 19 個殺死 19、存活 0;`npx eslint` 對修改檔 0 問題。帳本分拆:`rulebook.md` 143,591 位元組 → 索引 + `rulebook_pk/find/float/data/diag/bin.md`(各節逐字搬移、位元組守恆;引用核對前後未定義集合相同)。報告 `C:\opensrcOper\dnow\20261029002013\agent-out\mig-mdb2-修正報告.md`。
 - 2026-10-30 mig-mdb(改用 wsemi 1.9.31 共用診斷模組,依賴 w-orm-reladb 1.1.18;對最終 src):全套 `npm test` **3140 passing / 610 pending / 0 failing**,exit 0(7 分 46 秒);受影響 4 檔(`unit-diaglog` 17、`unit-urlerr` 29、`unit-diaglog-wo` 42、`unit-diaglog-wire` 45)**133/133**;修前紅(HEAD 之 src + 新測試)127 案中紅 60;變異 39 個殺死 39、存活 0(M06、M19 另以補之行為案重驗殺死);範例 4 支於 HEAD 副本與現況輸出相同;`npx eslint` 對修改檔 0 問題。報告 `C:\opensrcOper\dnow\20261029002013\agent-out\mig-mdb-修正報告.md`。

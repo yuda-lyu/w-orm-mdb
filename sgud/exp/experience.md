@@ -110,7 +110,17 @@
 - **「改成複製」本身要過輸入型別表(sol 第 2 輪找出 9 條,高 6)**:把「檢核後再讀」改成呼叫當下攤平後,新引入的洞全在輸入型別:①外層批次是 `Array` 子類別且自訂 `Symbol.species` 時,`d.map(flatRow)` 的結果型別由子類別決定(實測變 `Uint8Array`、整批靜默零筆)——外層批次一律索引迴圈建普通陣列;②陣列子類別的列(`class Row extends Array { get id(){…} }`)被「陣列原樣返回」略過,主鍵存取器仍重讀——`cloneDeep` 對陣列只複製索引(自有的額外屬性即丟),故子類別的欄位值只能來自原型上的 getter,須同樣攤平;③Map/Set/Date 等內建容器攤平後只剩一般屬性(`Map.prototype.size` 是存取器還會多出一欄),`chkOrmData` 看不到容器內容而繞過檢核,且單一 Map 輸入從「無資料」變「寫一筆空列」——以 `Object.prototype.toString` 標籤排除內建容器;④原型上的陣列/物件與 getter 回傳物件沒有被 `cloneDeep`(它只複製自有屬性),攤平時要自己深複製;⑤`opt` 以 `for in` 複製漏掉不可列舉選項與類別 getter(HEAD 的一般屬性存取讀得到),要補本套件讀取的選項名稱(`url db cl fdModels modelType logging pk autoGenPk useStable storage useEncryption`);⑥複製時 `o[k] = v[k]` 遇鍵名 `__proto__`(如 `JSON.parse` 得到的自有資料屬性)會改原型而保留可變 getter——一律 `defineProperty`。教訓:任何「把讀取點換成複製步驟」的修正,先列輸入型別表(純物件/類別實例/Object.create/陣列子類別/內建容器/Proxy/凍結/存取器拋錯)與選項讀取表(可列舉/不可列舉/繼承/`__proto__`/非物件)再改。
 - **延後拋出的存取器**:攤平時某個與 model 無關的 getter 拋錯不應讓整次呼叫失敗(HEAD 只在該欄位被讀時才拋),改成在攤平列上定義「重拋同一錯誤」的不可列舉存取器——只有 `pickCols` 等真的讀該欄才拋,`chkOrmData` 因不可列舉而不走訪。
 - **工具陷阱(本節寫帳本時又犯一次)**:在 Bash 的 `node -e "…"` 內寫含反引號的文字,反引號與其內容被 shell 當成命令替換吃掉(檔案被寫壞,以 Write 重寫修復);另在 JS 樣板字串或 `node -e` 內寫 `\\b`(想要正規式字邊界)會變成真的退格字元 0x08(測試檔內肉眼看不出、`grep` 亦不顯示),使正規式永遠不匹配,以 Edit 工具直接改檔並用 `grep -c` 查控制字元驗證。**凡含反引號、`$`、反斜線的內容一律用 Write/Edit 工具,不經 shell 字串。**
-- **負載下的既有不穩**:`mocha --parallel` 全套在機器同時有外審行程(codex、opencode)與變異測試在跑時,`unit-concurrency` / `unit-instance-lifecycle` 偶發 Jet 3031 `Not a valid password.`(已記載之 LD4)並連帶令 R-LIFE 計數測試差 1;單獨重跑三次皆綠。**收尾全套請在無其他重負載時跑**。
+- **負載下的既有不穩**:`mocha --parallel` 全套在機器同時有外審行程(codex、opencode)與變異測試在跑時,`unit-concurrency` / `unit-instance-lifecycle` 偶發 Jet 3031 `Not a valid password.`(已記載之 LD4)並連帶令 R-LIFE 計數測試差 1;單獨重跑三次皆綠。**收尾全套請在無其他重負載時跑**。〔2026-11-05 第 319 項已根治:見 `rulebook_open.md` R-OPEN 與下節〕
+
+## 第 319 項教訓(2026-11-05,併發開啟暫態失敗與重試白名單)
+
+- **連紅的歸因順序**:兩次連動各紅一案、案例不同,先別各自找原因——先在**最底層**(直接對 `connMDB.exe` 併發啟動、不經任何 node 依賴與重試)量失敗率:純讀、零寫入、16 並行、每輪換新複本,約 0.7~1.2% 之呼叫於首次嘗試開啟失敗。該層重現即可排除依賴升版(wsemi/w-orm-reladb/w-auto-sequelize 之 `src/` 逐檔比對亦幾乎相同),且樣本(數百至上千次呼叫)比「兩測試檔跑 10 輪」(1/10 對 0/10,不具統計意義)有力得多。**機率性失敗的前後對比用呼叫層大樣本,測試輪數只作旁證。**
+- **同源的四種錯誤碼,不是兩種**:3031(無密碼之檔亦出現)、3049(`Cannot open database ''`)、3045(`Could not use ''; file already in use.`)、3356(`already opened exclusively … Try again`)全是併發開啟暫態,皆 `openFailed: true`(零語句已執行);訊息中檔名為空字串是徵象。第一次修(納入三碼)後以重試迴圈的複製探測又撈到殘留的 3356——**白名單修法要用「修後殘留失敗清單為空」的探測收尾,不能只靠讀到的兩個碼**。
+- **「密碼正確卻回 3031」不矛盾**:測試用的是無密碼之 mdb、連線字串不帶密碼,仍回 3031;3031 在併發開啟下不代表密碼有誤。反之真實的錯誤密碼也回 3031,無從由碼區辨,故一併重試,代價是錯誤密碼由約 0.33 秒變約 3.4 秒才回報(LO2)。
+- **字串 vs Error**:`select` 路徑經 `jet.query → runOne → Promise.reject(res.error)`,reject 的是**字串**;`save` 路徑經 `throw new Error(rWrite.error)` 是 Error。這是既有形狀,重試政策不動它(R-OPEN-02)。
+- **測試鷹架**:受測的是 `src/jet.mjs` 的重試迴圈,機率性失敗無法穩定重現。作法:假執行檔(C# 5,~40 行,依腳本檔逐次回傳預寫之結果檔並記錄次數與每次輸入)+ 於 `test/temp-*/` 建一份套件根,放 `src/jet.mjs`、`src/ensureBins.mjs` 的**逐位元組複本**與指向假執行檔的清單/離線快取。不改受測碼、不加測試縫隙;變異(改 `src/jet.mjs`)時每次測試重新複製,即時生效。csc 在 git-bash 下直呼 `%windir%\Microsoft.NET\Framework\v4.0.30319\csc.exe` 即可,中文路徑無礙(從 node `spawnSync` 呼叫)。
+- **`git archive` 取舊版會被 `core.autocrlf` 轉成 CRLF**:與工作樹(LF)逐行 `diff` 會顯示整檔不同;比對語意差異用 `git diff -- <路徑>`(帳本記 `i/lf w/lf`)。
+- **切舊依賴比對**:`npm i --no-save` 三個套件後,`package.json`、`package-lock.json` 的 md5 不變,但 `node_modules/.package-lock.json`(npm 內部隱藏鎖)的 md5 會變;還原後以「`npm ls --depth=0` 前後相同 + 隱藏鎖與追蹤之鎖檔逐套件比版本/integrity/resolved」驗證,不要要求隱藏鎖位元組相同。
 
 ## 第 87 項 B4 教訓(2026-10-21,非主鍵日期條件改用浮動時間)
 

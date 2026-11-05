@@ -14,5 +14,6 @@
 | 寫入值與實例 | `sgud/rule/rulebook_data.md` | 寫入 DATE 欄之日期範圍與字串正規化、字串良構檢核、sequelize 實例生命週期 | `R-DATE`、`R-WF`、`R-LIFE` |
 | 診斷輸出 | `sgud/rule/rulebook_diag.md` | 診斷輸出之單一出口與預設安全、對外錯誤值之遮罩(含遷移至 wsemi 共用模組之 `R-DIAG-13`) | `R-DIAG` |
 | 外部執行檔 | `sgud/rule/rulebook_bin.md` | connMDB.exe 之存放、下載、校驗與離線(D 類制式規格摘要) | `R-BIN` |
+| 連線開啟 | `sgud/rule/rulebook_open.md` | 併發開啟 mdb 時開啟階段暫態失敗(Jet 3734/3050/3045/3031/3049/3356)之有限重試,及其前提(`openFailed` 恆代表零語句已執行)、永久性失敗之回報時間(2026-11-05 新增,第 319 項;`rulebook_data.md` 之 LD4 已解) | `R-OPEN`(含 LO1~LO5) |
 
 分拆當時各檔位元組數:`rulebook_pk.md` 12,376、`rulebook_find.md` 37,198、`rulebook_float.md` 26,037、`rulebook_data.md` 33,780、`rulebook_diag.md` 29,622、`rulebook_bin.md` 5,763、本檔(索引)另計。
