@@ -20,7 +20,7 @@
 | B5 | 快取內容定址 `<快取>/<sha256>/connMDB.exe`,命中亦校驗;`W_BIN_CACHE`、`W_BIN_MIRROR`、`W_BIN_OFFLINE` 由 wsemi 統一讀取 | D3、D4、O1~O3 | `ensureBins()` 不轉傳 `floatingManifestUrl` |
 | B6 | 匯出 `ensureBins()`:`WOrmMdb.ensureBins`(靜態屬性,維持單一 default 匯出,dist 之 UMD 形狀不變) | D1、E2③ | `src/WOrmMdb.mjs` 末段 |
 | B7 | Jet 中介檔(`_<id>_in.json`、`_<id>_res.json`、`_<id>_q<k>.jsonl`)寫在 `os.tmpdir()`,**不寫在快取**(快取內容由清單校驗且可能共用或唯讀;舊版寫在 exe 旁之 `src/`) | — | `jet.mjs` `runOnce` |
-| B8 | 取不到執行檔之錯誤為帶 `code` 之 `Error`(`E_OFFLINE_MISSING` 等),不再是字串 `can not find folder for connMDB` | E3 | `jet.mjs` 不吞錯 |
+| B8 | 取不到執行檔之錯誤為帶 `code` 之 `Error`(`E_OFFLINE_MISSING` 等),不再是字串 `can not find folder for connMDB`;`E_OFFLINE_MISSING` 之訊息只列檔名與準備方法(不帶路徑與 sha256,〈輸入參數之檢測機制〉V20),sha256、大小、`cachePath`、`mirrorPath`、網址在結構欄位 `err.missing[]`(經 `WOrmMdb` 之 `diag.err` 時其內含憑證字樣之路徑遮罩) | E3、O3 | `jet.mjs` 不吞錯;`unit-ensurebins`(T6)、`unit-diaglog-wire` |
 
 ### R-BIN-02 更新流程(規格 U1,兩步提交)
 

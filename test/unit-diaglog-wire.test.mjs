@@ -489,7 +489,9 @@ if (isWindows()) {
                 assert.strictEqual(si.err, 'close failed ***')
             })
 
-            it('執行檔之取得失敗(ensureBins離線缺檔, 訊息含快取路徑): 快取路徑含憑證字樣 → select與createStorage之reject遮罩, error事件同源', async function() {
+            //wsemi 1.9.64起(輸入參數之檢測機制V20)ensureBins離線缺檔之訊息只含檔名, 不再帶快取路徑; 原案驗「訊息內含憑證字樣之快取路徑經diag.err遮罩為cache-***」之前提已不存在,
+            //改驗: ①訊息不含快取路徑與憑證字樣 ②快取路徑移至結構欄位err.missing[](經diag.err複製並遮罩): 其含憑證字樣之資料夾名遮罩為cache-*** ③reject與error事件同源
+            it('執行檔之取得失敗(ensureBins離線缺檔, 訊息只含檔名不含快取路徑): 快取路徑含憑證字樣 → select與createStorage之reject之訊息不含路徑與憑證, 結構欄位missing之快取路徑遮罩, error事件同源', async function() {
                 let old = process.env.W_BIN_CACHE
                 process.env.W_BIN_CACHE = path.resolve(fdTmp, `cache-${PW}`)
                 let r1
@@ -512,8 +514,15 @@ if (isWindows()) {
                 for (let r of [r1, r2]) {
                     assert.ok(r.err instanceof Error, String(r.err))
                     assert.strictEqual(r.err.code, 'E_OFFLINE_MISSING')
+                    //①訊息: 含缺檔之檔名; 不含快取路徑(其資料夾名cache-<密碼>連同遮罩後之cache-***皆不得出現)與憑證字樣
+                    assert.ok(r.err.message.indexOf('connMDB.exe') >= 0, r.err.message.slice(0, 300))
+                    assert.ok(r.err.message.indexOf('cache-') < 0, r.err.message.slice(0, 300))
                     noPw(r.err.message, 'ensureBins')
-                    assert.ok(r.err.message.indexOf('cache-***') >= 0, r.err.message.slice(0, 300))
+                    //②結構欄位missing: 保留(經複製)且其快取路徑之憑證字樣遮罩為cache-***
+                    assert.strictEqual(r.err.missing.length, 1)
+                    assert.strictEqual(r.err.missing[0].name, 'connMDB.exe')
+                    assert.ok(r.err.missing[0].cachePath.indexOf('cache-***') >= 0, String(r.err.missing[0].cachePath).slice(0, 300))
+                    noPw(JSON.stringify(r.err.missing), 'ensureBins.missing')
                 }
                 assert.deepStrictEqual(evs.map((e) => [e[0], e[2]]), [['select', r1.err.message], ['createStorage', r2.err.message]])
             })

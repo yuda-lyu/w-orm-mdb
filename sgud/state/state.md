@@ -28,6 +28,7 @@
 - 取得入口 `src/ensureBins.mjs`(wsemi `fsEnsureBins`);`jet.mjs` 每次 `runOnce` 經 `getProg()`;預設快取 `<套件根>/bin-cache/<sha256>/connMDB.exe`,環境變數 `W_BIN_CACHE`、`W_BIN_MIRROR`、`W_BIN_OFFLINE`;`WOrmMdb.ensureBins()` 供預先取得。Jet 中介檔改寫 `os.tmpdir()`。
 - 改 exe 之流程見 R-BIN-02(兩步提交);`srcCs/build.bat` 輸出已改 `..\bin\connMDB.exe`。
 - README:〈External executable〉與〈Breaking changes: external executable〉兩節(新增;專案 CLAUDE.md 之 README 改動範圍待主控同步)。
+- 離線缺檔訊息(2026-11-18,wsemi 1.9.64 V20 連動,eb1):`E_OFFLINE_MISSING` 之訊息只列檔名與準備方法,sha256、大小、`cachePath`、`mirrorPath`、來源網址改由 `err.missing[]` 讀取;`unit-ensurebins` 之 T6、環境變數、jet 整合案改驗結構欄位(另增有鏡像之 `mirrorPath` 案),`unit-diaglog-wire` 之「執行檔取得失敗」案因訊息不再含路徑,改驗訊息不含路徑與憑證、且 `missing[0].cachePath` 經 `diag.err` 遮罩(`cache-***`);`src/` 無包裝(`jet.mjs` 不吞錯)故未改,README〈External executable〉已補 `err.missing[]` 範例.
 - 待辦:發布前在連網機器實跑一次 `WOrmMdb.ensureBins()` 確認真實 GitHub 網址之下載(測試不連外網,未實測);專案 `CLAUDE.md` 之〈exe 重編方式〉、〈測試〉、〈README〉三處待主控同步。
 
 ## 連線開啟失敗之重試(R-OPEN)現況

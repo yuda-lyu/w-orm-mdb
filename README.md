@@ -33,7 +33,7 @@ The package reaches the Jet engine through one small executable, `connMDB.exe` (
 - **Environment variables** (read by `ensureBins()` and by every call that uses the engine):
   - `W_BIN_CACHE=<folder>`: keep the cache in `<folder>/w-orm-mdb/<sha256>/connMDB.exe` instead of the package folder (use it when `node_modules` is read-only; several packages can share one folder).
   - `W_BIN_MIRROR=<folder or http(s) base URL>`: look in the mirror before GitHub. The layout is `<mirror>/w-orm-mdb/<sha256>/connMDB.exe`. A file from the mirror is checked against the manifest like any other, so a mirror cannot supply a different file; a file that does not match is refused and the next source is tried.
-  - `W_BIN_OFFLINE=1`: never connect to GitHub; use only the cache and the mirror. When the file is missing the call rejects with `code: 'E_OFFLINE_MISSING'`, and the message names the file, its SHA-256 and size, and the exact cache and mirror paths where it must be put.
+  - `W_BIN_OFFLINE=1`: never connect to GitHub; use only the cache and the mirror. When the file is missing the call rejects with `code: 'E_OFFLINE_MISSING'`. The message only names the file and how to prepare it (it carries no path and no SHA-256); the SHA-256, the size, the source URL and the exact place where the file must be put (`cachePath`, and `mirrorPath` when a mirror is set) are in the `missing` array of the error (see below).
 - **Offline deployment** (a machine that cannot reach GitHub):
   1. On a machine with network access set `W_BIN_CACHE` to an empty folder and run a script that calls `ensureBins()` once:
 
@@ -45,6 +45,21 @@ The package reaches the Jet engine through one small executable, `connMDB.exe` (
 
      (PowerShell: `$env:W_BIN_CACHE='D:\mirror'; node prepare.mjs`.) The folder now holds `w-orm-mdb/<sha256>/connMDB.exe`.
   2. Copy the whole folder to the offline machine and set `W_BIN_MIRROR=<that folder>` (and `W_BIN_OFFLINE=1` to forbid any network access). The first use copies the verified file into the local cache.
+- **Where to put the file when it is missing offline**: read it from `err.missing[]`:
+
+  ```alias
+  try {
+      await WOrmMdb.ensureBins()
+  }
+  catch (err) {
+      if (err.code === 'E_OFFLINE_MISSING') {
+          //err.missing[0]: { name, sha256, size, cachePath, mirrorPath, url, ... }; put connMDB.exe at cachePath (or mirrorPath)
+          console.log(err.missing)
+      }
+  }
+  ```
+
+  The same `err.missing` is on the error that `select`, `createStorage`, … reject with when they need the file; there a credential-like word in the folder names of `cachePath` is masked (`***`), as in every diagnostic value of the package.
 
 ### Breaking changes: external executable
 

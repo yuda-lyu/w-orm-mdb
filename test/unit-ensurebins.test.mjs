@@ -128,7 +128,7 @@ try {
     o = { ok: true, rows: await jet.query('SELECT * FROM [users]') }
 }
 catch (err) {
-    o = { ok: false, code: err && err.code, message: String(err && err.message || err) }
+    o = { ok: false, code: err && err.code, message: String(err && err.message || err), missing: err && err.missing || null }
 }
 console.log(JSON.stringify(o))
 `
@@ -252,21 +252,44 @@ describe(`ensureBins (外部執行檔connMDB.exe之取得, 制式規格§8 T3~T7
         assert.strict.deepStrictEqual(hits, [`/mirror/${manifest.pkg}/${sha}/connMDB.exe`])
     })
 
-    it(`T6: should reject with E_OFFLINE_MISSING naming the file, sha256, size and the cache path when offline with no cache and no mirror (O3)`, async function() {
+    //規格 T6/O3(2026-11-18改)與〈輸入參數之檢測機制〉V20: 訊息只列缺哪個檔(名稱)與準備方法, 不帶sha256、大小、路徑與網址; 這些改放錯誤物件之結構欄位err.missing[](結構欄位屬契約, 不在「訊息」之限)
+    it(`T6: should reject with E_OFFLINE_MISSING naming only the file in the message, and the sha256, size and cache path are in err.missing[] when offline with no cache and no mirror (O3, V20)`, async function() {
         let cacheDir = `${fdt}/t6`
         let err = await getErr(ensureBins({ cacheDir, mirror: '', offline: true, fetch: fetchNever }))
         let fp = path.join(path.resolve(cacheDir), sha, 'connMDB.exe')
         assert.strict.equal(err && err.code, 'E_OFFLINE_MISSING', err && err.message)
+
+        //結構欄位err.missing[](原案由訊息驗之資訊: 哪個檔、sha256、大小、應放之快取路徑)
         assert.strict.equal(err.missing.length, 1)
         assert.strict.equal(err.missing[0].name, 'connMDB.exe')
         assert.strict.equal(err.missing[0].sha256, sha)
         assert.strict.equal(err.missing[0].size, ent.size)
         assert.strict.equal(path.resolve(err.missing[0].cachePath), fp)
-        for (let s of ['connMDB.exe', sha, String(ent.size), fp]) {
-            assert.strict.ok(err.message.includes(s), `訊息須含: ${s}`)
-        }
+        assert.strict.equal(err.missing[0].mirrorPath, null) //未設鏡像
+        assert.strict.equal(err.missing[0].url, `https://raw.githubusercontent.com/${manifest.repo}/${manifest.commit}/${ent.path}`) //自有檔之釘選提交網址
+        assert.strict.equal(err.missing[0].bundle, null) //單一檔非檔案組
+
+        //訊息: 含缺檔之檔名; 不含sha256、快取路徑與快取資料夾
+        assert.strict.ok(err.message.includes('connMDB.exe'), `訊息須含檔名: ${err.message}`)
+        assert.strict.ok(!err.message.includes(sha), `訊息不得含sha256: ${err.message}`)
+        assert.strict.ok(!err.message.includes(fp), `訊息不得含快取路徑: ${err.message}`)
+        assert.strict.ok(!err.message.includes(path.resolve(cacheDir)), `訊息不得含快取資料夾: ${err.message}`)
         assert.strict.deepStrictEqual(listFiles(cacheDir), [])
         assert.strict.equal(hits.length, 0)
+    })
+
+    it(`T6: should give the mirror path in err.missing[] and not in the message when offline with a mirror that lacks the file (O3, O1, V20)`, async function() {
+        let cacheDir = `${fdt}/t6m`
+        let mirror = `${fdt}/t6m-mirror` //不存在之鏡像
+        let err = await getErr(ensureBins({ cacheDir, mirror, offline: true, fetch: fetchNever }))
+        assert.strict.equal(err && err.code, 'E_OFFLINE_MISSING', err && err.message)
+        assert.strict.equal(err.missing.length, 1)
+        assert.strict.equal(err.missing[0].name, 'connMDB.exe')
+        assert.strict.equal(path.resolve(err.missing[0].cachePath), path.join(path.resolve(cacheDir), sha, 'connMDB.exe'))
+        assert.strict.equal(path.resolve(err.missing[0].mirrorPath), path.join(path.resolve(mirror), manifest.pkg, sha, 'connMDB.exe'))
+        assert.strict.ok(err.message.includes('connMDB.exe'), err.message)
+        assert.strict.ok(!err.message.includes(path.resolve(mirror)), `訊息不得含鏡像路徑: ${err.message}`)
+        assert.strict.ok(!err.message.includes(sha), `訊息不得含sha256: ${err.message}`)
     })
 
     it(`T7: should not return a tampered cache file and should obtain it again (D4)`, async function() {
@@ -310,7 +333,15 @@ describe(`ensureBins (外部執行檔connMDB.exe之取得, 制式規格§8 T3~T7
         let o2 = runChild(CHILD_ENSURE, { W_BIN_CACHE: path.resolve(`${fdt}/env-cache2`), W_BIN_OFFLINE: '1' })
         assert.strict.equal(o2.ok, false)
         assert.strict.equal(o2.code, 'E_OFFLINE_MISSING', o2.message)
-        assert.strict.ok(o2.message.includes(path.join(path.resolve(`${fdt}/env-cache2`), manifest.pkg, sha, 'connMDB.exe')))
+        //O3、V20: 應放之快取位置(<W_BIN_CACHE>/<套件>/<sha256>/<name>)在missing[0].cachePath(子行程以JSON回傳之結構欄位), 訊息只含檔名而不含該路徑
+        let fpMissing = path.join(path.resolve(`${fdt}/env-cache2`), manifest.pkg, sha, 'connMDB.exe')
+        assert.strict.equal(o2.missing.length, 1)
+        assert.strict.deepStrictEqual([o2.missing[0].name, o2.missing[0].sha256, o2.missing[0].size], ['connMDB.exe', sha, ent.size])
+        assert.strict.equal(path.resolve(o2.missing[0].cachePath), fpMissing)
+        assert.strict.equal(o2.missing[0].mirrorPath, null) //W_BIN_MIRROR未設
+        assert.strict.ok(o2.message.includes('connMDB.exe'), o2.message)
+        assert.strict.ok(!o2.message.includes(fpMissing), `訊息不得含快取路徑: ${o2.message}`)
+        assert.strict.ok(!o2.message.includes(path.resolve(`${fdt}/env-cache2`)), `訊息不得含快取資料夾: ${o2.message}`)
     })
 
     //整合: 實際執行exe, 僅Windows
@@ -352,7 +383,13 @@ describe(`ensureBins (外部執行檔connMDB.exe之取得, 制式規格§8 T3~T7
             }, os.tmpdir())
             assert.strict.equal(o.ok, false)
             assert.strict.equal(o.code, 'E_OFFLINE_MISSING', o.message)
-            assert.strict.ok(o.message.includes('connMDB.exe') && o.message.includes(sha))
+            //O3、V20: 訊息只含檔名; sha256與應放之快取位置在missing[0](子行程以JSON回傳之結構欄位)
+            assert.strict.ok(o.message.includes('connMDB.exe'), o.message)
+            assert.strict.ok(!o.message.includes(sha), `訊息不得含sha256: ${o.message}`)
+            assert.strict.ok(!o.message.includes(path.resolve(`${fdJet}/cache-empty`)), `訊息不得含快取資料夾: ${o.message}`)
+            assert.strict.equal(o.missing.length, 1)
+            assert.strict.deepStrictEqual([o.missing[0].name, o.missing[0].sha256, o.missing[0].size], ['connMDB.exe', sha, ent.size])
+            assert.strict.equal(path.resolve(o.missing[0].cachePath), path.join(path.resolve(`${fdJet}/cache-empty`), manifest.pkg, sha, 'connMDB.exe'))
         })
 
         it(`should write the scratch files to the OS temp folder (a missing temp folder makes the call fail with ENOENT)`, function() {
