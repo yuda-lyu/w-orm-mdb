@@ -98,9 +98,20 @@ if (isWindows()) {
             }
         })
 
-        it('String包裝物件不是原始字串: 建構throw not a string(原為接受)', function() {
-            for (let k of ['db', 'cl', 'storage']) {
-                assert.strict.throws(ctor({ [k]: new String('x') }), (err) => err.message === `invalid opt.${k}: not a string`, k) // eslint-disable-line no-new-wrappers
+        //spec: wsemi 1.9.69起判斷函數(isestr)只收原始值, 以判斷函數守門之opt收到包裝物件即視為未給(與其他非字串opt同一處理, 不另設包裝物件專用分支)
+        //註: 建構時此類opt於預設值階段(isestr為假)即取預設值, 不會抵達chkOrmStr, 故不拋invalid opt.<名>: not a string(wsemi 1.9.68以前isestr收包裝物件而於chkOrmStr被拒, 建構throw)
+        it('String包裝物件作為opt.<db|cl|url|storage|pk>: 與5、{}、空字串同一處理, 視為未給而取預設值, 建構不throw(原為建構throw not a string)', function() {
+            let mkvs = [
+                ['new String', () => new String('x')], // eslint-disable-line no-new-wrappers
+                ['Object(\'x\')', () => Object('x')],
+                ['5', () => 5],
+                ['{}', () => ({})],
+                ['空字串', () => ''],
+            ]
+            for (let k of ['db', 'cl', 'url', 'storage', 'pk']) {
+                for (let [lb, mkv] of mkvs) {
+                    assert.strict.doesNotThrow(ctor({ [k]: mkv() }), `opt.${k}=${lb}`)
+                }
             }
         })
 
@@ -511,6 +522,27 @@ if (isWindows()) {
                 let rej = await w.insert([mk('q1')]).catch((e) => e)
                 assert.strict.ok(/can not import model: test/.test(msgOf(rej)), msgOf(rej))
                 assert.strict.strictEqual(n, 0, 'protoOpt之getter不得被讀')
+            })
+
+            //spec: wsemi 1.9.69起判斷函數只收原始值, 包裝物件與5、{}、空字串同為未給而取預設值(opt.cl預設test、opt.pk預設id)
+            it('opt.cl、opt.pk為String包裝物件: 與5、{}、空字串同一處理, 確實取預設值(cl→test而找不到model, pk→id而可寫入twf)', async function() {
+                let mkvs = [
+                    ['new String', (s) => new String(s)], // eslint-disable-line no-new-wrappers
+                    ['Object(\'s\')', (s) => Object(s)],
+                    ['5', () => 5],
+                    ['{}', () => ({})],
+                    ['空字串', () => ''],
+                ]
+                for (let [lb, mkv] of mkvs) {
+                    //cl: 給twf之包裝物件不得被採用(採用則可寫入twf); 取預設值test則model不存在而reject
+                    let { w: wc } = freshWo(ctx, { cl: mkv('twf') })
+                    let rej = await wc.insert([mk('d1')]).catch((e) => e)
+                    assert.strict.ok(/can not import model: test/.test(msgOf(rej)), `opt.cl=${lb}: ${msgOf(rej)}`)
+                    //pk: 給zz之包裝物件不得被採用(採用則報找不到主鍵欄zz); 取預設值id則可寫入
+                    let { w: wp } = freshWo(ctx, { pk: mkv('zz') })
+                    await wp.insert([mk('d2')])
+                    assert.strict.deepStrictEqual(await ids(wp), ['d2'], `opt.pk=${lb}`)
+                }
             })
 
             it('建構: 不可列舉之選項與類別getter照舊被讀取(不得靜默變成預設值); 非物件之opt為錯誤', async function() {

@@ -3,7 +3,8 @@
 本檔只記現況(各功能做到哪裡、對應之規則帳本條目與測試檔、已知缺口與待辦、最近一次驗證或發布之版本),不寫過程;過程與教訓見 `sgud/exp/experience.md`,規則細節見 `sgud/rule/rulebook*.md`(2026-10-30 起依類型分拆:`rulebook.md` 為「哪類查哪檔」之索引,規則在 `rulebook_pk.md`、`rulebook_find.md`、`rulebook_float.md`、`rulebook_data.md`、`rulebook_diag.md`、`rulebook_bin.md`、`rulebook_open.md`〔2026-11-05 新增〕;節號與標題不變)。
 
 - 套件版本:`package.json` 為 1.0.53;發布與版號由維護者與主控決定。
-- 依賴現況(2026-11-05 核對):`node_modules` 之 `w-orm-reladb` 為 1.1.28、`wsemi` 1.9.51、`w-auto-sequelize` 1.0.61;`package.json` 範圍 `w-orm-reladb ^1.1.28`、`wsemi ^1.9.51`(下限沿革:wsemi 診斷共用模組自 1.9.31 起,reladb `genModelsByTabs` 之 diag 參數契約〔wsemi getDiag 實例〕與 `src/ownErr.mjs` 自 1.1.18 起;由 `unit-diaglog` 釘住)。
+- wsemi 1.9.69 連動(2026-11-19,omd492i):`package.json` 之 `wsemi` 為 `^1.9.69`,`node_modules` 為 1.9.69。判斷函數(`isestr`、`isbol` 等)自該版起只收原始值,故建構時 `opt.db/cl/url/storage/pk`(及 `fdModels`、`modelType`)為 `String` 包裝物件者與 `5`、`{}`、`''` 同一處理——`isestr` 為假而取預設值,不再於 `chkOrmStr` 拋 `invalid opt.<名>: not a string`(`src/WOrmMdb.mjs:170-197` 未改);`unit-wellformed` 該案已改寫並另增「確實取預設值」之觀察案(`opt.cl`→`test`、`opt.pk`→`id`)。附帶:`escVal` 之 `isbol` 分支不再收 `new Boolean(..)`(落入 `String(v)`,寫成 `'false'`/`'true'` 字串;原 `new Boolean(false)` 被寫成 `True`),見 `sgud/exp/experience.md`。
+- 依賴現況(2026-11-05 核對;wsemi 已見上條):`node_modules` 之 `w-orm-reladb` 為 1.1.28、`wsemi` 1.9.51、`w-auto-sequelize` 1.0.61;`package.json` 範圍 `w-orm-reladb ^1.1.28`、`wsemi ^1.9.51`(下限沿革:wsemi 診斷共用模組自 1.9.31 起,reladb `genModelsByTabs` 之 diag 參數契約〔wsemi getDiag 實例〕與 `src/ownErr.mjs` 自 1.1.18 起;由 `unit-diaglog` 釘住)。
 
 - 語料 wire 案處置(2026-11-01,orm233): `unit-diaglog-wire` 之 `WIRE_APPLIED`(17)＋`WIRE_NA`(6)對 wsemi 1.9.36 語料 wire 案 23 個全數分類;新增之 A11(`genDiagFunLog` 之 `opt.safeKeys`)、C14(`getDiagBriefErr` 之 `types`)、U22(`getDiagSecrets` 之 `conns`)皆判不適用: `src/WOrmMdb.mjs` 只引入 `getDiag`(:29)與 `getDiagSecrets`(:30),兩者不引入 `genDiagFunLog`;宣告為 `getDiagSecrets({ urls, username, password, paths })`、`patterns:['mdbUrl']`、`safeKeys: SAFE_KEYS`(不匯出之區域常數,:274-278),無 `codes`、`types`、`conns`.A07 仍為適用(使用端以 `genDiagFunLog` 之 `funLog` 接管之路徑,測試內 import `genDiagFunLog`).最近一次全套驗證(2026-11-01,orm233,wsemi 1.9.36): `npm test`(`quiet-run --lock`)3152 passing / 610 pending / 0 failing.
 
@@ -54,6 +55,8 @@
 4. **R-OPEN 待裁示**:永久性之模糊碼(3031/3049/3045/3356)重試至用盡才回報,錯誤密碼約 3.4 秒;是否對這四碼另設較少嘗試(實測暫態全於第 2 次嘗試恢復)見 R-OPEN LO4。
 
 ## 最近一次驗證
+
+- 2026-11-19 omd492i(wsemi 1.9.69 連動;`src/` 未改,只改 `test/unit-wellformed.test.mjs` 與文件):升級後未改碼全套 3185 passing / 610 pending / **1 failing**(`unit-wellformed` 原 `:101-105` 之包裝物件案);改後全套 `npm test`(`quiet-run --lock`)**3187 passing / 610 pending / 0 failing**,exit 0(10 分 20 秒;較 3185 增 1 案即 opt.cl/opt.pk 觀察預設值案,原案改寫不增減);`unit-wellformed` 64/64;變異(暫把 `isestr` 改為收包裝物件以模擬 1.9.68 以前,驗後已還原,`git diff -- src` 為 0)兩新案皆轉紅;`npx eslint` 對 `test/unit-wellformed.test.mjs` 為與 HEAD 相同之 7 條既有 error(brace-style 6、no-template-curly-in-string 1),新增 0。
 
 - 2026-11-05 mdb319(併發開啟暫態失敗之重試白名單,LD4 已解;對最終 src):全套 `npm test`(`quiet-run --lock`)兩次各 **3185 passing / 610 pending / 0 failing**,exit 0(8 分 29 秒、9 分 01 秒;較 3152 增 33 案即 `unit-jet-retry`);`unit-concurrency`＋`unit-instance-lifecycle` 各 10 輪:修前現版依賴 1/10 輪紅、舊依賴 0/10、修後 0/10(修後輪次之白名單尚未含 3356);jet 層探測(16 並行 × 50 輪 = 800 次)修前現版 7 失敗、舊依賴 10、修後 0;重試迴圈探測 1600 次(含 3356)0 失敗;修前紅 `unit-jet-retry` 33 案中 15 紅;變異 18 個殺死 18、存活 0;`npx eslint` 對修改檔 0 問題;範例 4 支於隔離副本輸出與檔尾註解一致。獨立審查(sonnet):功能缺陷 0,文件層 3 條已修。詳見 `rulebook_open.md` 末節。
 

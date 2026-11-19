@@ -120,7 +120,7 @@
 |---|---|
 | 主鍵(`selectByPk` 之引數,及 `insert`/`insertBulk`/`save`/`del` 資料之 `opt.pk` 欄) | 字串不得含 NUL 或孤立代理(原因詞彙 `string contains NUL`、`string contains lone surrogate`;NUL 先報)。先拆 `new String`/`new Number` 包裝(與 `normPk` 一致) |
 | 寫入資料(`insert`、`insertBulk`、`save`)之鍵名與字串值,含巢狀、陣列元素、Map/Set 等(`chkOrmData` 走訪者),**含 model 外之鍵** | 不得含孤立代理;值之 NUL 不拒(Jet 自身對含 NUL 之 SQL 文字報語法錯 3075,維持現況) |
-| `opt.db`、`opt.cl`、`opt.url`、`opt.storage`、`opt.pk` | 不得含孤立代理,建構時 throw `invalid opt.<名>: <原因>`;`{ nul: false }`(NUL 不屬本規則);`String` 包裝物件為 `not a string`。`opt.storage` 為本套件之路徑承載者(比照 reladb 1f 之 `opt.storage`);`opt.pk` 為欄名,含孤立代理會被 UTF-8 改寫為另一欄名並進入錯誤訊息之路徑(外審 minimax [5]),故一併納入(reladb 不納入,此為本套件較嚴處);`opt.fdModels`(model 資料夾路徑)不納入 |
+| `opt.db`、`opt.cl`、`opt.url`、`opt.storage`、`opt.pk` | 不得含孤立代理,建構時 throw `invalid opt.<名>: <原因>`;`{ nul: false }`(NUL 不屬本規則);非原始字串者(`String` 包裝物件、`5`、`{}`、`''` 等)先被 `isestr` 判為未給而取預設值(wsemi 1.9.69 起判斷函數只收原始值,包裝物件為 `false`;更早 `isestr` 收包裝物件而由 `chkOrmStr` 回 `not a string` 令建構 throw),故不會抵達 `chkOrmStr`,**不另設包裝物件專用分支**(包裝物件與其他非字串 opt 同一處理)。`opt.storage` 為本套件之路徑承載者(比照 reladb 1f 之 `opt.storage`);`opt.pk` 為欄名,含孤立代理會被 UTF-8 改寫為另一欄名並進入錯誤訊息之路徑(外審 minimax [5]),故一併納入(reladb 不納入,此為本套件較嚴處);`opt.fdModels`(model 資料夾路徑)不納入 |
 | 條件(find) | 不變:`cvOrmFind` 已拒收(`invalid find`) |
 
 ### R-WF-02 處置(與既有「無效主鍵」同形;不隨 `opt.autoGenPk` 改變)
@@ -174,7 +174,7 @@
 
 ### R-WF-07 破壞性變更紀錄(2026-10-21,第 66 項批 2;相對 1.0.39,版號由發布流程決定;「原行為」取自 HEAD 實跑 `tmp/head-probe.mjs`)
 
-見 README〈Breaking changes: well-formed strings〉。要點:①寫入值/資料鍵名之孤立代理原靜默存成 U+FFFD,改為 `insert`/`insertBulk` 整批 reject、`save` 該筆 `ok:0`;②`del`、`save`(`autoInsert:false`)對 NUL/孤立代理主鍵原靜默 `ok:1`,改 `ok:0`+固定詞彙 `err`(D5);③訊息去回顯(D6);④建構 `opt.db/cl/url/storage` 含孤立代理 throw,`String` 包裝物件為 `not a string`;⑤四個寫入函數於呼叫當下複製(`useStable:true` 原於佇列輪到時才複製)。
+見 README〈Breaking changes: well-formed strings〉。要點:①寫入值/資料鍵名之孤立代理原靜默存成 U+FFFD,改為 `insert`/`insertBulk` 整批 reject、`save` 該筆 `ok:0`;②`del`、`save`(`autoInsert:false`)對 NUL/孤立代理主鍵原靜默 `ok:1`,改 `ok:0`+固定詞彙 `err`(D5);③訊息去回顯(D6);④建構 `opt.db/cl/url/storage` 含孤立代理 throw,`String` 包裝物件視為未給而取預設值(wsemi 1.9.69 起;原為 `not a string` throw);⑤四個寫入函數於呼叫當下複製(`useStable:true` 原於佇列輪到時才複製)。
 
 ### R-WF-08 對應測試
 
