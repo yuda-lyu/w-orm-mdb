@@ -207,3 +207,12 @@
 - **帳本分拆**:用 Write 寫的一次性腳本(`tmp/mig-mdb2/splitRulebook.mjs`)依 `## ` 標題切節、按類型分組輸出,回驗各節文字逐字存在於新檔、位元組守恆(各節總和 + 檔頭 = 原稿);分拆前後用 `checkRefs.mjs` 蒐集 repo 內所有 `R-` 起首之節號引用並對帳本標題解析,未定義集合不變(只有 `unit-instance-lifecycle` 內三個測試自有編號,屬分拆前即有)。索引與經驗文字不要寫看似節號之佔位字樣(會被引用核對當成未定義的節)。引用路徑仍寫 `sgud/rule/rulebook.md`,由主檔索引以節號前綴導到各檔,不改各檔註解。
 - **wire 案處置表紅燈時以失敗訊息之差集為準**(orm233,2026-11-01,wsemi 1.9.36: 派工說新增 A11,實際差集為 A11、C14、U22 三案,語料 wire 案共 23): 三案皆歸 `WIRE_NA`.本套件 A07 為適用(使用端以 `genDiagFunLog` 之 `funLog` 接管,測試內 import 它),但 A11 仍不適用——A07 驗的是 `getDiag` 見 `noDetail` 之 `funLog` 不呼叫 `getDetail`(本套件的站點與 `getDiag` 實例決定結果),A11 驗的是轉接器自身對 safe 頂層鍵之白名單過濾,全在 `genDiagFunLog.mjs` 內,本套件不傳也不讀 `opt.safeKeys`,`SAFE_KEYS` 為不匯出之區域常數.判定時追 import 與宣告(`getDiagSecrets` 用 `urls`/`username`/`password`/`paths` 分別宣告,非 `conns`;`getDiag` 無 `codes`、`types`),不只 Grep `src` 有無字樣.
 - **分組以單檔 ≤ 約 37 KB 為度**:條件類(R-FIND、R-WL 與三則系列規格摘要)若與 R-FLOAT 同檔為 62 KB,故 R-FLOAT 另成 `rulebook_float.md`;各檔大小見 `rulebook.md` 索引。
+
+## omd569 教訓(2026-11-20,第 569 項:主鍵只認自有可列舉之資料屬性)
+
+- **「攤平」會洗白來源**:`snap` 內之 `flatRow` 把繼承而來之可列舉屬性與原型 getter 以 `defineProperty` 定義為自有資料屬性(R-WF-04 為令檢核與使用之值為同一固定值),繼承之主鍵因此在進入各入口之前即成為「自有」而被判為已帶;修在 `chkWf`/`procPk`/`del` 各處都太晚(來源已洗白),必須在攤平當下、取值之後、定義之前依**複製後之複本**之描述子判定(`cloneDeep` 保留原型、只複製自有可列舉屬性,故複本之自有可列舉性即呼叫端給的列之自有可列舉性)。四個入口經同一個 `snap`,一處修正四處受惠,但每個入口仍須各有接線案(逐入口變異 `D_*`)。
+- **順序是規格**:先取值(既有路徑,每個名稱只讀一次;存取器拋錯者照 R-WF-04 延後)、值為未帶即短路、值為「給了」才查描述子。把順序顛倒(先查描述子、非自有者不讀值直接定為未帶)會使繼承 getter 之讀取次數由 1 變 0、並使「拋錯之繼承 getter」由 reject 變成成功寫入;`unownPk` 若先讀 `r[opt.pk]` 再查自有,會對「取值拋錯而定義為重新拋出之存取器」之主鍵誤讀而改變失敗通道(變異 M02、M07)。
+- **本庫之補值不需 `setPk`**:w-orm-lowdb 之列保留原型,補值須 `defineProperty`(原型之主鍵欄為 frozen 或只有 getter 時賦值拋 `TypeError`);本庫各列於 `snap` 後皆為攤平之純物件,遮蔽時於複本定義自有可寫之 `undefined`,其後 `procPk` 之賦值落在自有屬性上,不碰原型。需要 `defineProperty` 之處是「遮蔽」(原型為唯讀時賦值會拋),只在 `Object.prototype` 上之唯讀汙染可觸發,見下。
+- **`Object.prototype` 被定義 `id` 時整個呼叫都不可靠**:匯入 model(sequelize)即失敗(`can not import model`),修前修後皆然;唯讀之汙染更會令 Node 內部對新物件賦值 `id`(計時器)而崩潰行程。測試法:汙染形狀以**污染前即初始化之 `option.instance`**(`await w.init()`)呼叫,唯讀之汙染只在呼叫之同步段存在(`snap` 於呼叫當下同步完成複製、攤平與遮蔽)隨即還原。首跑時整個呼叫期間汙染使 32 案以 `rej: undefined` 假紅,診斷腳本逐步縮小才定位到匯入 model。
+- **舊測試之前提被規則改變時須改寫而非遷就**:`unit-wellformed` 有 5 案以「繼承之主鍵存取器(原型上之 `id` getter、類別 getter、共用原型之 `id`)」驗呼叫當下攤平與 TOCTOU,其前提(繼承主鍵為有效主鍵)被本規則推翻;改寫為「繼承者視為未帶(讀一次、補新主鍵、`del` 不刪同值列)」並另補「自有存取器/自有主鍵」之同意旨案(讀一次並固定、改動呼叫端原物件不影響)。
+- **探針與測試合一**:全矩陣(入口 × 形狀 × 有無同值列 × autoGenPk)約 330 格,每格 3 次 exe 往返,機器 CPU 85% 時每格 5~7 秒;獨立探針與新測試重複同一矩陣不划算。改以環境變數 `PKOWN_TRACE=<檔>` 令測試逐格把觀察附記為 jsonl(先於斷言),修前跑一次、修後跑一次即得修前/修後表,探針只留讀取次數一支。

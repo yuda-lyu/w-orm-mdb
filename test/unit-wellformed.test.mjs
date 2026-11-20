@@ -327,21 +327,54 @@ if (isWindows()) {
                 }
             })
 
-            it('主鍵為繼承存取器: 讀一次並固定, 寫入之主鍵即檢核之主鍵(其後讀值改變不影響)', async function() {
+            //註(第569項, R-PKOWN-01): 繼承(原型鏈上)之主鍵視為未帶, 原本[以第一次所讀之繼承主鍵寫入或刪除]之案改釘: 繼承之主鍵存取器仍只讀一次(取值先於判定),
+            //其值不被採用(補新主鍵; del該筆ok為0不刪同值列); 原案之意旨[讀一次並固定, 寫入之主鍵即檢核之主鍵]改以自有之主鍵存取器(cloneDeep讀一次為資料屬性)驗
+            it('主鍵為繼承存取器(視為未帶): 讀一次而不採用其值, 補新主鍵, del不刪同值列; 主鍵為自有存取器則讀一次並固定, 寫入之主鍵即檢核之主鍵', async function() {
                 for (let api of ['insert', 'insertBulk', 'save']) {
                     let { w } = freshWo(ctx, {})
                     let { d, count } = mkProtoDoc(undefined, 'id', (n) => (n === 1 ? 'pk-first' : H))
                     d.name = 'x'
                     let r = await w[api]([d]).catch((e) => e)
                     assert.strict.ok(!(r instanceof Error), `${api}: ${msgOf(r)}`)
-                    assert.strict.deepStrictEqual(await ids(w), ['pk-first'], `${api}: 寫入者為第一次所讀之主鍵`)
+                    let got = await ids(w)
+                    assert.strict.strictEqual(got.length, 1, api)
+                    assert.strict.strictEqual(got[0].length, 36, `${api}: 補新主鍵, 不採用繼承存取器之值`)
                     assert.strict.strictEqual(count(), 1, `${api}: 主鍵存取器只應被呼叫一次`)
+
+                    let { w: w2 } = freshWo(ctx, {})
+                    let n = 0
+                    let own = Object.defineProperty({ name: 'x' }, 'id', {
+                        get() {
+                            n++
+                            return n === 1 ? 'pk-first' : H
+                        },
+                        enumerable: true,
+                        configurable: true,
+                    })
+                    let r2 = await w2[api]([own]).catch((e) => e)
+                    assert.strict.ok(!(r2 instanceof Error), `${api}: ${msgOf(r2)}`)
+                    assert.strict.deepStrictEqual(await ids(w2), ['pk-first'], `${api}: 自有存取器, 寫入者為第一次所讀之主鍵`)
+                    assert.strict.strictEqual(n, 1, `${api}: 自有主鍵存取器只應被呼叫一次`)
                 }
                 let { w } = freshWo(ctx, {})
                 await w.insertBulk([mk('pk-first'), mk('keep')])
-                let { d } = mkProtoDoc(undefined, 'id', (n) => (n === 1 ? 'pk-first' : H))
+                let { d, count } = mkProtoDoc(undefined, 'id', (n) => (n === 1 ? 'pk-first' : H))
                 let rd = await w.del([d])
-                assert.strict.deepStrictEqual(rd, [{ n: 1, nDeleted: 1, ok: 1 }], 'del以第一次所讀之主鍵刪除')
+                assert.strict.deepStrictEqual(rd, [{ n: 0, nDeleted: 0, ok: 0, err: 'invalid data[0].id' }], 'del: 繼承之主鍵視為未給, 不刪同值列')
+                assert.strict.strictEqual(count(), 1)
+                assert.strict.deepStrictEqual(await ids(w), ['keep', 'pk-first'])
+                let m = 0
+                let own = Object.defineProperty({}, 'id', {
+                    get() {
+                        m++
+                        return m === 1 ? 'pk-first' : H
+                    },
+                    enumerable: true,
+                    configurable: true,
+                })
+                let rd2 = await w.del([own])
+                assert.strict.deepStrictEqual(rd2, [{ n: 1, nDeleted: 1, ok: 1 }], 'del以第一次所讀之自有主鍵刪除')
+                assert.strict.strictEqual(m, 1)
                 assert.strict.deepStrictEqual(await ids(w), ['keep'])
             })
 
@@ -435,18 +468,27 @@ if (isWindows()) {
                         await p
                         assert.strict.deepStrictEqual((await w.select()).map((v) => [v.id, v.name]), [['p1', 'at-call']], `${api} useStable:${useStable}`)
                     }
+                    //del: 主鍵為自有時呼叫後立即改動之原物件不影響呼叫當時之值(第569項起繼承之主鍵視為未給, 故以自有主鍵驗呼叫當下複製)
                     let { w } = freshWo(ctx, { useStable })
                     await w.insertBulk([mk('first'), mk('keep')])
-                    let proto = { id: 'first' }
-                    let d = Object.create(proto)
+                    let d = { id: 'first' }
                     let p = w.del([d])
-                    proto.id = 'keep'
+                    d.id = 'keep'
                     await p
                     assert.strict.deepStrictEqual(await ids(w), ['keep'], `del useStable:${useStable}`)
+
+                    //del: 繼承之主鍵於呼叫當時即視為未給(ok為0), 其後改動共用原型為另一個存在之鍵亦不使其刪除任何列
+                    let { w: w2 } = freshWo(ctx, { useStable })
+                    await w2.insertBulk([mk('first'), mk('keep')])
+                    let proto = { id: 'first' }
+                    let p2 = w2.del([Object.create(proto)])
+                    proto.id = 'keep'
+                    assert.strict.deepStrictEqual(await p2, [{ n: 0, nDeleted: 0, ok: 0, err: 'invalid data[0].id' }], `del inherited useStable:${useStable}`)
+                    assert.strict.deepStrictEqual(await ids(w2), ['first', 'keep'], `del inherited useStable:${useStable}`)
                 }
             })
 
-            it('前一個呼叫之change事件改動後一個已呼叫之共用原型: 後者仍刪除呼叫當時之值', async function() {
+            it('前一個呼叫之change事件改動後一個已呼叫之共用原型: 後者仍以呼叫當時之判定為準(第569項起繼承之主鍵視為未給: 不刪first, 亦不因改動後之原型值而刪keep)', async function() {
                 let { w } = freshWo(ctx, {})
                 await w.insertBulk([mk('first'), mk('keep'), mk('x')])
                 let proto = { id: 'first' }
@@ -454,6 +496,22 @@ if (isWindows()) {
                 w.on('change', (mode) => {
                     if (mode === 'save') {
                         proto.id = 'keep'
+                    }
+                })
+                let p1 = w.save([mk('x', { name: 'saved' })])
+                let p2 = w.del([d])
+                let [, rd] = await Promise.all([p1, p2])
+                assert.strict.deepStrictEqual(rd, [{ n: 0, nDeleted: 0, ok: 0, err: 'invalid data[0].id' }])
+                assert.strict.deepStrictEqual(await ids(w), ['first', 'keep', 'x'])
+            })
+
+            it('前一個呼叫之change事件改動後一個已呼叫之主鍵所在物件(自有主鍵): 後者仍刪除呼叫當時之值', async function() {
+                let { w } = freshWo(ctx, {})
+                await w.insertBulk([mk('first'), mk('keep'), mk('x')])
+                let d = { id: 'first' }
+                w.on('change', (mode) => {
+                    if (mode === 'save') {
+                        d.id = 'keep'
                     }
                 })
                 let p1 = w.save([mk('x', { name: 'saved' })])
@@ -572,7 +630,8 @@ if (isWindows()) {
                 }
             })
 
-            it('陣列之子類別作為列: 主鍵存取器亦被攤平固定(第一次undefined或換鍵皆以第一次為準)', async function() {
+            //註(第569項, R-PKOWN-01): 主鍵為原型鏈上之類別getter, 不論第一次讀到undefined或良構之鍵皆視為未帶(後者原為以該鍵更新), 存取器仍只讀一次
+            it('陣列之子類別作為列: 主鍵(類別getter)視為未帶而不採用, 存取器只讀一次', async function() {
                 for (let first of [undefined, 'first']) {
                     let { w } = freshWo(ctx, { autoGenPk: false })
                     await w.insertBulk([mk('first'), mk('keep')])
@@ -593,14 +652,10 @@ if (isWindows()) {
                     let r = new Row()
                     r.push('slot')
                     let rs = await w.save([r]).catch((e) => e)
-                    if (first === undefined) {
-                        assert.strict.strictEqual(msgOf(rs), 'invalid data[0].id, autoGenPk is false')
-                    }
-                    else {
-                        assert.strict.deepStrictEqual(rs, [{ n: 1, nInserted: 0, nModified: 1, ok: 1 }])
-                    }
+                    assert.strict.strictEqual(msgOf(rs), 'invalid data[0].id, autoGenPk is false', `first=${first}`)
                     let rows = Object.fromEntries((await w.select()).map((v) => [v.id, v.name]))
                     assert.strict.strictEqual(rows.keep, 'n', 'keep不得被更新')
+                    assert.strict.strictEqual(rows.first, 'n', 'first不得被更新(繼承之主鍵視為未帶)')
                     assert.strict.strictEqual(n, 1, '存取器只讀一次')
                 }
             })
@@ -706,7 +761,7 @@ if (isWindows()) {
 
             //第3輪(sol)補格
 
-            it('內建容器之子類別與自訂Symbol.toStringTag之列: 主鍵存取器亦被攤平固定(以第一次為準), 容器內容仍被檢核', async function() {
+            it('內建容器之子類別與自訂Symbol.toStringTag之列: 主鍵(類別getter)視為未帶(R-PKOWN-01), 容器內容仍被檢核', async function() {
                 class MapRow extends Map {
                     constructor(first) {
                         super()
@@ -749,14 +804,15 @@ if (isWindows()) {
                         let { w } = freshWo(ctx, { autoGenPk: false })
                         await w.insertBulk([mk('wanted', { name: 'before' }), mk('keep', { name: 'keep-before' })])
                         let r = await w[api]([new Cls('wanted')]).catch((e) => e)
-                        assert.strict.ok(!(r instanceof Error), `${Cls.name} ${api}: ${msgOf(r)}`)
                         let rows = Object.fromEntries((await w.select()).map((v) => [v.id, v.name]))
                         assert.strict.strictEqual(rows.keep, 'keep-before', `${Cls.name} ${api}: keep不得被更新或刪除`)
+                        //第569項(R-PKOWN-01): 主鍵為原型鏈上之類別getter, 視為未帶: save於autoGenPk為false整批reject, del該筆ok為0, 皆不更新或刪除wanted(原以第一次所讀之wanted更新或刪除)
+                        assert.strict.strictEqual(rows.wanted, 'before', `${Cls.name} ${api}: 繼承之主鍵視為未帶, wanted不得被更新或刪除`)
                         if (api === 'save') {
-                            assert.strict.strictEqual(rows.wanted, 'after', `${Cls.name} save`)
+                            assert.strict.strictEqual(msgOf(r), 'invalid data[0].id, autoGenPk is false', `${Cls.name} save`)
                         }
                         else {
-                            assert.strict.strictEqual(rows.wanted, undefined, `${Cls.name} del`)
+                            assert.strict.deepStrictEqual(r, [{ n: 0, nDeleted: 0, ok: 0, err: 'invalid data[0].id' }], `${Cls.name} del`)
                         }
                     }
                 }

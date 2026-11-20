@@ -149,3 +149,63 @@
 3. 未帶主鍵(`undefined`、`null`、`''`、鍵不存在)之處置不變。
 4. 訊息字面(全族對齊輪,2026-11-20):`invalid id: not a string at [data[k].id]` → `invalid id: not a string or finite number at [data[k].id]`(本庫接受有限數字;第一輪之訊息只存在於工作樹、尚未發布,故對已發布版〔1.0.74〕而言為同一次不相容變更)。
 
+## R-PKOWN 主鍵只認自有可列舉之資料屬性(2026-11-20 立;第 569 項,w-orm 系列規則一之補強;依據:主控 `rules-569.md`、olw569 報告〈結論〉6;參考實作 w-orm-lowdb `isOwnPk`/`setPk`/`procPk`/`delCore`、w-orm-postgresql `ownPk`)
+
+**背景**:`snap`(呼叫當下複製)內之 `flatRow` 把非純物件之列(類別實例、`Object.create(proto)` 等)攤平為純物件——`for…in` 取自有與繼承之可列舉屬性、並取原型鏈上之存取器,**以 `defineProperty` 定義為自有資料屬性**(R-WF-04 第 2 點,為使檢核與使用之值為同一固定值)。這使繼承而來之主鍵欄在進入各入口之前即成為自有可列舉屬性、被判為**已帶**:寫入含繼承值(`Object.create({ id: 'a9' })` 存為 `a9`)、`save` 有同值列則 UPDATE(覆寫)、`del` 刪除同值列、`insert` 因同值列而靜默跳過、`insertBulk` 因同值列整批重複鍵 reject(修前以真 Jet 實測,見報告)。純物件之列(原型為 `Object.prototype` 或 `null`)不經攤平,但 `get(v, opt.pk)` 沿原型鏈,`Object.prototype` 上被定義 `id` 時同樣誤判。
+
+### R-PKOWN-00 單一規則
+
+1. **列之主鍵欄(`opt.pk`)只認呼叫端自有可列舉之資料屬性**:為**繼承**(原型鏈上,不論值之型別,含有限數字與類別 getter、frozen 原型、`Object.prototype` 上被定義者)或**自有不可列舉**者,視為**未帶**——`autoGenPk` 為 true 補新主鍵(自有可列舉資料屬性)、為 false 照既有之未帶處置(整批 reject `invalid data[k].<pk>, autoGenPk is false`;主鍵欄為非字串類而 `autoGenPk` 為 true 者照既有訊息 `autoGenPk is true but pk column […]`)。有限數字於**自有**時仍為有效主鍵(R-PKGIVEN-01);**繼承**之有限數字亦為未帶。
+2. **判定不得多讀有效輸入**:先以既有路徑取值(攤平時每個名稱只讀一次;存取器拋錯者照 R-WF-04 延後為重新拋出之不可列舉存取器,不改判為未帶),值為未帶(`undefined`、`null`、`''`)即短路不查描述子;**只有值為「給了」才查**複製後之複本之主鍵欄是否為自有可列舉(`Object.prototype.propertyIsEnumerable.call(v, k)`,不呼叫 getter)。有效輸入(自有可列舉之主鍵、含自有存取器)之讀取次數與次序同修前。
+3. **`del`**:繼承之主鍵視為未給主鍵,該筆 `ok: 0` 附既有之 `invalid data[k].<pk>`,**不刪庫內同值之列**;**`save`**:不以繼承值更新或覆寫同值之列;**`insert`/`insertBulk`**:不因繼承值而跳過、撞鍵或寫入缺主鍵之列。
+4. `selectByPk` 收純量,不適用(傳列物件回 `null`;以測試釘住)。
+5. **非主鍵欄之繼承欄位與類別 getter**:既有處置不變(照常攤平寫入;不在本項範圍)。
+6. 未帶之各情形(含繼承之 `undefined`/`null`/`''`)之結果與修前相同(`autoGenPk` 補值或 reject)。
+
+### R-PKOWN-01 實作位置(單一擁有者:`src/WOrmMdb.mjs`)
+
+- `isNoPk`(未帶之定義,與 `chkWf`、`procPk` 同:`undefined`、`null`、`''`)。
+- `flatRow` 之攤平迴圈:取值後,`k === opt.pk` 且 `!isNoPk(x)` 且複本上 `!propertyIsEnumerable(k)` 者,值定為自有可列舉之 `undefined`(**以 `defineProperty` 定義自有資料屬性,不用賦值**:遮蔽原型上之主鍵欄,原型為唯讀〔frozen、`Object.prototype` 上 `writable: false`〕時嚴格模式賦值會拋 `TypeError`)。
+- `unownPk(r)`:攤平列(`flatRow` 之結果)或本即為純資料之複本(`proto` 為 `Object.prototype`、`null` 之物件、`Array.prototype` 之陣列,攤平前提早返回者)——主鍵欄**無自有屬性**而經原型鏈讀得「給了」之值(僅 `Object.prototype` 等被改動時)者,同樣以 `defineProperty` 於該複本定義自有可列舉之 `undefined`;已有自有屬性者(含取值拋錯而定義之重新拋出之存取器)**不讀不改**。
+- 補值仍由 `procPk` 以賦值為之:此時各列皆為攤平後之純物件、主鍵欄為自有可寫之資料屬性,賦值不會碰到原型(與 w-orm-lowdb 之 `setPk` 不同:該庫之列保留原型,故補值須 `defineProperty`)。
+- 作用範圍:`snap` 為 insert、insertBulk、save、del 之唯一入口複製處(`useStable` 兩種模式皆經),四個入口同受規範;逐入口接線以逐入口變異驗證(`D_*`)。
+
+### R-PKOWN-02 入口 × 輸入(修前/修後)
+
+見報告〈修前/修後表〉;測試逐格斷言(`unit-pkown1~3`)。摘要:
+
+| 情形(主鍵欄僅繼承或自有不可列舉) | 修前 | 修後 |
+|---|---|---|
+| insert/insertBulk/save,庫內無同值列 | 以繼承值寫入(字串欄存 `String(v)`) | autoGenPk 真:補新主鍵寫入;假:整批 reject |
+| insert,庫內有同值列 | 靜默跳過(`nInserted: 0`) | 補新主鍵寫入(真)/reject(假),既有列不動 |
+| insertBulk,庫內有同值列 | 重複鍵 reject | 同上 |
+| save,庫內有同值列 | 覆寫該列(`nModified: 1`) | 補新主鍵寫入(真)/reject(假),既有列不動 |
+| del,庫內有同值列 | 刪除該列(`nDeleted: 1`) | 該筆 `ok: 0`(`invalid data[k].<pk>`),不刪 |
+| 自有可列舉(含遮蔽繼承、自有存取器) | 以自有值 | 不變 |
+| 自有不可列舉且無繼承 | 已視為未帶(複本不帶不可列舉屬性) | 不變 |
+
+### R-PKOWN-03 已知限制與有意差異(LPKOWN)
+
+| # | 內容 |
+|---|---|
+| LPKOWN1 | **`Object.prototype` 被定義 `id` 時之測試限制**:①整個呼叫期間汙染會令匯入 model(sequelize)即失敗(`can not import model`,與本規則無關之既有限制,修前修後皆然),故汙染形狀之測試以污染前即初始化之 `option.instance` 呼叫(`unit-pkown-setup.mjs` 之 `getOpt`);②**唯讀之汙染**(`writable: false`)只能在**呼叫之同步段**測試(複製、攤平與遮蔽皆於 `snap` 同步完成):Node 內部會對新物件賦值 `id`(如計時器),持續唯讀之汙染會令行程崩潰;故只在呼叫同步段定義、隨即還原(`unit-pkown3` 之〈遮蔽以defineProperty…〉) |
+| LPKOWN2 | 單一物件輸入而鍵全在原型上(`insert(Object.create({ id: 'a9' }))`,無自有鍵)為 wsemi `iseobj` 判無效之早退(`n: 0`,既有,與主鍵無關),不在本規則範圍 |
+| LPKOWN3 | 與 w-orm-lowdb 之差異:本庫於攤平處判定(複製後之複本),而非於 `procPk`/`delCore`;有限數字於自有時仍有效(R-PKGIVEN-01),繼承者與其他型別同為未帶 |
+| LPKOWN4 | 取值拋錯之繼承存取器(`get id() { throw … }`)仍照 R-WF-04/R-READABLE-02 延後至該欄被讀取時原樣拋出(經診斷出口 `diag.err`),不因此改判為未帶而成功寫入:規則第 2 點「先以既有路徑取值」優先於第 1 點「繼承視為未帶」(兩者於此交會,取前者;與 w-orm-lowdb 之 `procPk` 先取值同序)。insert/insertBulk/save/del 皆整批 reject(`del` 亦非逐筆 `ok: 0`),`error` 事件恰一次;`unit-pkown3` 之 P2 案釘住 |
+| LPKOWN5 | **自有性依 `cloneDeep` 之複本判定(與參考實作 w-orm-lowdb 之 `isOwnPk` 同,該庫亦於複本上判定),複本與呼叫端原物件不一致之極端形狀**(複製行為為修前即有,本規則不改;以探針於修前、修後各實測一次):①原型鏈上有唯讀(frozen、`Object.prototype` 上 `writable: false`)或只有 getter 之 `id`,而呼叫端列另有自有可列舉 `id`(`Object.defineProperty(Object.create(Object.freeze({ id: 'a9' })), 'id', { value: 'own1', enumerable: true })`):`cloneDeep` 以賦值複製自有屬性,賦值於嚴格模式拋 `TypeError`,`snap` 轉 `invalid data: must be a readable value`(整批拒收,非靜默;**修前修後相同**);②呼叫端列有自有可列舉之資料屬性 `id`(`Object.defineProperty(instance, 'id', { value: 'own2', enumerable: true })`),而其類別之原型有 `id` 存取器**且帶 setter**:複製時賦值落入原型之 setter,複本無自有 `id`,本規則判為未帶、`autoGenPk` 為真時補新主鍵(修前寫入 `own2`;**此為本規則造成之行為差異**,屬極端形狀);③類別以 `get id()`/`set id(v)` 存取器對承載主鍵(`this.id = x` 經 setter 落在私有欄位,實例上無自有 `id`)者,依規則明示之「類別 getter」為未帶,補新主鍵(修前以存取器之值為主鍵);④ Map、Set、Date 之子類別其建構子於複本上執行,若建構子建立自有可列舉 `id`(預設主鍵),複本之 `id` 即為自有而非呼叫端所給,照用(**修前修後相同**);⑤ lodash 不可複製之標籤(自有不可寫之 `Symbol.toStringTag` 等)之列,於陣列內按參照返回(複本即原物件),此時於純物件分支之 `unownPk` 會直接於呼叫端原物件定義遮蔽屬性(僅在 `Object.prototype` 被定義主鍵欄、該列無自有主鍵時發生;列被凍結則 `defineProperty` 拋錯、轉 `invalid data: must be a readable value`;推演,未實測)。以上皆需二種以上之極端條件並存(③ 為規則明示),實作以複本為準(與 R-WF-04 之快照同一份),未另讀呼叫端原物件之描述子(那會對有效輸入多一次讀取,且與參考實作不同) |
+| LPKOWN6 | `Object.prototype` 被定義為**會拋錯之 getter 之 `id`**:`unownPk` 於無自有主鍵之純物件列讀 `r[opt.pk]` 而拋錯,於 `snap` 內轉 `invalid data: must be a readable value`(修前於 `chkWf` 讀到時才拋、走診斷出口 `diag.err`);失敗通道與訊息因此改變,仍為整批 reject、資料庫不變 |
+
+### 破壞性變更紀錄(2026-11-20,第 569 項)
+
+1. 列之主鍵欄僅為繼承(含有限數字、類別 getter、frozen 原型、`Object.prototype` 被定義者)或自有不可列舉者,原被當作已帶之主鍵(寫入、更新、跳過、刪除同值之列),現視為未帶:autoGenPk 真補新主鍵、假整批 reject;`del` 該筆 `ok: 0`。
+2. 自有可列舉之主鍵(含遮蔽繼承者、自有存取器)、非主鍵欄之繼承欄位與類別 getter、`selectByPk`:不變。
+
+### 對應測試(R-PKOWN)
+
+| 規則 | 測試 |
+|---|---|
+| R-PKOWN-00 第 1、3 點(字串主鍵表 × autoGenPk 真) | `test/unit-pkown1.test.mjs`(9 形狀 × 入口 × 有無同值列) |
+| R-PKOWN-00 第 1、3 點(autoGenPk 假;整數主鍵表 ipk 兩值) | `test/unit-pkown2.test.mjs` |
+| 其餘形狀、第 2 點(讀取次數、拋錯)、同批逐筆、第 4 點(selectByPk)、第 5 點(非主鍵欄)、`opt.pk` 非 id、原物件不被改動、事件、`defineProperty` 非賦值 | `test/unit-pkown3.test.mjs` |
+| 共用層(形狀、入口、應然、觀察) | `test/unit-pkown-setup.mjs`(不含測試案例);環境變數 `PKOWN_TRACE=<檔>` 逐格附記觀察供產修前/修後表 |
+

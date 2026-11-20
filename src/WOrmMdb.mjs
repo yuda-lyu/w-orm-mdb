@@ -121,6 +121,11 @@ const SCHEMES = ['mdb']
  * 訊息為固定詞彙invalid id: not a string or finite number at [data[索引].主鍵欄](不回顯值；有限數字為有效，故訊息同為接受有限數字之型別化後端w-orm-reladb之詞彙)：insert與insertBulk於初始化之前整批reject(發出一次error事件，不發change事件，資料庫不變)，
  * save該筆ok為0並附同訊息之err(逐筆通道，同批其餘筆照常)，del該筆ok為0(既有處置，訊息維持invalid data[索引].主鍵欄)，selectByPk回null，select與delAll之條件不命中任何列。
  * 與其他w-orm套件之有意差異：有限數字(含0)為有效主鍵——字串類主鍵欄存為String(v)，數值類主鍵欄存為數字(見R-PK-02)，因本套件之model可宣告數值類主鍵欄；其餘只收原始值之處置同系列
+ * 註: 主鍵只認自有可列舉之資料屬性(第569項，見sgud/rule/rulebook_pk.md之R-PKOWN-01，w-orm系列規則一之補強)：列之主鍵欄(opt.pk)為繼承(原型鏈上，不論值之型別，含有限數字與類別getter、
+ * frozen原型、Object.prototype上被定義者)或自有不可列舉者，視為未帶——autoGenPk為true補新主鍵(自有可列舉資料屬性)、為false照未帶之既有處置(整批reject invalid data[索引].主鍵欄, autoGenPk is false)；
+ * del該筆ok為0(既有之invalid data[索引].主鍵欄)，不刪除庫內同值之列；save不以繼承值更新或覆寫同值之列；insert與insertBulk不因繼承值而跳過、撞鍵或寫入缺主鍵之列。
+ * 判定先以既有路徑取值(每個名稱只讀一次)，值為未帶(undefined、null、空字串)即短路不查描述子，只有值為[給了]才查此列(複製後之複本)主鍵欄是否為自有可列舉；非主鍵欄之繼承欄位與類別getter照舊攤平寫入；
+ * selectByPk收純量，不適用(傳列物件回null)
  * 註: 讀取即拋錯之輸入(第557項，見sgud/rule/rulebook_readable.md之R-READABLE，w-orm系列規則二，wsemi之chkReadable)：呼叫端給的資料容器(data)、選項(建構opt與各方法之option)、selectByPk之pk，
  * 其判斷(iseobj、isearr、isestr、isbol、normPk)判為無效之分支內以chkReadable分辨「不可讀」(已撤銷之Proxy、Symbol.toStringTag拋錯者、ownKeys陷阱拋錯者、get陷阱拋錯者)與「可讀而型別不符」：
  * 不可讀者走原失敗通道並以固定詞彙invalid 名稱: must be a readable value拒絕(名稱為data、option、option.成員名、pk，建構為opt與opt.成員名；不含原例外文字與值)——
@@ -563,7 +568,8 @@ function WOrmMdb(opt = {}) {
      * 註: 同一筆主鍵先於資料, 逐筆結果各自保留: insert與insertBulk取索引最小者整批reject, save與del該筆ok為0且其餘筆照常
      * 註: 訊息為固定詞彙且不回顯值: invalid id: 原因 at [data[索引].主鍵欄]、invalid data: 原因 at [路徑]
      * 註: 檢查之值即使用之值: 輸入須為呼叫當下之快照(見snap與flatRow: 各列已攤平為只含自有資料屬性之純物件, 主鍵與各欄位值皆已讀過一次，
-     * 其後不再有存取器或原型鏈上之讀取, 呼叫端其後改動原物件、原型或存取器之副作用皆不影響本函數所檢與其後所寫);
+     * 其後不再有存取器或原型鏈上之讀取, 呼叫端其後改動原物件、原型或存取器之副作用皆不影響本函數所檢與其後所寫; 本即純資料之列保留Object.prototype為原型,
+     * 其主鍵欄若經該原型讀得[給了]之值者已由unownPk於該列遮蔽, 見R-PKOWN-01);
      * 巢狀值內若仍有存取器(巢狀之類別實例)則於走訪時被呼叫, 其輸出若成為字串寫入SQL文字, 由getCmd.mjs之escVal最後防線把關, 令任何路徑皆不可能產出含孤立代理之常值
      * 註: 須先於初始化(匯入model)、讀取與寫入; 檢核與讀取過程拋錯(存取器或Proxy陷阱拋出)原樣拋出, 由呼叫端以整批性錯誤處理
      *
@@ -1296,6 +1302,7 @@ function WOrmMdb(opt = {}) {
      * 訊息為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at [路徑](不回顯值)，不隨opt.autoGenPk改變(孤立代理主鍵不會被自動產生之主鍵取代)
      * 註: 主鍵給了而非字串或有限數字(見類別註解之R-PKGIVEN，第557項)：同樣於初始化之前整批reject，訊息invalid id: not a string or finite number at [data[索引].主鍵欄]，不得換成自動產生之主鍵，不隨opt.autoGenPk改變；
      * 讀取即拋錯之data(見類別註解之R-READABLE)與option：發出一次error事件(data為null)後reject固定詞彙invalid data: must be a readable value、invalid option: must be a readable value，資料庫不變
+     * 註: 列之主鍵欄為繼承或自有不可列舉者視為未帶(第569項，見類別註解之R-PKOWN-01)：依autoGenPk補新主鍵或整批reject，不以繼承值寫入、不因繼承值而跳過同值之列
      * 註: 撞鍵者之核對以Jet為準：先以快速鍵對應，對不上者逐筆以=語句查詢，仍不存在即撞及其他唯一索引而整批reject
      * 註: 全部插入語句於單次呼叫exe內循序送出且不因單筆衝突而中止，故一次往返即可取得精確之nInserted
      * 註: option.returnList為true時改回傳與輸入等長且保序之逐筆陣列[{n,nInserted,ok}]，
@@ -1513,6 +1520,7 @@ function WOrmMdb(opt = {}) {
      * 訊息為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at [路徑](不回顯值)，不隨opt.autoGenPk改變
      * 註: 主鍵給了而非字串或有限數字(見類別註解之R-PKGIVEN，第557項)：同樣於初始化之前整批reject，訊息invalid id: not a string or finite number at [data[索引].主鍵欄]，不得換成自動產生之主鍵；
      * 讀取即拋錯之data與option(見類別註解之R-READABLE)：發出一次error事件(data為null)後reject固定詞彙，資料庫不變
+     * 註: 列之主鍵欄為繼承或自有不可列舉者視為未帶(第569項，見類別註解之R-PKOWN-01)：依autoGenPk補新主鍵或整批reject，不以繼承值寫入、不因繼承值撞鍵
      * 註: [全有全無]以Jet之交易(OleDbTransaction)包覆全部插入語句達成，任一筆失敗即回滾，
      * 故reject之後資料庫狀態與呼叫前相同，無須補償動作；同批含重複主鍵者亦於交易內被偵測為衝突
      *
@@ -1671,6 +1679,7 @@ function WOrmMdb(opt = {}) {
      * 該類檢核先於初始化(匯入model)，故全數不合格時不載入model、不開啟資料庫檔
      * 註: 主鍵給了而非字串或有限數字(見類別註解之R-PKGIVEN，第557項)者同走此逐筆通道：該筆ok為0並附err(invalid id: not a string or finite number at [data[索引].主鍵欄]，不回顯值)，不得換成自動產生之主鍵寫入，
      * 不隨opt.autoGenPk與option.autoInsert改變；讀取即拋錯之data與option(見類別註解之R-READABLE)：發出一次error事件(data為null)後reject固定詞彙，資料庫不變
+     * 註: 列之主鍵欄為繼承或自有不可列舉者視為未帶(第569項，見類別註解之R-PKOWN-01)：依autoGenPk補新主鍵或整批reject，不以繼承值更新或覆寫庫內同值之列
      * 註: 各回合之預讀與寫入皆整批送出，故N筆數據於無衝突時僅需2次呼叫exe而非2N次
      *
      * @memberOf WOrmMdb
@@ -2052,6 +2061,7 @@ function WOrmMdb(opt = {}) {
      * 同批其餘筆照常處理，且先於初始化(匯入model)，故全數不合格時不載入model、不開啟資料庫檔、不送Jet；刪除不檢資料欄位
      * 註: 主鍵給了而非字串(布林、物件、陣列、BigInt、Symbol、String與Number包裝物件等，第557項, R-PKGIVEN)為無效主鍵，該筆ok為0並附err(既有處置，訊息維持invalid data[索引].主鍵欄)，不刪除任何列；
      * 讀取即拋錯之data與option(見類別註解之R-READABLE)：發出一次error事件(data為null)後reject固定詞彙，不刪除任何列
+     * 註: 列之主鍵欄為繼承(原型鏈上，不論值之型別)或自有不可列舉者視為未給主鍵(第569項，見類別註解之R-PKOWN-01)：該筆ok為0並附err(既有之invalid data[索引].主鍵欄)，不刪除庫內同值之列
      * 註: 本函數不受opt.autoGenPk影響，於任一設定下皆不補值
      * 註: 由DELETE語句自身之影響列數判定命中，不另行查詢以免多一次往返且與刪除間存在競態
      *
@@ -2484,10 +2494,40 @@ function WOrmMdb(opt = {}) {
     }
 
 
+    //isNoPk, 主鍵值是否為未帶: 只有undefined、null、空字串三種(R-PKGIVEN-00), 與chkWf、procPk之[未帶]同一定義
+    let isNoPk = (x) => {
+        return x === undefined || x === null || x === ''
+    }
+
+
+    /**
+     * 把攤平後(或本即為純資料)之一列中, 非呼叫端自有可列舉之主鍵視為未帶(第569項, 見sgud/rule/rulebook_pk.md之R-PKOWN-01)
+     *
+     * 註: 傳入之列之自有屬性即其後被當作呼叫端給的屬性(攤平列之屬性皆為自有; 本即純資料之複本其自有屬性來自cloneDeep: 只含自有可列舉屬性, 自有存取器已讀為資料屬性, 不可列舉者不被複製;
+     * 例外見R-PKOWN-03 LPKOWN5): 主鍵欄在此列上無自有屬性、卻經原型鏈讀得[給了]之值者(僅純物件或陣列之原型被改動而汙染時, 如Object.prototype上被定義了id),
+     * 於此列定義自有可列舉之undefined資料屬性遮蔽之, 令其後之判定、補值與刪除都視為未帶; 以defineProperty定義而非賦值: 汙染之屬性為唯讀時嚴格模式賦值會拋TypeError
+     * 註: 此列已有自有主鍵屬性者(呼叫端給的自有主鍵; 含攤平時取值拋錯而定義之會重新拋出之存取器)不讀不改, 令有效輸入不多讀、取值拋錯者照原先延後至被讀取時才拋出;
+     * 無自有屬性者才以既有路徑(經原型鏈)取值, 值為未帶(undefined、null、空字串)即短路不改, 只有值為[給了]才定義遮蔽之屬性
+     *
+     * @ignore
+     * @param {*} r 輸入攤平後之一列(複製後之純資料列)
+     * @returns {*} 回傳輸入之列(就地定義)
+     */
+    function unownPk(r) {
+        if (!Object.prototype.hasOwnProperty.call(r, opt.pk) && !isNoPk(r[opt.pk])) {
+            Object.defineProperty(r, opt.pk, { value: undefined, writable: true, enumerable: true, configurable: true })
+        }
+        return r
+    }
+
+
     /**
      * 把一列攤平為只含自有資料屬性之純物件(第66項, 見CLAUDE_rulebook.md之R-WF-04)
      *
-     * 註: 非物件原樣返回; 原型為Object.prototype或null之一般物件、原型為Array.prototype之陣列(cloneDeep後自有存取器已成資料屬性)已是純資料, 原樣返回;
+     * 註: 主鍵欄只認呼叫端自有可列舉之資料屬性(第569項, R-PKOWN-01): 繼承(原型鏈上, 不論值之型別)或自有不可列舉者視為未帶, 攤平時不可把繼承而來之主鍵值攤成自有屬性而令其成為[給了];
+     * 作法: 先以既有路徑取值(每個名稱只讀一次, 取值拋錯者照下列延後), 值為[給了]而此列(複製後之複本)主鍵欄非自有可列舉者, 值定為自有可列舉之undefined; 值為未帶者不查描述子; 非主鍵欄之攤平行為不變
+     *
+     * 註: 非物件原樣返回; 原型為Object.prototype或null之一般物件、原型為Array.prototype之陣列(cloneDeep後自有存取器已成資料屬性)已是純資料, 不攤平而原樣返回(僅經unownPk處理原型被改動而汙染主鍵欄之情形);
      * 其餘(類別實例、Object.create(proto)、Array之子類別、Map與Set等內建容器及其子類別、自訂Symbol.toStringTag之物件等)取:
      * 全部可列舉屬性(自有與繼承, for in)、原型鏈上(不含Object.prototype與Array.prototype)之存取器屬性(含不可列舉之類別getter, 現況即會被取值寫入),
      * 每個名稱只讀一次(存取器只呼叫一次, 之後的檢核、預讀、更新與事件皆讀此固定值; 主鍵欄與其他欄位同, 第一次回undefined者亦固定為undefined), 方法與其他原型上之資料屬性不取
@@ -2511,11 +2551,11 @@ function WOrmMdb(opt = {}) {
         let proto = Object.getPrototypeOf(v)
         if (isarr(v)) {
             if (proto === Array.prototype) {
-                return v
+                return unownPk(v)
             }
         }
         else if (proto === Object.prototype || proto === null) {
-            return v
+            return unownPk(v)
         }
         let names = new Set()
         for (let k in v) {
@@ -2556,8 +2596,13 @@ function WOrmMdb(opt = {}) {
                 }
                 continue
             }
+            //主鍵欄: 值為[給了]而此列(複製後之複本)之主鍵欄非自有可列舉者(繼承或自有不可列舉)視為未帶(R-PKOWN-01); 值為未帶者短路不查描述子
+            if (k === opt.pk && !isNoPk(x) && !Object.prototype.propertyIsEnumerable.call(v, k)) {
+                x = undefined
+            }
             Object.defineProperty(o, k, { value: x, writable: true, enumerable: true, configurable: true })
         }
+        unownPk(o)
         if (!isarr(v) && Object.prototype.toString.call(v) !== '[object Object]') {
             Object.defineProperty(o, KEY_CONT, { value: v, writable: false, enumerable: false, configurable: false })
         }
@@ -2586,6 +2631,7 @@ function WOrmMdb(opt = {}) {
     //若於函數內才複製, 呼叫端於呼叫後立即改動原數據(如重用同一陣列、改動共用之原型)會影響實際檢核與寫入之值; insert、insertBulk、save、del只使用此複本,
     //檢核與寫入皆作用於同一份複本; 複製或攤平讀取呼叫端之資料而拋錯者(第557項A3)轉固定詞彙而發出一次error事件(見下); 攤平時原型與繼承之存取器之拋錯延後至該欄位被讀取時,
     //屬複製之後之外來值(呼叫端程式拋出), 與函數內之其他錯誤同為rejected promise並經diag.err(R-DIAG), 不轉固定詞彙
+    //各列之主鍵欄於攤平時依複製後之複本判定自有可列舉性(繼承或自有不可列舉者視為未帶, 第569項, R-PKOWN-01), 見flatRow與unownPk; 四個入口經同一個snap故同受規範
     //外層批次以索引迴圈建成普通陣列: 不採用輸入陣列(或其子類別)自帶之map/Symbol.species, 以免批次被改變型別或靜默變成零筆; 洞視同undefined(同修改前lodash map之走訪)
     //既有之[無資料]判定(非物件、空物件、空陣列)須以cloneDeep後之原輸入為準而先於攤平: 攤平會把只有無關getter之物件變成非空, 使原本不處理之輸入多出一列
     //複製拋錯者(第557項, R-READABLE; A3): 複製處(cloneDeep與攤平)讀取呼叫端之資料而拋錯者, 不論頂層(已撤銷之Proxy、陷阱或Symbol.toStringTag拋錯者)或巢狀(列之id與欄位值、陣列之元素、

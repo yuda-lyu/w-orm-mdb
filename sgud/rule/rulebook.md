@@ -8,7 +8,7 @@
 
 | 類 | 檔 | 內容 | 含之節 |
 |---|---|---|---|
-| 主鍵 | `sgud/rule/rulebook_pk.md` | 主鍵之命中判定(Jet 為準);主鍵「給了而非字串」即拒絕(2026-11-20 新增,第 557 項,w-orm 系列規則一) | `R-PK`、`R-PKGIVEN` |
+| 主鍵 | `sgud/rule/rulebook_pk.md` | 主鍵之命中判定(Jet 為準);主鍵「給了而非字串」即拒絕(2026-11-20 新增,第 557 項,w-orm 系列規則一);主鍵只認自有可列舉之資料屬性,繼承或自有不可列舉者視為未帶(2026-11-20 新增,第 569 項) | `R-PK`、`R-PKGIVEN`、`R-PKOWN` |
 | 條件(find) | `sgud/rule/rulebook_find.md` | select/delAll 之條件轉譯、系列條件白名單之入口檢核,及主控寫入之三則系列規格摘要 | `R-FIND`、`R-WL`、〔條件(find)之支援範圍〕、〔delAll 與 find 之頂層語意〕、〔系列條件白名單〕 |
 | 日期條件 | `sgud/rule/rulebook_float.md` | 非主鍵日期條件:浮動時間(牆上時間),及條件引用非白名單欄型之欄一律拒收(`R-FLOAT-07`) | `R-FLOAT` |
 | 寫入值與實例 | `sgud/rule/rulebook_data.md` | 寫入 DATE 欄之日期範圍與字串正規化、字串良構檢核、sequelize 實例生命週期 | `R-DATE`、`R-WF`、`R-LIFE` |
