@@ -61,41 +61,16 @@ function getPkType(attrs, pk) {
 
 
 /**
- * 拆包裝物件
- *
- * 註: new String(x)與new Number(x)依toString標籤會被判為字串或數字, 但其值不參與===比較(如new String('')!==''),
- * 故先取出原始值, 令其與原始值同處置
- * 註: 以內建之String.prototype.valueOf/Number.prototype.valueOf讀包裝物件之內部值, 不呼叫物件自身之valueOf:
- * 後者可被呼叫端覆寫(每次讀值結果不同), 且僅偽造toStringTag之一般物件並非包裝物件(內建valueOf對其拋錯, 原樣返回而屬無效值)
- *
- * @ignore
- */
-function unwrap(v) {
-    if (v !== null && typeof v === 'object') {
-        try {
-            return String.prototype.valueOf.call(v)
-        }
-        catch (err) {}
-        try {
-            return Number.prototype.valueOf.call(v)
-        }
-        catch (err) {}
-    }
-    return v
-}
-
-
-/**
  * 主鍵值若為字串, 回傳其不良構之原因(含NUL: SQL文字於NUL被截斷; 含孤立代理: 經exe之UTF-8轉換被換為U+FFFD而改鍵), 合格或非字串回傳null
  *
- * 註: 判定單一擁有者為wsemi之chkOrmStr(第66項, 見CLAUDE_rulebook.md之R-WF), 預設一併檢NUL(主鍵與find同標準); 先拆包裝物件, 與normPk一致
+ * 註: 判定單一擁有者為wsemi之chkOrmStr(第66項, 見CLAUDE_rulebook.md之R-WF), 預設一併檢NUL(主鍵與find同標準)
+ * 註: 只收原始值(第557項, R-PKGIVEN): String包裝物件非字串, 與normPk一致, 不拆包裝物件(wsemi 1.9.69起判斷函數只收原始值, 同一原則)
  * 註: 回傳原因為固定詞彙(不回顯值), 供呼叫端組成invalid id: 原因 at [data[索引].主鍵欄]
  *
  * @param {*} v 輸入主鍵值
  * @returns {String|null} 回傳原因字串或null
  */
 function chkPkWf(v) {
-    v = unwrap(v)
     if (typeof v !== 'string') {
         return null
     }
@@ -116,10 +91,10 @@ function isOverLen(s) {
 /**
  * 依主鍵欄型別正規化主鍵值
  *
- * 註: kind為'ok'(v為正規化後之值)、'invalid'(未給或非有效值, 依T6處置)、'mismatch'(與主鍵欄型別不符)、'cannot'(不可能存在於資料表)
+ * 註: kind為'ok'(v為正規化後之值)、'invalid'(未給或非有效值; 寫入入口之處置見R-PKGIVEN: 未帶者依T6, 給了者整批或逐筆拒絕)、'mismatch'(與主鍵欄型別不符)、'cannot'(不可能存在於資料表)
  * 註: 字串類主鍵欄之有限數字以String(v)處置, 與w-serv-orm一致; 數值類主鍵欄僅轉換標準數字字串(String(Number(s))===s),
  * 其餘字串因Jet之INSERT轉型會改變鍵(如'012'存為12)而視為型別不符; 整數類主鍵欄之非整數因Jet會四捨六入五成雙而視為型別不符
- * 註: ±Infinity、NaN、空字串、布林、物件、陣列、Date、BigInt、null、undefined為無效
+ * 註: 只收原始值(第557項): ±Infinity、NaN、空字串、布林、物件、陣列、Date、BigInt、Symbol、null、undefined、String與Number包裝物件(不拆包裝, 原為拆包後同原始值處置)為無效
  * 註: 超過255字元(不計尾端半形空白)之字串於字串類與其他型別(含model未定義主鍵欄而無從得知型別者)皆為不可能存在
  * 註: 含NUL或孤立代理之字串(不良構, chkPkWf)亦為不可能存在, 且kind為'cannot'時附why(固定原因詞彙); 其kind不用'invalid',
  * 以免autoGenPk為true時被當成[未給主鍵]而以自動產生之UUID取代(寫入成功卻非呼叫端所給之主鍵), 呼叫端須以why區辨良構性與長度上限(後者無why)
@@ -129,9 +104,6 @@ function isOverLen(s) {
  * @returns {Object} 回傳{kind,v}, kind為'cannot'時可能附why
  */
 function normPk(v, tp) {
-
-    //unwrap
-    v = unwrap(v)
 
     //string
     if (typeof v === 'string') {

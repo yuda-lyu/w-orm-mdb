@@ -34,7 +34,7 @@
 
 ### R-PK-02 `normPk(v, 類)` 之結果 `{kind, v}`
 
-先拆包裝物件(`new String(x)`、`new Number(x)` 以 `valueOf()`)。
+~~先拆包裝物件(`new String(x)`、`new Number(x)` 以 `valueOf()`)~~ → **第 557 項起不拆包裝物件**:只收原始值,String 與 Number 包裝物件為 `invalid`(見 R-PKGIVEN)。
 
 | 輸入 | `str` | `int` | `flt` | `other` |
 |---|---|---|---|---|
@@ -42,15 +42,15 @@
 | 非空字串 >255 字元(不計尾端半形空白) | cannot | 同上(必 mismatch) | 同上 | cannot(model 未定義主鍵欄時型別為 other,實體欄仍可能為文字) |
 | 字串含 NUL 或孤立代理 | cannot | cannot | cannot | cannot |
 | 有限數字 | ok(`String(v)`) | 整數→ok;非整數→mismatch | ok | ok |
-| `''`、±Infinity、NaN、布林、物件、陣列、Date、BigInt、null、undefined | invalid | invalid | invalid | invalid |
+| `''`、±Infinity、NaN、布林、物件、陣列、Date、BigInt、Symbol、`new String(x)`、`new Number(x)`、null、undefined | invalid | invalid | invalid | invalid |
 
 ### R-PK-03 各函數之處置
 
 | 函數 | ok | invalid | mismatch | cannot |
 |---|---|---|---|---|
 | selectByPk | 以正規化值 `=` 查 | null(不初始化即回) | null | null,不送 Jet |
-| insert / insertBulk | 寫正規化值 | T6:autoGenPk 且主鍵欄為字串類則補值,否則寫入前整批 reject | 寫入前整批 reject | 寫入前整批 reject |
-| save | 寫正規化值 | 同上(T6) | 寫入前整批 reject | autoInsert 開啟:該筆 ok:0+err;關閉:n:0 ok:1;不送 Jet |
+| insert / insertBulk | 寫正規化值 | **未帶**(`undefined`、`null`、`''`)依 T6:autoGenPk 且主鍵欄為字串類則補值,否則寫入前整批 reject;**給了**者(其餘 invalid 值)一律寫入前整批 reject `invalid id: not a string or finite number at [data[k].id]`,不補值、不隨 autoGenPk 改變(R-PKGIVEN,第 557 項) | 寫入前整批 reject | 寫入前整批 reject |
+| save | 寫正規化值 | 未帶依 T6(同上);給了者該筆 ok:0+`invalid id: not a string or finite number at [data[k].id]`(逐筆通道,不補值,不隨 autoGenPk、autoInsert 改變;R-PKGIVEN) | 寫入前整批 reject | autoInsert 開啟:該筆 ok:0+err;關閉:n:0 ok:1;不送 Jet |
 | del | 以正規化值 `=` 刪 | 該筆 ok:0+`invalid <pk>[…]` | 該筆 ok:0+err(型別不符) | `{n:0,nDeleted:0,ok:1}`,不送 Jet |
 | select / delAll 之主鍵等值條件 | 以 Jet 判定命中列 | 肯定語境不命中;**否定語境(`$ne`、`$nin`)reject**(第 33 項批 2 後 `$not`、`$nor`、文件層 `$not` 已不在白名單,否定語境只剩此二) | 同 invalid | 肯定語境不命中;否定語境為必不相等 |
 
@@ -96,7 +96,7 @@
 ### 破壞性變更紀錄(2026-10-16,待發布說明)
 
 1. 字串主鍵欄之有限數字一律 `String(v)`;`change` 事件 `data` 之主鍵為字串。
-2. ±Infinity、`new String('')`、`new Number(NaN)`、BigInt 為無效主鍵(依 T6 補值或 reject;select/delAll 不命中)。
+2. ±Infinity、`new String('')`、`new Number(NaN)`、BigInt 為無效主鍵(依 T6 補值或 reject;select/delAll 不命中)。〔2026-11-20 第 557 項起:**給了**之無效主鍵不再依 T6 補值,一律 reject,見 R-PKGIVEN;只有未帶(`undefined`、`null`、`''`)依 T6。〕
 3. 數值主鍵欄:標準數字字串轉數字;非標準字串、整數欄之非整數為型別不符(selectByPk null、寫入前 reject、del ok:0)。
 4. select/delAll 之主鍵等值條件由 Jet 判定命中列:`delAll({id:'k2 '})` 會刪除 `'k2'`(與 del 一致);`$ne`/`$nin`/`$not` 不再刪除 Jet 視為同鍵之列。
 4b. select/delAll 之主鍵否定條件(`$ne`、`$nin`、`$not`、文件層 `$not`/`Op.not`/`$nor` 內)含無效或型別不符之值(如 `undefined`)時 reject(修正前 sequelize 對 `undefined` 亦 reject;若依「不命中」推得全部命中,delAll 會清空全表);肯定條件之無效值不命中;`{id:{}}` 不命中。
@@ -117,4 +117,35 @@
 | 全矩陣 | `node tmp/audit01/probe/p2-matrix.mjs S I D` + `gen-matrix.mjs`(審計工具,不入版控) |
 
 測試資產:`node toolg/genTestMdbAssets.mjs worm_pk_def.mdb` 產生 `test/assets/worm_pk_def.mdb`;model 於 `test/assets/models/`;測試時複製到 `./test/temp-pkvariant/` 再用。
+
+## R-PKGIVEN 主鍵「給了而非字串」即拒絕(2026-11-20 立;第 557 項,w-orm 系列規則一;依據:dspec〈輸入參數之檢測機制〉K2、K3、§11,wsemi 1.9.69 起判斷函數只收原始值)
+
+**背景**:修正前,寫入入口(insert、insertBulk、save)之 `procPk` 把「給了而非有效主鍵」(布林、物件、陣列、Date、BigInt、Symbol、NaN、±Infinity、`new String('')` 等,`normPk` 判為 `invalid`)與「未帶」同樣處置:`autoGenPk` 為 true 時靜默**換成自動產生之 UUID 寫入**(呼叫端以為寫入自己給的主鍵,實際存的是另一個鍵);為 false 時才 reject。`new String('a')` 等包裝物件則被拆包後視同 `'a'`(`selectByPk(new String('a'))` 命中列 `a`、`del` 刪到列 `a`)。
+
+### R-PKGIVEN-00 單一規則
+
+1. **未帶主鍵**只有三種:`id` 為 `undefined`、`null`、`''`(含鍵不存在)。`autoGenPk` 為 true 自動產生;為 false 維持既有整批 reject `invalid data[k].id, autoGenPk is false`。
+2. **給了而非有效主鍵**(`normPk` 判為 `invalid` 之其餘值:布林、物件、陣列、Date、BigInt、Symbol、NaN、±Infinity、**String 與 Number 包裝物件**)一律拒絕,**不得靜默換成新產生之主鍵寫入,不隨 `autoGenPk`、`autoInsert` 改變**;訊息固定詞彙 `invalid id: not a string or finite number at [data[k].id]`(`k` 為索引、欄名取自 `opt.pk`;不回顯值)。
+3. **失敗通道依各入口既有之通道**(與 R-WF 同一通道,先於初始化〔匯入 model〕、不連線):
+   - insert、insertBulk:整批 reject,`error` 事件恰一次(`data` 為呼叫當下之複本)、不發 `change`、資料庫不變;同批多筆不合格以索引最小者為準;
+   - save:該筆 `ok: 0` 附同訊息之 `err`(逐筆通道,不改為整批 reject),同批其餘筆照常;`autoInsert: false` 亦同;
+   - del:該筆 `ok: 0`,訊息維持既有 `invalid data[k].id`(**刪查入口已拒絕者核實不改**;包裝物件原被拆包而可能刪到列,現 `ok: 0`);
+   - selectByPk:回 `null`(可讀而非字串者;不可讀者見 R-READABLE);
+   - select、delAll:條件由 wsemi `cvOrmFind` 白名單拒收或不命中任何列(既有,核實不改)。
+4. 只收**原始值**:`normPk`、`chkPkWf` 不再拆包裝物件(`unwrap` 已移除)。
+
+### R-PKGIVEN-01 與其他 w-orm 套件之有意差異
+
+**有限數字(含 0)為有效主鍵**(共同規則一第 6 點〔型別化後端之例外〕,主控 2026-11-20 裁定維持):字串類主鍵欄存為 `String(v)`、數值類主鍵欄存為數字(R-PK-02)。**訊息**為 `invalid id: not a string or finite number at [data[k].id]`(主控 2026-11-20 裁定;字串主鍵之後端〔lowdb、level、lmdb、mongodb〕為 `not a string`,同為接受有限數字之型別化後端 w-orm-reladb 與本庫為同一句;`not a string` 字面對本庫不精確)。理由:(1) 本套件之 model 可宣告數值類主鍵欄(INTEGER、DOUBLE 等,Access 資料表常見),拒絕數字會使其 `insert({id:5})`、`selectByPk(5)` 全部失效;(2) 字串類欄收有限數字以 `String(v)` 處置為 2026-10-16 已文件化之裁示(Q1,與 w-serv-orm 一致),dspec N3 亦載 w-serv-orm R-ID-02 以有限 number 為主鍵;(3) 未發生「靜默換成新主鍵」:數字依欄型別寫入為其自身之值。其餘(布林、物件、陣列、包裝物件等)與系列一致拒絕。若主控裁定系列一律拒絕數字,改動點為 `chkWf` 之 `normPk(pkv, 'other')` 判定加 `typeof pkv !== 'string'` 並重寫數值欄相關之 `unit-pkvariant`、`unit-find-intpk` 等案(見報告〈需裁示〉)。
+
+### R-PKGIVEN-02 入口 × 輸入(修前/修後)
+
+見報告〈規則三:入口 × 輸入之行為表〉;測試 `test/unit-pkgiven.test.mjs`(S1~S4)逐格斷言。
+
+### 破壞性變更紀錄(2026-11-20)
+
+1. insert、insertBulk、save 收到**給了而非有效主鍵**(布林、物件、陣列、Date、BigInt、Symbol、NaN、±Infinity、String 與 Number 包裝物件):原靜默換成新產生之主鍵寫入(`autoGenPk` 為 true)或 reject `invalid data[k].id, autoGenPk is false`(為 false);現一律拒絕 `invalid id: not a string or finite number at [data[k].id]`(insert、insertBulk 整批 reject;save 該筆 `ok: 0`)。注意 save 於 `autoGenPk: false` 時原為整批 reject(`invalid data[k].id, autoGenPk is false`),現改逐筆 `ok: 0`(與 R-WF 之 save 通道、w-orm-mongodb 之 `api-pk-given` 同,且不隨 `autoGenPk` 改變)。
+2. 包裝物件(`new String('a')`、`new Number(5)`)不再拆包:`selectByPk` 回 `null`(原命中)、`del` 該筆 `ok: 0`(原刪除)、寫入拒絕(原寫入拆包後之值)。
+3. 未帶主鍵(`undefined`、`null`、`''`、鍵不存在)之處置不變。
+4. 訊息字面(全族對齊輪,2026-11-20):`invalid id: not a string at [data[k].id]` → `invalid id: not a string or finite number at [data[k].id]`(本庫接受有限數字;第一輪之訊息只存在於工作樹、尚未發布,故對已發布版〔1.0.74〕而言為同一次不相容變更)。
 

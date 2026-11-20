@@ -22,7 +22,7 @@ const WHY_NUL = 'string contains NUL'
 
 describe('WOrmMdb wellformed 純函數(R-WF-01)', function() {
 
-    it('chkPkWf: 良構與非字串回null, NUL先於孤立代理, 先拆包裝物件', function() {
+    it('chkPkWf: 良構與非字串回null, NUL先於孤立代理, 包裝物件非字串回null(第557項起不拆包裝, 由寫入入口以給了而非字串拒絕)', function() {
         for (let v of ['abc', '中文', 'a\u{1F600}b', 'a�b', '\u{20BB7}', 'é', 123, null, undefined, {}, [], true, '']) {
             assert.strict.strictEqual(pk.chkPkWf(v), null, `pk.chkPkWf(${String(v)})`)
         }
@@ -33,7 +33,7 @@ describe('WOrmMdb wellformed 純函數(R-WF-01)', function() {
         assert.strict.strictEqual(pk.chkPkWf('a\u0000b'), WHY_NUL)
         assert.strict.strictEqual(pk.chkPkWf('a\u0000\uD800'), WHY_NUL, 'NUL先報')
         /* eslint-disable no-new-wrappers */
-        assert.strict.strictEqual(pk.chkPkWf(new String(H)), WHY_LONE, '包裝物件先拆包裝(與normPk一致)')
+        assert.strict.strictEqual(pk.chkPkWf(new String(H)), null, '包裝物件非字串(第557項起不拆包裝, 與normPk一致)')
         assert.strict.strictEqual(pk.chkPkWf(new String('ok')), null)
         /* eslint-enable no-new-wrappers */
     })
@@ -254,7 +254,7 @@ if (isWindows()) {
                 })
             }
 
-            it('複製拋錯(存取器拋錯)為rejected promise, 同步呼叫不拋', async function() {
+            it('複製拋錯(存取器拋錯)為rejected promise, 同步呼叫不拋; 訊息為固定詞彙invalid data: must be a readable value(A3, 第557項; 不轉出存取器拋出之文字)', async function() {
                 let { w } = freshWo(ctx, {})
                 let d = mk('k1')
                 Object.defineProperty(d, 'name', { get() { throw new Error('getter boom') }, enumerable: true })
@@ -262,7 +262,7 @@ if (isWindows()) {
                     let p = w[api]([d])
                     assert.strict.ok(p instanceof Promise, api)
                     let rej = await p.catch((e) => e)
-                    assert.strict.strictEqual(msgOf(rej), 'getter boom', api)
+                    assert.strict.strictEqual(msgOf(rej), 'invalid data: must be a readable value', api)
                 }
             })
 

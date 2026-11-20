@@ -392,7 +392,7 @@ if (isWindows()) {
 
         describe('其他外來值之站點', function() {
 
-            it('快照(snap): 呼叫端數據之自有getter拋出含憑證之錯誤 → insert、insertBulk、save、del之reject為遮罩後副本(不發error事件, 同修改前)', async function() {
+            it('快照(snap)之複製處(A3, 第557項): 呼叫端數據之自有getter拋出含憑證之錯誤 → 不轉出外來文字(含遮罩後副本), 改固定詞彙invalid data: must be a readable value, insert、insertBulk、save、del各發出一次error事件(data為null)', async function() {
                 let w = mk(URL_X, 'users')
                 let evs = withEvents(w)
                 let mkRow = () => ({
@@ -404,10 +404,11 @@ if (isWindows()) {
                 for (let fn of ['insert', 'insertBulk', 'save', 'del']) {
                     let r = await settle(w[fn](fn === 'insertBulk' ? [mkRow()] : mkRow()))
                     assert.ok(r.err instanceof Error, `${fn}應reject Error`)
+                    assert.strictEqual(r.err.message, 'invalid data: must be a readable value', fn)
                     noPw(r.err.message, fn)
-                    assert.ok(r.err.message.indexOf('***') >= 0, r.err.message)
+                    assert.ok(r.err.message.indexOf('snap') < 0 && r.err.message.indexOf('***') < 0, r.err.message)
                 }
-                assert.deepStrictEqual(evs, [])
+                assert.deepStrictEqual(evs, ['insert', 'insertBulk', 'save', 'del'].map((fn) => [fn, null, 'invalid data: must be a readable value']))
             })
 
             it('預檢(chkWf): 主鍵getter(延後之拋錯)拋出含憑證之錯誤 → insert、insertBulk、save、del之reject與error事件皆遮罩', async function() {

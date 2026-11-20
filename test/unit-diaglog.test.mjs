@@ -109,9 +109,9 @@ describe('原始碼盤點(R-DIAG-00、R-DIAG-09)', function() {
     it('整批reject與error事件之出口: 七函數之catch皆res = outErr(err, si)、預檢與createStorage之catch皆let e = outErr(err), WOrmMdb之Promise.reject只交出已處置之值', function() {
         let c = code('WOrmMdb.mjs')
         assert.strictEqual(c.filter((ln) => ln.trim() === 'res = outErr(err, si)').length, 7, '七函數之整批catch')
-        assert.strictEqual(c.filter((ln) => ln.trim() === 'let e = outErr(err)').length, 5, 'insert、insertBulk、save、del之預檢catch與createStorage之catch')
+        assert.strictEqual(c.filter((ln) => ln.trim() === 'let e = outErr(err)').length, 6, 'insert、insertBulk、save、del之預檢catch與createStorage之catch, 及rejectIn(第557項, R-READABLE: 入口階段option與data之讀取失敗)')
         let rejects = c.filter((ln) => /Promise\.reject\(/.test(ln)).map((ln) => ln.trim())
-        let bad = rejects.filter((ln) => !['return Promise.reject(res)', 'return Promise.reject(e)', 'return Promise.reject(err)', 'return Promise.reject(diag.err(err))'].includes(ln))
+        let bad = rejects.filter((ln) => !['return Promise.reject(res)', 'return Promise.reject(e)', 'return Promise.reject(err)'].includes(ln))
         assert.deepStrictEqual(bad, [])
         //return Promise.reject(err)只用於固定詞彙之err(ownErr(msg)), 恰2處(insert、insertBulk之預檢不合格)
         let ownRej = c.filter((ln) => /let err = ownErr\(msg\)/.test(ln))
@@ -143,20 +143,24 @@ describe('原始碼盤點(R-DIAG-00、R-DIAG-09)', function() {
                 }
             })
         }
-        //建構期(throwUrlErr、opt之型別與良構)之同步拋錯為固定詞彙且不經outErr; importModels之invalid fields只於模組內被pm2resolve收下, 不成為對外值
+        //建構期(throwUrlErr、opt之型別、良構與可讀性〔第557項, R-READABLE〕)之同步拋錯為固定詞彙且不經outErr; importModels之invalid fields只於模組內被pm2resolve收下, 不成為對外值
         /* eslint-disable no-template-curly-in-string */ //預期值為原始碼之字面文字
         assert.deepStrictEqual(hits.sort(), [
+            'WOrmMdb.mjs: new Error(\'invalid opt: must be a readable value\'',
             'WOrmMdb.mjs: new Error(`${msg}, opt.url[${maskDiagUrl(opt.url, { schemes: SCHEMES }',
+            'WOrmMdb.mjs: new Error(`invalid opt.${curName}: must be a readable value`',
             'WOrmMdb.mjs: new Error(`invalid opt.${k}: ${why}`',
+            'WOrmMdb.mjs: new Error(`invalid opt.${k}: must be a readable value`',
             'WOrmMdb.mjs: new TypeError(\'invalid opt: not an object\'',
             'importModels.mjs: new Error(\'invalid fields\'',
         ].sort())
         /* eslint-enable no-template-curly-in-string */
     })
 
-    it('外來值之其他站點: snap之複製失敗、initAdodb之sequelize建立或關閉失敗皆經diag.err, normFind之cvOrmFind錯誤以markOwnErr登記', function() {
+    it('外來值之其他站點: initAdodb之sequelize建立或關閉失敗皆經diag.err, normFind之cvOrmFind錯誤以markOwnErr登記; snap之複製失敗(A3)不轉出外來文字而改固定詞彙(rejectIn), 不再經diag.err', function() {
         let c = code('WOrmMdb.mjs').map((ln) => ln.trim())
-        assert.ok(c.includes('return Promise.reject(diag.err(err))'), 'snap')
+        assert.strictEqual(c.filter((ln) => ln === 'return rejectIn(mode, ownUnreadable(\'data\'))').length, 2, 'snap之複製失敗與判無效分支內之可讀性探針(第557項P4): 皆固定詞彙invalid data: must be a readable value')
+        assert.ok(!c.includes('return Promise.reject(diag.err(err))'), 'snap之複製失敗不再轉出外來文字')
         assert.ok(c.includes('err = e === getImportErr(opt) ? e : diag.err(getErrMsg(e))'), 'initAdodb之initSequelize失敗')
         assert.ok(c.includes('throw diag.err(e)'), 'initAdodb之close')
         assert.ok(c.includes('throw markOwnErr(err)'), 'normFind')

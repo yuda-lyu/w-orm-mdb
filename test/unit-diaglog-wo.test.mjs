@@ -334,17 +334,145 @@ if (isWindows()) {
                 assert.deepStrictEqual(bad.map((v) => v.message), [])
             })
 
-            it('選項之getter拋錯: 與本套件其他選項(如logging)相同, 建構時原樣拋出(opt於建構開始時讀一次, 見R-WF), 不被吞下', function() {
-                for (let k of ['logDetail', 'funLog', 'logging', 'useStable']) {
-                    let o = mkOpt(ss.fpStorage)
-                    Object.defineProperty(o, k, {
-                        get() {
-                            throw new Error(`getter boom ${k}`)
-                        },
-                        enumerable: true
-                    })
-                    assert.throws(() => wo(o), (err) => err.message === `getter boom ${k}`, k)
+            //第557項全族之例外(主控裁, dspec C15 診斷出口永不失敗): opt.logDetail與opt.funLog之存取器或get陷阱拋錯者視為未給(用預設), 建構成功, 不throw、不轉出拋出者之文字;
+            //本套件於建構時讀取並複製全部選項(第66項), 此二鍵之讀取包try; 其餘選項(logging、useStable等)之存取器拋錯仍依A2於建構同步throw固定詞彙(見下一案與unit-readable)
+            describe('opt.logDetail與opt.funLog之存取器拋錯視為未給(第557項全族之例外, dspec C15)', function() {
+
+                const SECRET = 'SECRET-DIAG-GETTER'
+                const boomGet = () => {
+                    throw new Error(SECRET)
                 }
+
+                //每種存取方式各產生一個opt(k為logDetail或funLog)
+                const kinds = (k) => [
+                    ['自有可列舉之getter', () => {
+                        let o = mkOpt(ss.fpStorage)
+                        Object.defineProperty(o, k, { get: boomGet, enumerable: true, configurable: true })
+                        return o
+                    }],
+                    ['自有不可列舉之getter', () => {
+                        let o = mkOpt(ss.fpStorage)
+                        Object.defineProperty(o, k, { get: boomGet, enumerable: false, configurable: true })
+                        return o
+                    }],
+                    ['原型上之getter(類別)', () => {
+                        class Opt {
+                            get [k]() {
+                                return boomGet()
+                            }
+                        }
+                        let o = new Opt()
+                        Object.assign(o, mkOpt(ss.fpStorage))
+                        return o
+                    }],
+                    ['僅對該鍵拋錯之get陷阱', () => new Proxy(mkOpt(ss.fpStorage), {
+                        get(t, key, r) {
+                            if (key === k) {
+                                return boomGet()
+                            }
+                            return Reflect.get(t, key, r)
+                        }
+                    })],
+                ]
+
+                //診斷輸出之觀察: change訂閱函數拋錯會經診斷出口輸出(預設為(標籤, 摘要)兩引數且摘要不為Error; logDetail為true時第2引數為Error細節; funLog給予時不寫console)
+                async function observe(w) {
+                    w.on('change', () => {
+                        throw new Error(`listener ${ID}`)
+                    })
+                    return capture(async () => {
+                        await w.insert({ id: VID, name: VNAME })
+                        await w.del({ id: VID })
+                    })
+                }
+
+                for (let k of ['logDetail', 'funLog']) {
+                    for (let [nmKind, mkO] of kinds(k)) {
+                        it(`opt.${k}為${nmKind}且拋錯: 建構成功(不throw), 視同未給: 診斷輸出為預設之(標籤, 摘要), 不含拋出者之文字`, async function() {
+                            let w = null
+                            assert.doesNotThrow(() => {
+                                w = wo(mkO())
+                            })
+                            let cp = await observe(w)
+                            assert.strictEqual(cp.lines.length, 2, 'funLog視同未給: 診斷輸出寫console')
+                            for (let l of cp.lines) {
+                                assert.strictEqual(l.args.length, 2)
+                                assert.strictEqual(l.args[0], 'change handler threw')
+                                assert.ok(!(l.args[1] instanceof Error), 'logDetail視同未給(false): 不含細節')
+                            }
+                            assert.ok(flat(cp).indexOf(SECRET) < 0 && flat(cp).indexOf(ID) < 0, '不含拋出者之文字與資料')
+                        })
+                    }
+                }
+
+                it('兩者同時拋錯: 建構成功, 皆視同未給', async function() {
+                    let o = mkOpt(ss.fpStorage)
+                    for (let k of ['logDetail', 'funLog']) {
+                        Object.defineProperty(o, k, { get: boomGet, enumerable: true, configurable: true })
+                    }
+                    let w = null
+                    assert.doesNotThrow(() => {
+                        w = wo(o)
+                    })
+                    let cp = await observe(w)
+                    assert.strictEqual(cp.lines.length, 2)
+                    assert.ok(cp.lines.every((l) => l.args.length === 2 && !(l.args[1] instanceof Error)))
+                })
+
+                it('各自獨立: logDetail拋錯而funLog有效時funLog照常生效; funLog拋錯而logDetail為true時logDetail照常生效', async function() {
+                    let got = []
+                    let o1 = mkOpt(ss.fpStorage, { funLog: (...a) => got.push(a) })
+                    Object.defineProperty(o1, 'logDetail', { get: boomGet, enumerable: true, configurable: true })
+                    let w1 = wo(o1)
+                    let cp1 = await observe(w1)
+                    assert.deepStrictEqual(cp1.lines, [], 'funLog有效: 取代console')
+                    assert.strictEqual(got.length, 2)
+
+                    let o2 = mkOpt(ss.fpStorage, { logDetail: true })
+                    Object.defineProperty(o2, 'funLog', { get: boomGet, enumerable: true, configurable: true })
+                    let w2 = wo(o2)
+                    let cp2 = await observe(w2)
+                    assert.strictEqual(cp2.lines.length, 2)
+                    assert.ok(cp2.lines.every((l) => l.args.length === 2 && l.args[1] instanceof Error), 'logDetail為true: 第2引數為遮罩後之細節(Error)')
+                })
+
+                it('值本身不可讀(已撤銷之Proxy; funLog為已撤銷之函數Proxy): 建構成功, 診斷出口永不失敗, 操作結果不受影響(核實不改)', async function() {
+                    let mkRevoked = (target) => {
+                        let r = Proxy.revocable(target, {})
+                        r.revoke()
+                        return r.proxy
+                    }
+                    for (let ext of [{ logDetail: mkRevoked({}) }, { funLog: mkRevoked(function() {}) }, { logDetail: mkRevoked({}), funLog: mkRevoked(function() {}) }]) {
+                        let w = null
+                        assert.doesNotThrow(() => {
+                            w = wo(mkOpt(ss.fpStorage, ext))
+                        }, Object.keys(ext).join())
+                        let res = await capture(async () => {
+                            w.on('change', () => {
+                                throw new Error(`listener ${ID}`)
+                            })
+                            return [await w.insert({ id: VID, name: VNAME }), await w.del({ id: VID })]
+                        })
+                        assert.strictEqual(res.result[0].n, 1)
+                        assert.strictEqual(res.result[1][0].nDeleted, 1)
+                    }
+                })
+
+                it('其餘選項(logging、useStable等)之存取器拋錯仍建構同步throw固定詞彙invalid opt.<名>: must be a readable value(A2); 與logDetail或funLog同時拋錯時報其他選項(不被此二鍵之處置遮掉)', function() {
+                    for (let k of ['logging', 'useStable', 'url', 'autoGenPk']) {
+                        let o = mkOpt(ss.fpStorage)
+                        Object.defineProperty(o, k, { get: boomGet, enumerable: true, configurable: true })
+                        assert.throws(() => wo(o), (err) => err.message === `invalid opt.${k}: must be a readable value`, k)
+                        for (let k2 of ['logDetail', 'funLog']) {
+                            let o2 = mkOpt(ss.fpStorage)
+                            for (let kk of [k2, k]) {
+                                Object.defineProperty(o2, kk, { get: boomGet, enumerable: true, configurable: true })
+                            }
+                            assert.throws(() => wo(o2), (err) => err.message === `invalid opt.${k}: must be a readable value`, `${k2}+${k}`)
+                        }
+                    }
+                })
+
             })
 
             it('不可列舉或繼承而來之選項(defineProperty、類別getter)亦生效, 與其他選項相同(opt依選項名稱讀取, 不以列舉為限)', async function() {

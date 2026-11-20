@@ -64,10 +64,10 @@ describe('WOrmMdb pkvariant normPk純函數', function() {
         }
     })
 
-    it('包裝物件先拆包', function() {
-        assert.strict.deepStrictEqual(pk.normPk(new String('k2'), 'str'), { kind: 'ok', v: 'k2' })
+    it('包裝物件不拆包: 只收原始值, String與Number包裝物件為無效(第557項, R-PKGIVEN; 原為拆包後同原始值處置)', function() {
+        assert.strict.strictEqual(pk.normPk(new String('k2'), 'str').kind, 'invalid')
         assert.strict.strictEqual(pk.normPk(new String(''), 'str').kind, 'invalid')
-        assert.strict.deepStrictEqual(pk.normPk(new Number(12), 'int'), { kind: 'ok', v: 12 })
+        assert.strict.strictEqual(pk.normPk(new Number(12), 'int').kind, 'invalid')
         assert.strict.strictEqual(pk.normPk(new Number(NaN), 'str').kind, 'invalid')
     })
 
@@ -672,7 +672,7 @@ if (isWindows()) {
 
         describe('無效值、包裝物件與BigInt(R-PK-02、03; Q6)', function() {
 
-            it('±Infinity: selectByPk回null、del該筆ok為0、insert依T6補值或reject、select不命中', async function() {
+            it('±Infinity: selectByPk回null、del該筆ok為0、select不命中、insert給了而非字串reject(不依T6補值, 不隨autoGenPk改變)', async function() {
                 let w = ws.users
                 await seed('users', SEED_U)
                 assert.strict.strictEqual(await w.selectByPk(Infinity), null)
@@ -681,29 +681,32 @@ if (isWindows()) {
                 assert.strict.strictEqual(await getRt(w.select({ id: Infinity })), 'reject', '條件值±Infinity: 白名單拒收(1.0.36 為不命中)')
                 assert.strict.strictEqual(await getRt(w.delAll({ id: -Infinity })), 'reject')
                 assert.strict.strictEqual((await all('users')).length, SEED_U.length, '不得刪除任何列')
-                assert.strict.deepStrictEqual(await w.insert([{ id: Infinity, name: 'inf' }]), { n: 1, nInserted: 1, ok: 1 })
-                let row = (await all('users')).find((r) => r.name === 'inf')
-                assert.strict.ok(row && row.id.length === 36, '依T6補值(:91)')
+                //第557項(R-PKGIVEN): 給了而非有效主鍵不依T6補值(原補成UUID寫入), 一律reject, 不隨autoGenPk改變
+                await assert.rejects(() => w.insert([{ id: Infinity, name: 'inf' }]), (err) => err.message === 'invalid id: not a string or finite number at [data[0].id]')
                 let wf = mk('users', { autoGenPk: false })
-                assert.strict.strictEqual(await getRt(wf.insert([{ id: Infinity }])), 'reject', 'autoGenPk為false時reject(:100)')
+                await assert.rejects(() => wf.insert([{ id: Infinity }]), (err) => err.message === 'invalid id: not a string or finite number at [data[0].id]')
+                assert.strict.strictEqual((await all('users')).length, SEED_U.length, '不得以補值之主鍵寫入')
             })
 
-            it('包裝物件拆包、new String("")與new Number(NaN)為無效', async function() {
+            it('包裝物件不拆包(第557項, R-PKGIVEN; 原拆包後同原始值處置): selectByPk回null、del該筆ok為0、寫入reject, new String("")與new Number(NaN)亦然', async function() {
                 let w = ws.users
-                await seed('users', [...SEED_U, { id: '123', name: 'n123' }, { id: 'NaN', name: 'nanrow' }])
-                assert.strict.strictEqual((await w.selectByPk(new String('k2'))).id, 'k2')
-                assert.strict.strictEqual(await getRt(w.select({ id: new Number(123) })), 'reject', '條件值為包裝物件: 白名單拒收(1.0.36 拆包後命中; selectByPk與資料列仍拆包)')
+                await seed('users', [...SEED_U, { id: '123', name: 'n123' }, { id: 'NaN', name: 'nanrow' }, { id: '12', name: 'n12' }])
+                let n0 = (await all('users')).length
+                assert.strict.strictEqual(await w.selectByPk(new String('k2')), null, '原拆包後命中k2')
+                assert.strict.strictEqual(await getRt(w.select({ id: new Number(123) })), 'reject', '條件值為包裝物件: 白名單拒收')
                 assert.strict.strictEqual(await w.selectByPk(new Number(NaN)), null, '不得命中NaN字串之列')
                 assert.strict.strictEqual(await w.selectByPk(new String('')), null)
                 assert.strict.strictEqual((await w.del([{ id: new String('') }]))[0].ok, 0)
-                await w.insert([{ id: new String(''), name: 'empty' }])
-                let row = (await all('users')).find((r) => r.name === 'empty')
-                assert.strict.ok(row && row.id.length === 36, '不得寫出空字串主鍵, 依T6補值')
-                await seed('users', [{ id: '12', name: 'n12' }])
-                assert.strict.strictEqual((await w.selectByPk(new Number(12))).id, '12', '拆包後同數字12, 依String(v)命中')
+                assert.strict.strictEqual((await w.del([{ id: new String('k2') }]))[0].ok, 0, '原拆包後刪除k2')
+                for (let mkv of [() => new String(''), () => new String('k2'), () => new Number(12)]) {
+                    await assert.rejects(() => w.insert([{ id: mkv(), name: 'wrapped' }]), (err) => err.message === 'invalid id: not a string or finite number at [data[0].id]')
+                }
+                assert.strict.strictEqual((await all('users')).length, n0, '不得寫入任何列, 亦不補成UUID')
+                assert.strict.strictEqual(await w.selectByPk(new Number(12)), null, '原拆包後同數字12, 依String(v)命中')
                 let wi = ws.ipk
                 await seed('ipk', [{ id: 12, name: 'r12' }])
-                assert.strict.strictEqual((await wi.selectByPk(new Number(12))).id, 12)
+                assert.strict.strictEqual(await wi.selectByPk(new Number(12)), null, '數值主鍵欄亦同, 原命中12')
+                assert.strict.strictEqual((await wi.selectByPk(12)).id, 12, '原始數字仍命中')
             })
 
             it('BigInt為無效: select/delAll皆reject(1.0.36 為不命中)且不刪除', async function() {

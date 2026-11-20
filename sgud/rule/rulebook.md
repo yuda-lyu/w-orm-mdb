@@ -8,12 +8,13 @@
 
 | 類 | 檔 | 內容 | 含之節 |
 |---|---|---|---|
-| 主鍵 | `sgud/rule/rulebook_pk.md` | 主鍵之命中判定(Jet 為準) | `R-PK` |
+| 主鍵 | `sgud/rule/rulebook_pk.md` | 主鍵之命中判定(Jet 為準);主鍵「給了而非字串」即拒絕(2026-11-20 新增,第 557 項,w-orm 系列規則一) | `R-PK`、`R-PKGIVEN` |
 | 條件(find) | `sgud/rule/rulebook_find.md` | select/delAll 之條件轉譯、系列條件白名單之入口檢核,及主控寫入之三則系列規格摘要 | `R-FIND`、`R-WL`、〔條件(find)之支援範圍〕、〔delAll 與 find 之頂層語意〕、〔系列條件白名單〕 |
 | 日期條件 | `sgud/rule/rulebook_float.md` | 非主鍵日期條件:浮動時間(牆上時間),及條件引用非白名單欄型之欄一律拒收(`R-FLOAT-07`) | `R-FLOAT` |
 | 寫入值與實例 | `sgud/rule/rulebook_data.md` | 寫入 DATE 欄之日期範圍與字串正規化、字串良構檢核、sequelize 實例生命週期 | `R-DATE`、`R-WF`、`R-LIFE` |
 | 診斷輸出 | `sgud/rule/rulebook_diag.md` | 診斷輸出之單一出口與預設安全、對外錯誤值之遮罩(含遷移至 wsemi 共用模組之 `R-DIAG-13`) | `R-DIAG` |
 | 外部執行檔 | `sgud/rule/rulebook_bin.md` | connMDB.exe 之存放、下載、校驗與離線(D 類制式規格摘要) | `R-BIN` |
+| 讀取即拋錯之輸入 | `sgud/rule/rulebook_readable.md` | 呼叫端給的資料容器、選項、selectByPk 之 pk 讀取即拋錯者,以 wsemi 之 `chkReadable` 分辨「不可讀」與「型別不符」,不可讀者依原失敗通道以固定詞彙拒絕;存取器拋錯與複製階段之巢狀不可讀值亦轉固定詞彙、與頂層不可讀同通道(2026-11-20 新增,第 557 項,w-orm 系列規則二與全族對齊口徑 A1~A6) | `R-READABLE` |
 | 連線開啟 | `sgud/rule/rulebook_open.md` | 併發開啟 mdb 時開啟階段暫態失敗(Jet 3734/3050/3045/3031/3049/3356)之有限重試,及其前提(`openFailed` 恆代表零語句已執行)、永久性失敗之回報時間(2026-11-05 新增,第 319 項;`rulebook_data.md` 之 LD4 已解) | `R-OPEN`(含 LO1~LO5) |
 
 分拆當時各檔位元組數:`rulebook_pk.md` 12,376、`rulebook_find.md` 37,198、`rulebook_float.md` 26,037、`rulebook_data.md` 33,780、`rulebook_diag.md` 29,622、`rulebook_bin.md` 5,763、本檔(索引)另計。
