@@ -1,9 +1,9 @@
 {
   "name": "w-orm-mdb",
-  "version": "1.0.76",
+  "version": "1.0.77",
   "main": "dist/w-orm-mdb.umd.js",
   "dependencies": {
-    "w-orm-reladb": "^1.1.48",
+    "w-orm-reladb": "^1.1.49",
     "wsemi": "^1.9.70"
   },
   "devDependencies": {
