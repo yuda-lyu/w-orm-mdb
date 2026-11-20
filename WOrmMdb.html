@@ -81,7 +81,8 @@
 忽略全半形寬度與平片假名、ß視同ss(已實測); selectByPk、insertBulk、save、del之判定皆交Jet以=語句為之,
 insert之撞鍵核對以快速鍵對應, 對不上者亦以=語句交Jet判定; 主鍵之定位不依賴IN之結果(Jet對長字串之IN與=不等價)
 註: 主鍵值送出前依主鍵欄型別正規化(見pk.mjs之normPk): 字串類主鍵欄之有限數字以String(v)處置(與w-serv-orm一致),
-數值類主鍵欄之標準數字字串轉為數字; 型別不符者selectByPk回null、insert/insertBulk/save於寫入前reject、del該筆ok為0
+數值類主鍵欄之標準數字字串轉為數字; 型別不符者selectByPk回null、insert/insertBulk/save於寫入前reject、del該筆ok為0;
+只收原始值: String與Number包裝物件為無效主鍵(第557項, 原為拆包後同原始值處置)
 註: 字串類主鍵超過255字元、含NUL或非良構UTF-16者不可能存在於資料表, 讀取類視為未命中且不送Jet
 (Jet對超過255字元之字面值於SELECT/DELETE會截斷後比對, 送出將命中或刪除另一列)
 註: select與delAll之條件(find)僅支援系列白名單(欄位等值、$eq $ne $gt $gte $lt $lte $in $nin、文件層$and $or; 詳見select與delAll之說明), 白名單外一律整批reject;
@@ -110,6 +111,21 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
 可列舉屬性[自有與繼承]與原型鏈上之存取器各讀一次並深複製其值；建構時opt亦只讀一次並複製，不再寫回預設值)，不隨opt.autoGenPk改變；
 另於字串進入SQL文字之出口(escVal、escId)再檢一次作最後防線；String包裝物件以其字串值檢核並寫成一般字串(Jet只存文字)，列內巢狀之類別實例與Map之物件鍵為共用參照(已知限制)。
 既有資料不遷移：修正前經本套件寫入之孤立代理已被改寫為U+FFFD且無從還原，檢出法見README。
+註: 主鍵「給了而非字串」即拒絕(第557項，見sgud/rule/rulebook_pk.md之R-PKGIVEN，w-orm系列規則一)：未帶主鍵只有undefined、null、空字串三種(含鍵不存在)，依opt.autoGenPk自動產生或拒絕；
+給了而非有效主鍵(布林、物件、陣列、Date、BigInt、Symbol、NaN、±Infinity、String與Number包裝物件等，判斷只收原始值)一律拒絕，不得靜默換成自動產生之主鍵寫入，不隨autoGenPk改變，
+訊息為固定詞彙invalid id: not a string or finite number at <a href="%E4%B8%8D%E5%9B%9E%E9%A1%AF%E5%80%BC%EF%BC%9B%E6%9C%89%E9%99%90%E6%95%B8%E5%AD%97%E7%82%BA%E6%9C%89%E6%95%88%EF%BC%8C%E6%95%85%E8%A8%8A%E6%81%AF%E5%90%8C%E7%82%BA%E6%8E%A5%E5%8F%97%E6%9C%89%E9%99%90%E6%95%B8%E5%AD%97%E4%B9%8B%E5%9E%8B%E5%88%A5%E5%8C%96%E5%BE%8C%E7%AB%AFw-orm-reladb%E4%B9%8B%E8%A9%9E%E5%BD%99">data[索引].主鍵欄</a>：insert與insertBulk於初始化之前整批reject(發出一次error事件，不發change事件，資料庫不變)，
+save該筆ok為0並附同訊息之err(逐筆通道，同批其餘筆照常)，del該筆ok為0(既有處置，訊息維持invalid data[索引].主鍵欄)，selectByPk回null，select與delAll之條件不命中任何列。
+與其他w-orm套件之有意差異：有限數字(含0)為有效主鍵——字串類主鍵欄存為String(v)，數值類主鍵欄存為數字(見R-PK-02)，因本套件之model可宣告數值類主鍵欄；其餘只收原始值之處置同系列
+註: 讀取即拋錯之輸入(第557項，見sgud/rule/rulebook_readable.md之R-READABLE，w-orm系列規則二，wsemi之chkReadable)：呼叫端給的資料容器(data)、選項(建構opt與各方法之option)、selectByPk之pk，
+其判斷(iseobj、isearr、isestr、isbol、normPk)判為無效之分支內以chkReadable分辨「不可讀」(已撤銷之Proxy、Symbol.toStringTag拋錯者、ownKeys陷阱拋錯者、get陷阱拋錯者)與「可讀而型別不符」：
+不可讀者走原失敗通道並以固定詞彙invalid 名稱: must be a readable value拒絕(名稱為data、option、option.成員名、pk，建構為opt與opt.成員名；不含原例外文字與值)——
+insert、insertBulk、save、del之data不可讀、各方法之option不可讀、selectByPk之pk不可讀者，發出一次error事件(data為null)後reject，不初始化、不讀寫資料庫；建構為同步throw；
+可讀而型別不符者照既有處理(data為5或null回n為0之空結果、建構之opt成員取預設值、selectByPk(5以外之非字串)回null)；
+容器可讀而成員為存取器或陷阱拋錯者(option.instance、option.returnList、option.autoInsert，建構opt之成員；chkReadable不呼叫存取器)同樣轉固定詞彙invalid option.成員名: must be a readable value、invalid opt.成員名: must be a readable value，
+不轉出存取器拋出之文字(例外：opt.logDetail與opt.funLog由wsemi之getDiag處置，診斷出口永不失敗[dspec C15]，其存取器或get陷阱拋錯者視為未給[用預設]，建構成功，不throw；本套件於建構時讀取並複製全部選項[第66項]，此二鍵之讀取包try；值本身不可讀者原樣複製，亦由getDiag處置)；
+複製階段(cloneDeep與攤平)之不可讀值——不論頂層或巢狀(列之id與欄位值、陣列之元素、存取器拋錯)、不論原因(原型為null之Date、過深之巢狀等無法複製者亦同)——同樣發出一次error事件(data為null)後reject固定詞彙invalid data: must be a readable value，資料庫不變；
+複製成功而判斷函數(iseobj、isearr)判為無效者(如原型鏈為ownKeys或getPrototypeOf陷阱拋錯之Proxy的物件，cloneDeep不讀原型鏈而成功，iseobj之for...in才拋錯)，於該分支內以chkReadable分辨：不可讀者同上(固定詞彙invalid data、error事件恰一次且data為null)，可讀而型別不符者(5、null、空物件、空陣列等)照既有回空結果，有效輸入不多讀；
+複製之後才讀取之原型上之存取器與繼承之存取器所拋者，屬外來錯誤之診斷出口(經diag.err)，不在此列；find之不可讀由wsemi之cvOrmFind處置(invalid find)
 註: Jet之字串等值由其排序規則決定(不分大小寫、忽略尾端半形空白、全半形、假名與增補平面字元等)，良構字串亦可能相等：'a'、'a'+emoji、'a'+U+FFFD為同一主鍵
 (selectByPk('a'+emoji)命中'a'，del可刪到'a')，與大小寫同屬設計，套件不改變(要精確比對須由資料庫端另處理)
 註: 診斷輸出與遮罩一律用wsemi之共用模組(getDiag、getDiagSecrets、maskDiagUrl，規則見wsemi之R-DIAG-01與主控dspec〈診斷輸出與遮罩〉)。
@@ -121,7 +137,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line141">line 141</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line158">line 158</a>
     </li></ul></dd>
     
 
@@ -613,7 +629,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
                 </td>
             
 
-            <td class="description last"><p>輸入是否於console輸出遮罩後之診斷細節布林值，預設false，須為true才生效(型別錯誤者視同false)。診斷輸出由wsemi之getDiag實作(選項語意見其說明)：console預設只含固定標籤與不含個資之摘要(safe只留stmt、mode、name、type、errType、errCode)；為true時改為(標籤, 遮罩後之細節)(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。細節中之連線字串、帳號、密碼、帳號:密碼與資料庫檔案路徑以***遮罩</p></td>
+            <td class="description last"><p>輸入是否於console輸出遮罩後之診斷細節布林值，預設false，須為true才生效(型別錯誤者視同false；存取器或get陷阱拋錯者亦視同未給，建構成功)。診斷輸出由wsemi之getDiag實作(選項語意見其說明)：console預設只含固定標籤與不含個資之摘要(safe只留stmt、mode、name、type、errType、errCode)；為true時改為(標籤, 遮罩後之細節)(訂閱函數拋出之錯誤、opt.logging之sql全文、genModelsByTabs之檔案路徑與存檔錯誤等)，有洩漏個資之風險，僅供除錯使用。細節中之連線字串、帳號、密碼、帳號:密碼與資料庫檔案路徑以***遮罩</p></td>
         </tr>
 
     
@@ -653,7 +669,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
                 </td>
             
 
-            <td class="description last"><p>輸入診斷輸出函數(label, safe, detail)，預設無，須為函數才生效(型別錯誤者視同未給)。給予時診斷輸出只交給它而不寫console(logDetail不作用)：label為固定標籤字串，safe為摘要物件(可能為undefined)，detail為遮罩後之細節拷貝(wsemi之maskDiagCopy；可能無此引數)。函數拋錯被吞下，回傳之原生Promise標記已處理，不影響各操作之結果</p></td>
+            <td class="description last"><p>輸入診斷輸出函數(label, safe, detail)，預設無，須為函數才生效(型別錯誤者視同未給；存取器或get陷阱拋錯者亦視同未給，建構成功)。給予時診斷輸出只交給它而不寫console(logDetail不作用)：label為固定標籤字串，safe為摘要物件(可能為undefined)，detail為遮罩後之細節拷貝(wsemi之maskDiagCopy；可能無此引數)。函數拋錯被吞下，回傳之原生Promise標記已處理，不影響各操作之結果</p></td>
         </tr>
 
     
@@ -871,7 +887,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2251">line 2251</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2443">line 2443</a>
     </li></ul></dd>
     
 
@@ -982,6 +998,8 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
 超過255字元之字串類主鍵視為未命中且不送Jet(ok為1、n為0)，因Jet對超過255字元之字面值會截斷後比對，送出將刪除另一列
 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理者該筆ok為0並附err(invalid id: 原因 at [data[索引].主鍵欄]，不回顯值；原為靜默回ok為1)，
 同批其餘筆照常處理，且先於初始化(匯入model)，故全數不合格時不載入model、不開啟資料庫檔、不送Jet；刪除不檢資料欄位
+註: 主鍵給了而非字串(布林、物件、陣列、BigInt、Symbol、String與Number包裝物件等，第557項, R-PKGIVEN)為無效主鍵，該筆ok為0並附err(既有處置，訊息維持invalid data[索引].主鍵欄)，不刪除任何列；
+讀取即拋錯之data與option(見類別註解之R-READABLE)：發出一次error事件(data為null)後reject固定詞彙，不刪除任何列
 註: 本函數不受opt.autoGenPk影響，於任一設定下皆不補值
 註: 由DELETE語句自身之影響列數判定命中，不另行查詢以免多一次往返且與刪除間存在競態</p></li></ul></dd>
     
@@ -989,7 +1007,7 @@ save與del該筆ok為0並附err，同批其餘筆照常(del原為靜默回ok為1
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1884">line 1884</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2064">line 2064</a>
     </li></ul></dd>
     
 
@@ -1303,7 +1321,7 @@ DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2124">line 2124</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2310">line 2310</a>
     </li></ul></dd>
     
 
@@ -1592,7 +1610,7 @@ DATE欄之日期條件以牆上時間(浮動時間)比較，負偏移時區主�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2286">line 2286</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line2478">line 2478</a>
     </li></ul></dd>
     
 
@@ -1903,7 +1921,7 @@ jet為內部之Jet介面(供以option.instance傳回本套件之各函數), 由�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line603">line 603</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line732">line 732</a>
     </li></ul></dd>
     
 
@@ -2013,6 +2031,8 @@ jet為內部之Jet介面(供以option.instance傳回本套件之各函數), 由�
 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理、資料之鍵名與字串值含孤立代理者，於初始化(匯入model)之前即整批reject，不寫任何一筆，
 訊息為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at <a href="%E4%B8%8D%E5%9B%9E%E9%A1%AF%E5%80%BC">路徑</a>，不隨opt.autoGenPk改變(孤立代理主鍵不會被自動產生之主鍵取代)
+註: 主鍵給了而非字串或有限數字(見類別註解之R-PKGIVEN，第557項)：同樣於初始化之前整批reject，訊息invalid id: not a string or finite number at [data[索引].主鍵欄]，不得換成自動產生之主鍵，不隨opt.autoGenPk改變；
+讀取即拋錯之data(見類別註解之R-READABLE)與option：發出一次error事件(data為null)後reject固定詞彙invalid data: must be a readable value、invalid option: must be a readable value，資料庫不變
 註: 撞鍵者之核對以Jet為準：先以快速鍵對應，對不上者逐筆以=語句查詢，仍不存在即撞及其他唯一索引而整批reject
 註: 全部插入語句於單次呼叫exe內循序送出且不因單筆衝突而中止，故一次往返即可取得精確之nInserted
 註: option.returnList為true時改回傳與輸入等長且保序之逐筆陣列[{n,nInserted,ok}]，
@@ -2024,7 +2044,7 @@ jet為內部之Jet介面(供以option.instance傳回本套件之各函數), 由�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1162">line 1162</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1313">line 1313</a>
     </li></ul></dd>
     
 
@@ -2356,6 +2376,8 @@ jet為內部之Jet介面(供以option.instance傳回本套件之各函數), 由�
 註: 主鍵值依主鍵欄型別正規化(見類別註解)；型別不符或不可能存在之主鍵於任何寫入之前整批reject
 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理、資料之鍵名與字串值含孤立代理者，於初始化(匯入model)之前即整批reject，不寫任何一筆，
 訊息為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at <a href="%E4%B8%8D%E5%9B%9E%E9%A1%AF%E5%80%BC">路徑</a>，不隨opt.autoGenPk改變
+註: 主鍵給了而非字串或有限數字(見類別註解之R-PKGIVEN，第557項)：同樣於初始化之前整批reject，訊息invalid id: not a string or finite number at [data[索引].主鍵欄]，不得換成自動產生之主鍵；
+讀取即拋錯之data與option(見類別註解之R-READABLE)：發出一次error事件(data為null)後reject固定詞彙，資料庫不變
 註: [全有全無]以Jet之交易(OleDbTransaction)包覆全部插入語句達成，任一筆失敗即回滾，
 故reject之後資料庫狀態與呼叫前相同，無須補償動作；同批含重複主鍵者亦於交易內被偵測為衝突</p></li></ul></dd>
     
@@ -2363,7 +2385,7 @@ jet為內部之Jet介面(供以option.instance傳回本套件之各函數), 由�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1360">line 1360</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1525">line 1525</a>
     </li></ul></dd>
     
 
@@ -2664,13 +2686,15 @@ autoInsert為true時因無法寫入而該筆ok為0並附err，為false時n為0
 註: 字串良構檢核(見類別註解)：主鍵含NUL或孤立代理、資料之鍵名與字串值含孤立代理者，該筆ok為0並附err(autoInsert為false者亦然，原為靜默n為0)，
 同批其餘筆照常處理，不連線亦不進入其後之主鍵正規化與日期預檢；err為invalid id: 原因 at [data[索引].主鍵欄]或invalid data: 原因 at <a href="%E4%B8%8D%E5%9B%9E%E9%A1%AF%E5%80%BC">路徑</a>，
 該類檢核先於初始化(匯入model)，故全數不合格時不載入model、不開啟資料庫檔
+註: 主鍵給了而非字串或有限數字(見類別註解之R-PKGIVEN，第557項)者同走此逐筆通道：該筆ok為0並附err(invalid id: not a string or finite number at [data[索引].主鍵欄]，不回顯值)，不得換成自動產生之主鍵寫入，
+不隨opt.autoGenPk與option.autoInsert改變；讀取即拋錯之data與option(見類別註解之R-READABLE)：發出一次error事件(data為null)後reject固定詞彙，資料庫不變
 註: 各回合之預讀與寫入皆整批送出，故N筆數據於無衝突時僅需2次呼叫exe而非2N次</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1510">line 1510</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1683">line 1683</a>
     </li></ul></dd>
     
 
@@ -3024,7 +3048,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line901">line 901</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1030">line 1030</a>
     </li></ul></dd>
     
 
@@ -3312,13 +3336,16 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
 含NUL或孤立代理者先於初始化即回傳null(不載入model、不送Jet，亦不命中U+FFFD之鄰近列)，
 [命中]以Jet之判定為準，與insert、save、del一致
 註: Jet之字串等值不分大小寫、忽略尾端半形空白與全半形寬度等，故主鍵之命中判定亦同(見類別註解)
+註: 主鍵值無效含給了而非字串者(布林、物件、陣列、Date、BigInt、Symbol、String與Number包裝物件等，只收原始值，第557項)回傳null；
+讀取即拋錯之pk(已撤銷之Proxy、Symbol.toStringTag或get陷阱拋錯者，經wsemi之chkReadable判定)reject固定詞彙invalid pk: must be a readable value(發出一次error事件、data為null、不初始化)，不被當成無效主鍵而回null；
+option不可讀者reject invalid option: must be a readable value，option.instance為拋錯之存取器者reject invalid option.instance: must be a readable value(同樣發出一次error事件、data為null，不轉出存取器拋出之文字)
 註: 本函數不得有副作用，故不創建資料表</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line976">line 976</a>
+        <a href="WOrmMdb.mjs.html">WOrmMdb.mjs</a>, <a href="WOrmMdb.mjs.html#line1114">line 1114</a>
     </li></ul></dd>
     
 
@@ -3604,7 +3631,7 @@ Jet回傳之DATE欄值於過濾前一律換算為同一浮動空間，無法換�
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Nov 20 2026 01:53:06 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Nov 20 2026 11:35:31 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
